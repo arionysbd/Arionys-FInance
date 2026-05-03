@@ -14,6 +14,7 @@ export default function UserManagement() {
   const selectRef = useRef(null);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [openInviteSelect, setOpenInviteSelect] = useState(false);
   const [pendingRoleChange, setPendingRoleChange] = useState(null);
   const [createForm, setCreateForm] = useState({ name: '', email: '', role: 'accountant' });
   const [creating, setCreating] = useState(false);
@@ -148,7 +149,7 @@ export default function UserManagement() {
             <div className="page-actions">
               <button className="btn-create-user" onClick={() => setShowCreateModal(true)}>
                 <UserPlus size={16} />
-                <span>Create User</span>
+                <span className="btn-text">Create User</span>
               </button>
             </div>
           )}
@@ -392,17 +393,40 @@ export default function UserManagement() {
                   </div>
                 </div>
                 <div className="modal-field">
-                  <label>Assign Role</label>
-                  <div className="modal-input-wrap">
-                    <Shield size={16} />
-                    <select
-                      value={createForm.role}
-                      onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
+                  <label>Assign Authority</label>
+                  <div className="modal-custom-select-wrapper">
+                    <div 
+                      className={`modal-select-trigger ${openInviteSelect ? 'active' : ''}`}
+                      onClick={() => setOpenInviteSelect(!openInviteSelect)}
                     >
-                      {roleOptions.filter(o => o.value !== 'admin').map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
+                      <div className="m-trigger-content">
+                        {getRoleInfo(createForm.role).icon}
+                        <span>{getRoleInfo(createForm.role).label}</span>
+                      </div>
+                      <ChevronDown size={14} className={`m-arrow ${openInviteSelect ? 'rotate' : ''}`} />
+                    </div>
+                    
+                    {openInviteSelect && (
+                      <div className="modal-role-dropdown animate-pop-in">
+                        {roleOptions.filter(o => o.value !== 'admin').map((opt) => (
+                          <div 
+                            key={opt.value} 
+                            className={`m-role-option ${createForm.role === opt.value ? 'selected' : ''}`}
+                            onClick={() => {
+                              setCreateForm({ ...createForm, role: opt.value });
+                              setOpenInviteSelect(false);
+                            }}
+                          >
+                            <div className="m-opt-icon">{opt.icon}</div>
+                            <div className="m-opt-text">
+                              <span className="m-opt-label">{opt.label}</span>
+                              <span className="m-opt-desc">{opt.desc}</span>
+                            </div>
+                            {createForm.role === opt.value && <Check size={14} className="m-check" />}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <button type="submit" className="btn-send-invite" disabled={creating}>
@@ -418,6 +442,11 @@ export default function UserManagement() {
           .users-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2.5rem; }
           .btn-create-user { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1.25rem; background: #0f172a; color: #ffffff; border: none; border-radius: 6px; font-size: 0.8125rem; font-weight: 800; cursor: pointer; transition: all 0.2s; }
           .btn-create-user:hover { background: #1e293b; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15); }
+          @media (max-width: 768px) {
+            .btn-text { display: none; }
+            .btn-create-user { padding: 0.75rem; border-radius: 6px; }
+            .users-header { align-items: center; }
+          }
           .title-area { display: flex; align-items: flex-start; gap: 1rem; }
           .title-area h2 { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin-bottom: 0.25rem; }
           .title-area p { color: #64748b; font-size: 0.875rem; }
@@ -432,12 +461,12 @@ export default function UserManagement() {
           .user-name { font-size: 0.9375rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 0.5rem; }
           .user-email { font-size: 0.8125rem; color: #64748b; }
           .self-badge { background: #0f172a; color: white; font-size: 0.6rem; padding: 1px 4px; border-radius: 4px; margin-left: 4px; }
-          .custom-select-wrapper { position: relative; width: 200px; }
+          .custom-select-wrapper { position: relative; width: 230px; }
           .role-trigger { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0.75rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
           .role-trigger:hover:not(.disabled) { border-color: #cbd5e1; }
           .role-trigger.active { border-color: #0f172a; background: white; }
           .role-trigger.disabled { opacity: 0.6; cursor: not-allowed; }
-          .role-current { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; font-weight: 700; color: #0f172a; }
+          .role-current { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; font-weight: 700; color: #0f172a; white-space: nowrap; }
           .arrow { color: #94a3b8; transition: transform 0.2s; }
           .arrow.rotate { transform: rotate(180deg); }
           .role-dropdown { 
@@ -579,6 +608,54 @@ export default function UserManagement() {
           .btn-confirm { padding: 0.875rem; background: #0f172a; color: white; border: none; border-radius: 6px; font-weight: 800; font-size: 0.875rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1); }
           .btn-confirm:hover { background: #1e293b; transform: translateY(-1px); box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2); }
           .btn-confirm:active { transform: translateY(0); }
+          .modal-custom-select-wrapper { position: relative; width: 100%; }
+          .modal-select-trigger {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 44px;
+          }
+          .modal-select-trigger:hover { border-color: #cbd5e1; }
+          .modal-select-trigger.active { background: white; border-color: #0f172a; box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.05); }
+          .m-trigger-content { display: flex; align-items: center; gap: 0.75rem; font-size: 0.875rem; font-weight: 700; color: #0f172a; }
+          .m-trigger-content :global(svg) { color: #64748b; }
+          .m-arrow { color: #64748b; transition: transform 0.3s; }
+          .m-arrow.rotate { transform: rotate(180deg); }
+
+          .modal-role-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 0.5rem;
+            z-index: 3000;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+          }
+          .m-role-option {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+          }
+          .m-role-option:hover { background: #f8fafc; }
+          .m-role-option.selected { background: #f1f5f9; }
+          .m-opt-icon { color: #64748b; }
+          .m-opt-text { display: flex; flex-direction: column; flex: 1; }
+          .m-opt-label { font-size: 0.8125rem; font-weight: 700; color: #0f172a; }
+          .m-opt-desc { font-size: 0.65rem; color: #94a3b8; font-weight: 500; }
+          .m-check { color: #0f172a; }
         `}</style>
       </div>
     </DashboardLayout>

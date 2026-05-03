@@ -205,7 +205,7 @@ export default function DashboardLayout({ children }) {
                 {item.icon}
                 {item.showBadge && pendingCount > 0 && <span className="notification-badge">{pendingCount}</span>}
               </div>
-              <span>{item.id === 'dashboard' ? 'Home' : item.id === 'users' ? 'System' : item.label}</span>
+              <span className="mob-label">{item.id === 'dashboard' ? 'Home' : item.id === 'users' ? 'System' : item.label}</span>
             </Link>
           );
         })}
@@ -346,9 +346,10 @@ export default function DashboardLayout({ children }) {
           .mobile-header-right { display: flex; align-items: center; gap: 0.75rem; }
           .mobile-user-name { font-size: 0.8125rem; font-weight: 800; color: #0f172a; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
           .mobile-logout { background: transparent; border: none; color: #64748b; display: flex; align-items: center; justify-content: center; padding: 0.25rem; }
-          .mobile-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 75px; display: flex; align-items: center; justify-content: space-between; padding: 0 5vw; z-index: 1000; border-top: 1px solid #f1f5f9; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
-          :global(.mob-nav-item) { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; color: #94a3b8; font-weight: 700; font-size: 0.65rem; text-transform: uppercase; text-decoration: none; min-width: 60px; }
-          :global(.mob-nav-item.active) { color: #0f172a; }
+          .mobile-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 5vw; z-index: 1000; border-top: 1px solid #f1f5f9; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+          :global(.mob-nav-item) { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; text-decoration: none; min-width: 50px; height: 100%; transition: all 0.2s; }
+          :global(.mob-nav-item.active) { color: #0f172a; transform: translateY(-2px); }
+          .mob-label { display: none; }
           .mobile-logout { background: transparent; border: none; color: #64748b; }
           .header-flex h1 { font-size: clamp(1.25rem, 5vw, 1.5rem); }
           .desktop-role { display: none; }
