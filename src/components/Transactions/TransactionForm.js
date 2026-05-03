@@ -268,9 +268,9 @@ export default function TransactionForm({ onTransactionAdded }) {
           padding-bottom: 1.5rem;
         }
 
-        .header-text h3 { font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0; }
-        .header-text p { font-size: 0.875rem; color: #64748b; margin-top: 0.25rem; }
-        .header-icon { background: #f8fafc; padding: 0.75rem; border-radius: 6px; color: #0f172a; border: 1px solid #e2e8f0; }
+        .header-text h3 { font-size: clamp(1.1rem, 4vw, 1.25rem); font-weight: 800; color: #0f172a; margin: 0; }
+        .header-text p { font-size: clamp(0.75rem, 3vw, 0.875rem); color: #64748b; margin-top: 0.25rem; }
+        .header-icon { background: #f8fafc; padding: clamp(0.5rem, 2vw, 0.75rem); border-radius: 6px; color: #0f172a; border: 1px solid #e2e8f0; }
 
         .form-grid {
           display: flex;
@@ -296,13 +296,13 @@ export default function TransactionForm({ onTransactionAdded }) {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 0.75rem 1rem;
+          padding: clamp(0.5rem, 3vw, 0.75rem) clamp(0.75rem, 4vw, 1rem);
           background: #f8fafc;
           border: 1px solid #e2e8f0;
           border-radius: 6px;
           cursor: pointer;
           transition: all 0.2s;
-          min-height: 46px;
+          min-height: clamp(40px, 12vw, 46px);
         }
         
         .custom-select-trigger:hover { border-color: #cbd5e1; }
@@ -312,7 +312,7 @@ export default function TransactionForm({ onTransactionAdded }) {
           box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.05); 
         }
 
-        .trigger-content { display: flex; align-items: center; gap: 0.75rem; font-size: 0.9375rem; font-weight: 700; color: #0f172a; }
+        .trigger-content { display: flex; align-items: center; gap: 0.75rem; font-size: clamp(0.85rem, 3.5vw, 0.9375rem); font-weight: 700; color: #0f172a; }
         .trigger-content :global(svg) { color: #64748b; }
 
         .arrow-icon { color: #64748b; transition: transform 0.3s; }
@@ -353,11 +353,11 @@ export default function TransactionForm({ onTransactionAdded }) {
 
         .input-field {
           width: 100%;
-          padding: 0.75rem 1rem 0.75rem 2.75rem;
+          padding: clamp(0.6rem, 3vw, 0.75rem) 1rem clamp(0.6rem, 3vw, 0.75rem) 2.75rem;
           background: #f8fafc;
           border: 1px solid #e2e8f0;
           border-radius: 6px;
-          font-size: 0.9375rem;
+          font-size: clamp(0.85rem, 3.5vw, 0.9375rem);
           color: #0f172a;
           transition: all 0.2s;
         }
@@ -387,12 +387,12 @@ export default function TransactionForm({ onTransactionAdded }) {
           align-items: center;
           justify-content: center;
           gap: 0.75rem;
-          padding: 1rem;
+          padding: clamp(0.75rem, 4vw, 1rem);
           background: #0f172a;
           color: white;
           border: none;
           border-radius: 6px;
-          font-size: 0.9375rem;
+          font-size: clamp(0.85rem, 3.5vw, 0.9375rem);
           font-weight: 800;
           cursor: pointer;
           transition: all 0.3s;

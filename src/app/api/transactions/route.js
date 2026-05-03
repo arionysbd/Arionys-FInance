@@ -25,7 +25,8 @@ export async function GET(req) {
     const transactions = await Transaction.find(query)
       .populate('createdBy', 'name')
       .populate('approvedBy', 'name')
-      .sort({ date: -1 });
+      .sort({ date: -1 })
+      .lean();
     return NextResponse.json({ success: true, data: transactions });
   } catch (error) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });

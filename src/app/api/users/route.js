@@ -28,6 +28,16 @@ export async function PATCH(req) {
       return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
     }
 
+    // Protection for Admin accounts
+    if (user.role === 'admin') {
+      if (role && role !== 'admin') {
+        return NextResponse.json({ success: false, message: 'Administrator role cannot be changed' }, { status: 400 });
+      }
+      if (isActive === false) {
+        return NextResponse.json({ success: false, message: 'Administrator account cannot be deactivated' }, { status: 400 });
+      }
+    }
+
     if (role) user.role = role.toLowerCase();
     
     // Check if user is being approved
@@ -44,7 +54,6 @@ export async function PATCH(req) {
           ceo: 'Chief Executive Officer',
           cfo: 'Chief Financial Officer',
           csuit: 'Executive Board',
-          audit: 'Audit Officer',
           accountant: 'Accounts Manager',
         };
         const roleLabel = roleLabelMap[user.role?.toLowerCase()] || user.role;
@@ -89,8 +98,9 @@ export async function DELETE(req) {
       return NextResponse.json({ success: false, message: 'Only admins can delete accounts' }, { status: 403 });
     }
 
-    if (userId === adminId) {
-      return NextResponse.json({ success: false, message: 'You cannot delete your own account' }, { status: 400 });
+    const targetUser = await User.findById(userId);
+    if (targetUser && targetUser.role === 'admin') {
+      return NextResponse.json({ success: false, message: 'Administrator accounts cannot be deleted' }, { status: 400 });
     }
 
     await User.findByIdAndDelete(userId);

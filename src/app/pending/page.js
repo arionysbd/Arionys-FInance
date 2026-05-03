@@ -34,7 +34,7 @@ export default function PendingTransactions() {
         status,
         userId: user._id
       });
-      window.location.reload();
+      await fetchPending(); // Re-fetch data instead of reloading the whole page
     } catch (err) {
       alert(err.response?.data?.message || 'Action failed');
     } finally {
@@ -50,20 +50,43 @@ export default function PendingTransactions() {
     }
   };
 
-  if (loading) return (
-    <div className="loading-state">
-      <div className="spinner"></div>
-      <p>Synchronizing Queue...</p>
+  const PendingSkeleton = () => (
+    <div className="skeleton-queue">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className="skeleton-row">
+          <div className="skeleton-col originator">
+            <div className="skeleton-avatar shim"></div>
+            <div className="skeleton-info">
+              <div className="skeleton-line shim w-60"></div>
+              <div className="skeleton-line shim w-40"></div>
+            </div>
+          </div>
+          <div className="skeleton-col details"><div className="skeleton-line shim w-80"></div></div>
+          <div className="skeleton-col type"><div className="skeleton-pill shim"></div></div>
+          <div className="skeleton-col amount"><div className="skeleton-line shim w-50"></div></div>
+          <div className="skeleton-col actions"><div className="skeleton-btn-group shim"></div></div>
+        </div>
+      ))}
     </div>
   );
 
   return (
     <DashboardLayout>
       <div className="pending-container animate-fade-in">
-
+        <div className="queue-header">
+          <div className="title-area">
+            <div className="icon-slate"><Clock size={28} /></div>
+            <div>
+              <h2>Pending Queue</h2>
+              <p>Transactions awaiting executive verification</p>
+            </div>
+          </div>
+        </div>
 
         <div className="queue-card">
-          {pendingTx.length > 0 ? (
+          {loading ? (
+            <PendingSkeleton />
+          ) : pendingTx.length > 0 ? (
             <div className="desktop-only">
               <table className="queue-table">
                 <thead>
@@ -113,7 +136,7 @@ export default function PendingTransactions() {
                             disabled={processing === tx._id}
                             title="Reject Transaction"
                           >
-                            <X size={16} />
+                            {processing === tx._id ? <div className="spinner-mini" /> : <X size={16} />}
                           </button>
                           <button 
                             className="action-btn approve"
@@ -121,7 +144,7 @@ export default function PendingTransactions() {
                             disabled={processing === tx._id}
                             title="Verify Transaction"
                           >
-                            <Check size={16} />
+                            {processing === tx._id ? <div className="spinner-mini" /> : <Check size={16} />}
                           </button>
                         </div>
                       </td>
@@ -140,45 +163,58 @@ export default function PendingTransactions() {
             </div>
           )}
 
-          {/* Mobile View */}
-          <div className="mobile-only">
-            <div className="mobile-queue-list">
-              {pendingTx.map((tx) => (
-                <div key={tx._id} className={`mobile-tx-card ${processing === tx._id ? 'dim' : ''}`}>
-                  <div className="card-top">
-                    <span className="m-date">{new Date(tx.date).toLocaleDateString()}</span>
-                    <div className={`type-pill-minimal type-${tx.type}`}>
-                      {tx.type}
-                    </div>
-                  </div>
-                  <h4 className="m-desc"><span className="m-label-dim">Description:</span> {tx.description}</h4>
-                  <div className="m-originator">
-                    <span>Initiated by: {tx.createdBy?.name || 'Unknown'}</span>
-                  </div>
-                  <div className="m-financials">
-                    <span className="m-currency">BDT</span>
-                    <span className="m-amount">{tx.amount.toLocaleString()}</span>
-                  </div>
-                  <div className="m-actions">
-                    <button 
-                      className="m-btn m-reject"
-                      onClick={() => handleAction(tx._id, 'rejected')}
-                      disabled={processing === tx._id}
-                    >
-                      Reject
-                    </button>
-                    <button 
-                      className="m-btn m-approve"
-                      onClick={() => handleAction(tx._id, 'approved')}
-                      disabled={processing === tx._id}
-                    >
-                      {processing === tx._id ? '...' : 'Approve'}
-                    </button>
-                  </div>
+          {/* Mobile View Skeleton */}
+          {loading && (
+            <div className="mobile-only">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="mobile-tx-card skeleton-mobile">
+                  <div className="shim w-100" style={{height: '80px', borderRadius: '6px'}}></div>
                 </div>
               ))}
             </div>
-          </div>
+          )}
+
+          {/* Mobile View Actual */}
+          {!loading && (
+            <div className="mobile-only">
+              <div className="mobile-queue-list">
+                {pendingTx.map((tx) => (
+                  <div key={tx._id} className={`mobile-tx-card ${processing === tx._id ? 'dim' : ''}`}>
+                    <div className="card-top">
+                      <span className="m-date">{new Date(tx.date).toLocaleDateString()}</span>
+                      <div className={`type-pill-minimal type-${tx.type}`}>
+                        {tx.type}
+                      </div>
+                    </div>
+                    <h4 className="m-desc"><span className="m-label-dim">Description:</span> {tx.description}</h4>
+                    <div className="m-originator">
+                      <span>Initiated by: {tx.createdBy?.name || 'Unknown'}</span>
+                    </div>
+                    <div className="m-financials">
+                      <span className="m-currency">BDT</span>
+                      <span className="m-amount">{tx.amount.toLocaleString()}</span>
+                    </div>
+                    <div className="m-actions">
+                      <button 
+                        className="m-btn m-reject"
+                        onClick={() => handleAction(tx._id, 'rejected')}
+                        disabled={processing === tx._id}
+                      >
+                        {processing === tx._id ? 'Wait...' : 'Reject'}
+                      </button>
+                      <button 
+                        className="m-btn m-approve"
+                        onClick={() => handleAction(tx._id, 'approved')}
+                        disabled={processing === tx._id}
+                      >
+                        {processing === tx._id ? 'Processing...' : 'Approve'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
       <style jsx>{`
@@ -304,8 +340,87 @@ export default function PendingTransactions() {
         .m-approve { background: #0f172a; color: white; }
         .m-reject { background: #f8fafc; color: #ef4444; border: 1px solid #e2e8f0; }
 
-        .loading-state { height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; color: #64748b; }
-        .spinner { width: 24px; height: 24px; border: 2px solid #f8fafc; border-top-color: #0f172a; border-radius: 50%; animation: spin 0.6s linear infinite; }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Skeleton Styles */
+        .skeleton-queue { padding: 1rem; }
+        .skeleton-row { display: flex; align-items: center; padding: 1.25rem 0.5rem; border-bottom: 1px solid #f1f5f9; gap: 2rem; }
+        .skeleton-col { flex: 1; }
+        .skeleton-col.originator { flex: 1.5; display: flex; gap: 0.75rem; align-items: center; }
+        .skeleton-col.details { flex: 2; }
+        .skeleton-col.type { flex: 1; }
+        .skeleton-col.amount { flex: 1; }
+        .skeleton-col.actions { flex: 1; display: flex; justify-content: flex-end; }
+        
+        .skeleton-avatar { width: 32px; height: 32px; border-radius: 6px; flex-shrink: 0; }
+        .skeleton-info { display: flex; flex-direction: column; gap: 0.4rem; width: 100%; }
+        .skeleton-line { height: 10px; background: #f1f5f9; border-radius: 4px; }
+        .skeleton-pill { height: 24px; width: 70px; background: #f1f5f9; border-radius: 6px; }
+        .skeleton-btn-group { height: 32px; width: 80px; background: #f1f5f9; border-radius: 6px; }
+        
+        .w-40 { width: 40%; }
+        .w-50 { width: 50%; }
+        .w-60 { width: 60%; }
+        .w-80 { width: 80%; }
+        .w-100 { width: 100%; }
+
+        .shim {
+          background: linear-gradient(90deg, #f1f5f9 25%, #f8fafc 50%, #f1f5f9 75%);
+          background-size: 200% 100%;
+          animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+
+        .skeleton-mobile { padding: 1rem; }
+        
+        .loading-state { 
+          height: 70vh; 
+          display: flex; 
+          flex-direction: column; 
+          align-items: center; 
+          justify-content: center; 
+          gap: 1.5rem; 
+          color: #64748b; 
+        }
+
+        .premium-loader {
+          position: relative;
+          width: 60px;
+          height: 60px;
+        }
+
+        .loader-ring {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          border: 4px solid transparent;
+          border-top-color: #0f172a;
+          border-radius: 50%;
+          animation: loader-spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+        }
+        .loader-ring:nth-child(1) { animation-delay: -0.45s; }
+        .loader-ring:nth-child(2) { animation-delay: -0.3s; }
+        .loader-ring:nth-child(3) { animation-delay: -0.15s; }
+
+        @keyframes loader-spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        .spinner-mini { 
+          width: 14px; 
+          height: 14px; 
+          border: 2px solid rgba(0,0,0,0.1); 
+          border-top-color: currentColor; 
+          border-radius: 50%; 
+          animation: spin 0.6s linear infinite; 
+        }
+
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
     </DashboardLayout>

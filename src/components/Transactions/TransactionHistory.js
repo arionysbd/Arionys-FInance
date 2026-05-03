@@ -332,8 +332,8 @@ export default function TransactionHistory({ transactions, onUpdate }) {
           padding: 0.5rem 0;
         }
         .header-actions { display: flex; align-items: center; gap: 1rem; }
-        .title-area h3 { font-size: 1.25rem; font-weight: 800; color: #0f172a; margin-bottom: 0.25rem; }
-        .subtitle { font-size: 0.875rem; color: #64748b; }
+        .title-area h3 { font-size: clamp(1.1rem, 4vw, 1.25rem); font-weight: 800; color: #0f172a; margin-bottom: 0.25rem; }
+        .subtitle { font-size: clamp(0.75rem, 3vw, 0.875rem); color: #64748b; }
 
         /* Custom Dropdown Styling */
         .custom-dropdown-wrapper { position: relative; width: 180px; }
@@ -497,19 +497,19 @@ export default function TransactionHistory({ transactions, onUpdate }) {
         .tx-premium-mobile-card { 
           background: white; 
           border-radius: 6px; 
-          padding: 1.25rem; 
+          padding: clamp(1rem, 4vw, 1.25rem); 
           border: 1px solid #e2e8f0;
           box-shadow: 0 1px 3px rgba(0,0,0,0.02);
         }
         .mobile-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
-        .mobile-date { font-size: 0.75rem; font-weight: 700; color: #64748b; }
-        .mobile-desc { font-size: 1rem; font-weight: 800; color: #0f172a; margin-bottom: 0.25rem; }
+        .mobile-date { font-size: clamp(0.65rem, 2.5vw, 0.75rem); font-weight: 700; color: #64748b; }
+        .mobile-desc { font-size: clamp(0.9rem, 4vw, 1rem); font-weight: 800; color: #0f172a; margin-bottom: 0.25rem; }
         .label-dim { color: #94a3b8; font-weight: 600; font-size: 0.875rem; margin-right: 0.25rem; }
         .mobile-performed { font-size: 0.8125rem; color: #64748b; margin-bottom: 1.25rem; }
         .mobile-financials { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
         .mobile-amount-value { display: flex; align-items: baseline; gap: 0.25rem; font-weight: 900; color: #0f172a; }
-        .m-curr { font-size: 0.7rem; color: #64748b; }
-        .m-val { font-size: 1.25rem; }
+        .m-curr { font-size: clamp(0.6rem, 2vw, 0.7rem); color: #64748b; }
+        .m-val { font-size: clamp(1.1rem, 5vw, 1.25rem); }
         .status-chip.mini { padding: 0.125rem 0.5rem; font-size: 0.7rem; }
         .mobile-card-footer { border-top: 1px solid #f1f5f9; padding-top: 1rem; }
 

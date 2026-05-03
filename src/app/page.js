@@ -11,11 +11,19 @@ export default function Home() {
 
   return (
     <div className="redirect-screen">
-      <div className="spinner"></div>
+      <div className="placeholder shim"></div>
       <style jsx>{`
         .redirect-screen { height: 100vh; width: 100vw; display: flex; align-items: center; justify-content: center; background: #ffffff; }
-        .spinner { width: 40px; height: 40px; border: 3px solid #f1f5f9; border-top-color: #0f172a; border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .placeholder { width: 120px; height: 40px; border-radius: 6px; }
+        .shim {
+          background: linear-gradient(90deg, #f1f5f9 25%, #f8fafc 50%, #f1f5f9 75%);
+          background-size: 200% 100%;
+          animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
       `}</style>
     </div>
   );

@@ -36,14 +36,32 @@ export default function TransactionsPage() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="loading-placeholder">
-          <div className="spinner"></div>
-          <p>Syncing transaction records...</p>
+        <div className="tx-skeleton">
+          <div className="skeleton-bar shim"></div>
+          <div className="skeleton-form shim"></div>
+          <div className="skeleton-history">
+            <div className="skeleton-h-header shim"></div>
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={i} className="skeleton-h-row shim"></div>
+            ))}
+          </div>
         </div>
         <style jsx>{`
-          .loading-placeholder { height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; color: #64748b; }
-          .spinner { width: 24px; height: 24px; border: 2px solid #f8fafc; border-top-color: #0f172a; border-radius: 50%; animation: spin 0.6s linear infinite; }
-          @keyframes spin { to { transform: rotate(360deg); } }
+          .tx-skeleton { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; padding: 1rem 5vw 1rem 1rem; }
+          .skeleton-bar { height: 80px; border-radius: 6px; }
+          .skeleton-form { height: 350px; border-radius: 6px; }
+          .skeleton-history { display: flex; flex-direction: column; gap: 0.75rem; }
+          .skeleton-h-header { height: 50px; border-radius: 6px; }
+          .skeleton-h-row { height: 70px; border-radius: 6px; }
+          .shim {
+            background: linear-gradient(90deg, #f1f5f9 25%, #f8fafc 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+          }
+          @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+          }
         `}</style>
       </DashboardLayout>
     );
@@ -76,20 +94,20 @@ export default function TransactionsPage() {
       </div>
 
       <style jsx>{`
-        .tx-layout { max-width: 1200px; margin: 0 auto; }
+        .tx-layout { max-width: 1200px; margin: 0 auto; padding-right: 5vw; }
         .tx-quick-stats-bar { 
           display: flex; 
           align-items: center; 
           background: #ffffff; 
-          padding: 1.5rem 2rem; 
+          padding: clamp(1rem, 4vw, 1.5rem) clamp(1.25rem, 5vw, 2rem); 
           border-radius: 6px; 
           border: 1px solid #e2e8f0;
-          margin-bottom: 2rem;
+          margin-bottom: clamp(1.5rem, 6vw, 2rem);
           box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
         }
         .tx-stat-item { flex: 1; display: flex; flex-direction: column; gap: 0.25rem; }
-        .tx-stat-label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; }
-        .tx-stat-value { font-size: 1.25rem; font-weight: 900; color: #0f172a; }
+        .tx-stat-label { font-size: clamp(0.6rem, 2.5vw, 0.7rem); font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; }
+        .tx-stat-value { font-size: clamp(1rem, 5vw, 1.25rem); font-weight: 900; color: #0f172a; }
         .tx-stat-divider { width: 1px; height: 40px; background: #f1f5f9; margin: 0 2rem; }
         .tx-form-container { margin-bottom: 2rem; }
         

@@ -35,14 +35,37 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="loading-placeholder">
-          <div className="spinner"></div>
-          <p>Analyzing financial data...</p>
+        <div className="dashboard-skeleton">
+          <div className="skeleton-grid">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="skeleton-card shim"></div>
+            ))}
+          </div>
+          <div className="skeleton-main shim"></div>
+          <div className="skeleton-table">
+            <div className="skeleton-header shim"></div>
+            {[1, 2, 3].map(i => (
+              <div key={i} className="skeleton-row shim"></div>
+            ))}
+          </div>
         </div>
         <style jsx>{`
-          .loading-placeholder { height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; color: #64748b; }
-          .spinner { width: 24px; height: 24px; border: 2px solid #f8fafc; border-top-color: #0f172a; border-radius: 50%; animation: spin 0.6s linear infinite; }
-          @keyframes spin { to { transform: rotate(360deg); } }
+          .dashboard-skeleton { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; padding: 1rem; }
+          .skeleton-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; }
+          .skeleton-card { height: 140px; border-radius: 6px; }
+          .skeleton-main { height: 300px; border-radius: 6px; }
+          .skeleton-table { display: flex; flex-direction: column; gap: 0.75rem; }
+          .skeleton-header { height: 40px; border-radius: 6px; }
+          .skeleton-row { height: 60px; border-radius: 6px; }
+          .shim {
+            background: linear-gradient(90deg, #f1f5f9 25%, #f8fafc 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+          }
+          @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+          }
         `}</style>
       </DashboardLayout>
     );

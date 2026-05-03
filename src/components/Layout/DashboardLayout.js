@@ -7,6 +7,8 @@ import {
   Shield, 
   LogOut, 
   ChevronRight,
+  FileCheck,
+  Users as UsersIcon,
   Settings as SettingsIcon,
   User as UserIcon
 } from 'lucide-react';
@@ -105,11 +107,11 @@ export default function DashboardLayout({ children }) {
   }
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: <Home size={20} />, href: '/dashboard', roles: ['admin', 'ceo', 'cfo', 'csuit', 'audit', 'accountant'] },
-    { id: 'transactions', label: 'Transactions', icon: <ArrowRightLeft size={20} />, href: '/transactions', roles: ['admin', 'ceo', 'cfo', 'csuit', 'audit', 'accountant'] },
-    { id: 'pending', label: 'Pending', icon: <Bell size={20} />, href: '/pending', roles: ['admin', 'ceo', 'cfo'], showBadge: true },
-    { id: 'users', label: 'Management', icon: <Shield size={20} />, href: '/users', roles: ['admin', 'ceo'] },
-    { id: 'settings', label: 'Settings', icon: <SettingsIcon size={20} />, href: '/settings', roles: ['admin', 'ceo', 'cfo', 'csuit', 'audit', 'accountant'] },
+    { id: 'dashboard', label: 'Dashboard', icon: <Home size={20} />, href: '/dashboard', roles: ['admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+    { id: 'transactions', label: 'Transactions', icon: <ArrowRightLeft size={20} />, href: '/transactions', roles: ['admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+    { id: 'pending', label: 'Pending', icon: <FileCheck size={20} />, href: '/pending', roles: ['admin', 'ceo', 'cfo'] },
+    { id: 'users', label: 'User Management', icon: <UsersIcon size={20} />, href: '/users', roles: ['admin'] },
+    { id: 'settings', label: 'Settings', icon: <SettingsIcon size={20} />, href: '/settings', roles: ['admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
   ];
 
   const getPageTitle = () => {
@@ -221,13 +223,22 @@ export default function DashboardLayout({ children }) {
             <h1>{getPageTitle()}</h1>
             <div className="current-user-badge">
               <span className={`role-tag role-${user.role?.toLowerCase()}`}>
-                {user.role?.toLowerCase() === 'csuit' ? 'Executive Board' : 
-                 user.role?.toLowerCase() === 'admin' ? 'Administrator' :
-                 user.role?.toLowerCase() === 'ceo' ? 'Chief Executive Officer' :
-                 user.role?.toLowerCase() === 'cfo' ? 'Chief Financial Officer' :
-                 user.role?.toLowerCase() === 'audit' ? 'Audit Officer' :
-                 user.role?.toLowerCase() === 'accountant' ? 'Accounts Manager' :
-                 user.role}
+                <span className="desktop-role">
+                  {user.role?.toLowerCase() === 'admin' ? 'Administrator' :
+                   user.role?.toLowerCase() === 'ceo' ? 'Chief Executive Officer' :
+                   user.role?.toLowerCase() === 'cfo' ? 'Chief Financial Officer' :
+                   user.role?.toLowerCase() === 'csuit' ? 'Executive Board' :
+                   user.role?.toLowerCase() === 'accountant' ? 'Accounts Manager' : 
+                   user.role}
+                </span>
+                <span className="mobile-role">
+                  {user.role?.toLowerCase() === 'admin' ? 'ADMIN' :
+                   user.role?.toLowerCase() === 'ceo' ? 'CEO' :
+                   user.role?.toLowerCase() === 'cfo' ? 'CFO' :
+                   user.role?.toLowerCase() === 'csuit' ? 'EXEC' :
+                   user.role?.toLowerCase() === 'accountant' ? 'ACC' : 
+                   user.role?.toUpperCase()}
+                </span>
               </span>
             </div>
           </div>
@@ -315,11 +326,12 @@ export default function DashboardLayout({ children }) {
         .breadcrumb .current { color: #0f172a; }
         .header-flex { display: flex; justify-content: space-between; align-items: center; }
         .header-flex h1 { font-size: 1.875rem; font-weight: 900; color: #0f172a; letter-spacing: -0.02em; }
-        .role-tag { padding: 0.4rem 0.875rem; border-radius: 6px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.025em; }
+        .role-tag { padding: 0.4rem 0.875rem; border-radius: 6px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.025em; margin-right: 0.5rem; }
         .role-admin { background: #0f172a; color: white; }
         .role-ceo { background: #0f172a; color: white; }
         .role-cfo { background: #0f172a; color: white; }
         .role-accountant { background: #f1f5f9; color: #475569; }
+        .mobile-role { display: none; }
 
         .loading-screen { height: 100vh; width: 100vw; display: flex; align-items: center; justify-content: center; background: #ffffff; }
         .spinner { width: 40px; height: 40px; border: 3px solid #f1f5f9; border-top-color: #0f172a; border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -327,18 +339,20 @@ export default function DashboardLayout({ children }) {
 
         @media (max-width: 1024px) {
           .sidebar { display: none; }
-          .main-content { margin-left: 0; padding: 6rem 1.5rem 7rem; }
-          .mobile-header { position: fixed; top: 0; left: 0; right: 0; height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem 0 1.25rem; z-index: 1000; border-bottom: 1px solid #f1f5f9; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
+          .main-content { margin-left: 0; padding: 6rem 5vw 7rem; }
+          .mobile-header { position: fixed; top: 0; left: 0; right: 0; height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 0 5vw 0 4vw; z-index: 1000; border-bottom: 1px solid #f1f5f9; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
           .mobile-header .logo-area { padding: 0; border: none; margin: 0; display: flex; flex-direction: row; align-items: center; justify-content: flex-start; }
           .mobile-header .logo-icon { width: 110px; transform: translateY(-1px); display: flex; align-items: center; justify-content: flex-start; }
           .mobile-header-right { display: flex; align-items: center; gap: 0.75rem; }
           .mobile-user-name { font-size: 0.8125rem; font-weight: 800; color: #0f172a; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
           .mobile-logout { background: transparent; border: none; color: #64748b; display: flex; align-items: center; justify-content: center; padding: 0.25rem; }
-          .mobile-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 75px; display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; z-index: 1000; border-top: 1px solid #f1f5f9; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+          .mobile-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 75px; display: flex; align-items: center; justify-content: space-between; padding: 0 5vw; z-index: 1000; border-top: 1px solid #f1f5f9; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
           :global(.mob-nav-item) { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; color: #94a3b8; font-weight: 700; font-size: 0.65rem; text-transform: uppercase; text-decoration: none; min-width: 60px; }
           :global(.mob-nav-item.active) { color: #0f172a; }
           .mobile-logout { background: transparent; border: none; color: #64748b; }
-          .header-flex h1 { font-size: 1.5rem; }
+          .header-flex h1 { font-size: clamp(1.25rem, 5vw, 1.5rem); }
+          .desktop-role { display: none; }
+          .mobile-role { display: inline; }
         }
       `}</style>
     </div>

@@ -63,7 +63,6 @@ export async function POST(req) {
                   role === 'ceo' ? 'Chief Executive Officer' :
                   role === 'cfo' ? 'Chief Financial Officer' :
                   role === 'csuit' ? 'Executive Board' :
-                  role === 'audit' ? 'Audit Officer' :
                   role === 'accountant' ? 'Accounts Manager' :
                   role === 'admin' ? 'Administrator' : role
                 }</strong>.
