@@ -24,47 +24,106 @@ export default function TransactionHistory({ transactions, onUpdate }) {
 
   const generatePDF = (type) => {
     setShowDownloadMenu(false);
-    const doc = new jsPDF();
+    const doc = new jsPDF({ orientation: 'portrait' });
     const pageWidth = doc.internal.pageSize.getWidth();
 
-    // 1. Simple Header
+    // 1. Header (Black & White compatible)
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(22);
-    doc.setTextColor(15, 23, 42);
-    doc.text("Arionys Finance", 15, 20);
+    doc.setFontSize(20);
+    doc.setTextColor(0, 0, 0); // Pure black
+    doc.text("Arionys Ltd.", 15, 20);
     
-    doc.setFontSize(14);
-    doc.setTextColor(100);
+    doc.setFontSize(12);
+    doc.setTextColor(40); // Dark gray
     const title = type === 'all' ? 'General Financial Statement' : `${type.charAt(0).toUpperCase() + type.slice(1)} Statement`;
-    doc.text(title, 15, 30);
+    doc.text(title, 15, 28);
     
-    doc.setFontSize(9);
-    doc.setTextColor(150);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 15, 38);
-    doc.text(`Report Scope: ${type.toUpperCase()}`, 15, 43);
+    doc.setFontSize(8);
+    doc.setTextColor(80); // Medium gray
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 15, 36);
+    doc.text(`Report Scope: ${type.toUpperCase()}`, 15, 41);
 
     // 2. Table Data
-    const txToExport = type === 'all' 
-      ? transactions 
-      : transactions.filter(t => t.type === type);
+    let txToExport;
+    if (type === 'rejected') {
+      txToExport = transactions.filter(t => t.status === 'rejected');
+    } else if (type === 'all') {
+      txToExport = transactions.filter(t => t.status !== 'rejected');
+    } else {
+      txToExport = transactions.filter(t => t.type === type && t.status !== 'rejected');
+    }
 
     const tableData = txToExport.map(tx => [
       new Date(tx.date).toLocaleDateString(),
       tx.description,
-      tx.performedBy,
       tx.type.toUpperCase(),
-      `BDT ${tx.amount.toLocaleString()}`
+      `BDT ${tx.amount.toLocaleString()}`,
+      tx.performedBy || 'N/A',
+      tx.createdBy?.name || 'System',
+      tx.approvedBy?.name || '—'
     ]);
 
     autoTable(doc, {
-      startY: 50,
-      head: [['Date', 'Description', 'Performed By', 'Type', 'Amount']],
+      startY: 48,
+      head: [['Date', 'Description', 'Type', 'Amount', 'By', 'Rec.', 'Appr.']],
       body: tableData,
-      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
+      headStyles: { 
+        fillColor: [0, 0, 0], // Pure black background
+        textColor: [255, 255, 255], // White text
+        fontStyle: 'bold',
+        fontSize: 7
+      },
+      alternateRowStyles: { fillColor: [245, 245, 245] }, // Very light gray
       margin: { left: 15, right: 15 },
-      styles: { fontSize: 9, cellPadding: 4 }
+      styles: { 
+        fontSize: 7, 
+        cellPadding: 2, 
+        overflow: 'linebreak',
+        textColor: [0, 0, 0], // Black text
+        lineColor: [200, 200, 200], // Light gray borders
+        lineWidth: 0.1
+      },
+      columnStyles: {
+        0: { cellWidth: 18 },   // Date
+        1: { cellWidth: 43 },   // Description (wide)
+        2: { cellWidth: 22 },   // Type
+        3: { cellWidth: 25 },   // Amount
+        4: { cellWidth: 24 },   // By (Performed By)
+        5: { cellWidth: 24 },   // Rec. (Recorded By)
+        6: { cellWidth: 24 },   // Appr. (Approved By)
+      }
     });
+
+    // 3. Financial Summary (B&W compatible)
+    const finalY = doc.lastAutoTable.finalY || 50;
+    const totalRevenue = txToExport.filter(t => t.type === 'revenue').reduce((acc, t) => acc + t.amount, 0);
+    const totalInvestment = txToExport.filter(t => t.type === 'investment').reduce((acc, t) => acc + t.amount, 0);
+    const totalExpense = txToExport.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+    const balance = (totalInvestment + totalRevenue) - totalExpense;
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 0, 0);
+    doc.text("Financial Summary", 15, finalY + 15);
+
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    
+    doc.text(`Total Investment:`, 15, finalY + 22);
+    doc.text(`BDT ${totalInvestment.toLocaleString()}`, 60, finalY + 22, { align: 'right' });
+
+    doc.text(`Total Revenue:`, 15, finalY + 27);
+    doc.text(`BDT ${totalRevenue.toLocaleString()}`, 60, finalY + 27, { align: 'right' });
+
+    doc.text(`Total Expense:`, 15, finalY + 32);
+    doc.text(`BDT ${totalExpense.toLocaleString()}`, 60, finalY + 32, { align: 'right' });
+
+    doc.setLineWidth(0.2);
+    doc.line(15, finalY + 34, 60, finalY + 34); // Separator line
+
+    doc.setFont("helvetica", "bold");
+    doc.text(`Net Balance:`, 15, finalY + 39);
+    doc.text(`BDT ${balance.toLocaleString()}`, 60, finalY + 39, { align: 'right' });
 
     doc.save(`${type}_statement_${new Date().toISOString().split('T')[0]}.pdf`);
   };
@@ -83,7 +142,7 @@ export default function TransactionHistory({ transactions, onUpdate }) {
     ? (filterType === 'rejected' 
         ? transactions.filter(tx => tx.status === 'rejected')
         : transactions.filter(tx => tx.type === filterType && tx.status === 'approved'))
-    : transactions;
+    : transactions.filter(tx => tx.status !== 'rejected');
 
   return (
     <div className="card" ref={filterRef}>
@@ -145,6 +204,8 @@ export default function TransactionHistory({ transactions, onUpdate }) {
                 <button onClick={() => generatePDF('revenue')}>Revenue Statement</button>
                 <button onClick={() => generatePDF('investment')}>Investment Statement</button>
                 <button onClick={() => generatePDF('expense')}>Expenses Statement</button>
+                <div className="menu-divider" />
+                <button onClick={() => generatePDF('rejected')} className="text-danger">Rejected Items</button>
               </div>
             )}
           </div>
@@ -170,9 +231,6 @@ export default function TransactionHistory({ transactions, onUpdate }) {
                 <td>
                   <div className="tx-desc-cell">
                     <span className="tx-main-desc">{tx.description}</span>
-                    <div className="tx-performed-badge">
-                      <span>{tx.performedBy}</span>
-                    </div>
                   </div>
                 </td>
                 <td>
@@ -188,8 +246,15 @@ export default function TransactionHistory({ transactions, onUpdate }) {
                   <span className="value">{tx.amount.toLocaleString()}</span>
                 </td>
                 <td>
-                  <div className="creator-badge">
-                    <span>{tx.createdBy?.name || 'System'}</span>
+                  <div className="audit-stack">
+                    <div className="audit-line">
+                      <span className="audit-label">Perf:</span>
+                      <span className="audit-name">{tx.performedBy || 'N/A'}</span>
+                    </div>
+                    <div className="audit-line">
+                      <span className="audit-label">Rec:</span>
+                      <span className="audit-name">{tx.createdBy?.name || 'System'}</span>
+                    </div>
                   </div>
                 </td>
                 <td>
@@ -352,7 +417,7 @@ export default function TransactionHistory({ transactions, onUpdate }) {
         .date-cell { font-weight: 600; color: #64748b; font-size: 0.8125rem; }
 
         .tx-desc-cell { display: flex; flex-direction: column; gap: 0.3rem; }
-        .tx-main-desc { font-weight: 700; color: #0f172a; font-size: 0.9375rem; }
+        .tx-main-desc { font-weight: 700; color: #0f172a; font-size: 0.9375rem; word-break: break-word; max-width: 400px; line-height: 1.4; }
         .tx-performed-badge { 
           display: flex; 
           align-items: center; 
@@ -383,8 +448,8 @@ export default function TransactionHistory({ transactions, onUpdate }) {
         .type-revenue { background: #f0fdf4; border-color: #dcfce7; color: #15803d; }
         .type-expense { background: #fef2f2; border-color: #fee2e2; color: #b91c1c; }
 
-        .amount-cell-premium { font-weight: 800; color: #0f172a; display: flex; align-items: baseline; gap: 0.25rem; }
-        .amount-cell-premium .currency { font-size: 0.7rem; color: #64748b; }
+        .amount-cell-premium { font-weight: 800; color: #0f172a; white-space: nowrap; }
+        .amount-cell-premium .currency { font-size: 0.7rem; color: #64748b; margin-right: 0.25rem; }
         .amount-cell-premium .value { font-size: 1rem; }
 
         .creator-badge { display: flex; align-items: center; gap: 0.625rem; }
@@ -418,6 +483,11 @@ export default function TransactionHistory({ transactions, onUpdate }) {
         .status-chip.rejected { color: #ef4444; border-color: #fee2e2; background: #fef2f2; }
         
         .status-cell { display: flex; flex-direction: column; gap: 0.25rem; }
+        .audit-stack { display: flex; flex-direction: column; gap: 0.25rem; }
+        .audit-line { display: flex; align-items: baseline; gap: 0.4rem; white-space: nowrap; }
+        .audit-label { font-size: 0.65rem; color: #94a3b8; font-weight: 800; letter-spacing: 0.02em; min-width: 32px; }
+        .audit-name { font-size: 0.8125rem; font-weight: 700; color: #0f172a; }
+        
         .verifier-name { font-size: 0.65rem; color: #94a3b8; font-weight: 600; padding-left: 2px; }
         .status-stack { display: flex; flex-direction: column; align-items: flex-end; gap: 0.2rem; }
         .m-verifier { font-size: 0.6rem; color: #94a3b8; font-weight: 600; }
@@ -478,9 +548,11 @@ export default function TransactionHistory({ transactions, onUpdate }) {
           padding: 0.5rem;
         }
         .download-menu button {
-          padding: 0.75rem 1rem;
+          display: block;
+          width: 100%;
           text-align: left;
-          background: transparent;
+          padding: 0.75rem 1rem;
+          background: none;
           border: none;
           font-size: 0.8125rem;
           font-weight: 700;
@@ -490,6 +562,9 @@ export default function TransactionHistory({ transactions, onUpdate }) {
           border-radius: 6px;
         }
         .download-menu button:hover { background: #f8fafc; padding-left: 1.25rem; }
+        .download-menu .menu-divider { height: 1px; background: #f1f5f9; margin: 4px 0; }
+        .download-menu .text-danger { color: #ef4444; }
+        .download-menu .text-danger:hover { background: #fef2f2; color: #b91c1c; }
 
         .premium-empty-state { 
           text-align: center; 

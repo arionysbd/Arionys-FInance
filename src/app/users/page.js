@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { Shield, User as UserIcon, Mail, ShieldCheck, Briefcase, Calculator, Eye, UserCog, MoreVertical, ChevronDown, Check, CheckCircle, XCircle, Trash2 } from 'lucide-react';
+import { Shield, User as UserIcon, Mail, ShieldCheck, Briefcase, Calculator, Eye, UserCog, MoreVertical, ChevronDown, Check, CheckCircle, XCircle, Trash2, UserPlus, X } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
@@ -13,6 +13,11 @@ export default function UserManagement() {
   // Custom Select State
   const [openUserSelect, setOpenUserSelect] = useState(null); // stores userId
   const selectRef = useRef(null);
+
+  // Create User Modal
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createForm, setCreateForm] = useState({ name: '', email: '', role: 'accountant' });
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -89,6 +94,25 @@ export default function UserManagement() {
 
   const getRoleInfo = (role) => roleOptions.find(o => o.value === role?.toLowerCase()) || roleOptions[0];
 
+  const createUser = async (e) => {
+    e.preventDefault();
+    setCreating(true);
+    try {
+      await axios.post('/api/users/invite', {
+        ...createForm,
+        adminId: currentUser._id
+      });
+      setShowCreateModal(false);
+      setCreateForm({ name: '', email: '', role: 'accountant' });
+      fetchUsers();
+      alert('Invitation sent! The user will receive a confirmation email.');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to create user');
+    } finally {
+      setCreating(false);
+    }
+  };
+
   if (loading || !currentUser) return (
     <DashboardLayout>
       <div className="loading-state">
@@ -102,6 +126,15 @@ export default function UserManagement() {
     <DashboardLayout>
       <div className="users-container animate-fade-in" ref={selectRef}>
 
+        {/* Header with Create User button */}
+        {currentUser.role === 'admin' && (
+          <div className="page-actions">
+            <button className="btn-create-user" onClick={() => setShowCreateModal(true)}>
+              <UserPlus size={16} />
+              <span>Create User</span>
+            </button>
+          </div>
+        )}
 
       <div className="table-card">
         {/* Desktop View */}
@@ -132,14 +165,14 @@ export default function UserManagement() {
                     {/* Custom Role Dropdown */}
                     <div className="role-dropdown-container">
                       <div 
-                        className={`role-trigger ${openUserSelect === u._id ? 'active' : ''} ${u._id === currentUser._id ? 'disabled' : ''}`}
-                        onClick={() => u._id !== currentUser._id && setOpenUserSelect(openUserSelect === u._id ? null : u._id)}
+                        className={`role-trigger ${openUserSelect === u._id ? 'active' : ''} ${(u._id === currentUser._id || u.role === 'admin') ? 'disabled' : ''}`}
+                        onClick={() => (u._id !== currentUser._id && u.role !== 'admin') && setOpenUserSelect(openUserSelect === u._id ? null : u._id)}
                       >
                         <div className="trigger-inner">
                           {getRoleInfo(u.role).icon}
                           <span>{getRoleInfo(u.role).label}</span>
                         </div>
-                        {u._id !== currentUser._id && <ChevronDown size={14} className={`arrow ${openUserSelect === u._id ? 'rotate' : ''}`} />}
+                        {(u._id !== currentUser._id && u.role !== 'admin') && <ChevronDown size={14} className={`arrow ${openUserSelect === u._id ? 'rotate' : ''}`} />}
                       </div>
 
                       {openUserSelect === u._id && (
@@ -222,14 +255,14 @@ export default function UserManagement() {
                 <div className="m-role-section">
                   <div className="role-dropdown-container">
                     <div 
-                      className={`role-trigger ${openUserSelect === u._id ? 'active' : ''} ${u._id === currentUser._id ? 'disabled' : ''}`}
-                      onClick={() => u._id !== currentUser._id && setOpenUserSelect(openUserSelect === u._id ? null : u._id)}
+                      className={`role-trigger ${openUserSelect === u._id ? 'active' : ''} ${(u._id === currentUser._id || u.role === 'admin') ? 'disabled' : ''}`}
+                      onClick={() => (u._id !== currentUser._id && u.role !== 'admin') && setOpenUserSelect(openUserSelect === u._id ? null : u._id)}
                     >
                       <div className="trigger-inner">
                         {getRoleInfo(u.role).icon}
                         <span>{getRoleInfo(u.role).label}</span>
                       </div>
-                      {u._id !== currentUser._id && <ChevronDown size={14} className={`arrow ${openUserSelect === u._id ? 'rotate' : ''}`} />}
+                      {(u._id !== currentUser._id && u.role !== 'admin') && <ChevronDown size={14} className={`arrow ${openUserSelect === u._id ? 'rotate' : ''}`} />}
                     </div>
 
                     {openUserSelect === u._id && (
@@ -269,8 +302,98 @@ export default function UserManagement() {
         </div>
       </div>
 
+        {/* Create User Modal */}
+        {showCreateModal && (
+          <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
+            <div className="modal-card animate-pop-in" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <div>
+                  <h3>Invite New User</h3>
+                  <p>A confirmation email will be sent to the user.</p>
+                </div>
+                <button className="modal-close" onClick={() => setShowCreateModal(false)}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={createUser} className="modal-form">
+                <div className="modal-field">
+                  <label>Full Name</label>
+                  <div className="modal-input-wrap">
+                    <UserIcon size={16} />
+                    <input
+                      type="text"
+                      placeholder="John Doe"
+                      value={createForm.name}
+                      onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="modal-field">
+                  <label>Email Address</label>
+                  <div className="modal-input-wrap">
+                    <Mail size={16} />
+                    <input
+                      type="email"
+                      placeholder="user@arionys.com"
+                      value={createForm.email}
+                      onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="modal-field">
+                  <label>Assign Role</label>
+                  <div className="modal-input-wrap">
+                    <Shield size={16} />
+                    <select
+                      value={createForm.role}
+                      onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
+                    >
+                      {roleOptions.filter(o => o.value !== 'admin').map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <button type="submit" className="btn-send-invite" disabled={creating}>
+                  {creating ? 'Sending...' : 'Send Invitation'}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
       <style jsx>{`
         .users-container { max-width: 1200px; margin: 0 auto; }
+
+        .page-actions {
+          display: flex;
+          justify-content: flex-end;
+          margin-bottom: 1.25rem;
+        }
+        .btn-create-user {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.625rem 1.25rem;
+          background: #0f172a;
+          color: #ffffff;
+          border: none;
+          border-radius: 6px;
+          font-size: 0.8125rem;
+          font-weight: 800;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .btn-create-user:hover {
+          background: #1e293b;
+          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+        }
         
         .system-header { margin-bottom: 2.5rem; padding: 0 0.5rem; }
         .title-area { display: flex; align-items: flex-start; gap: 1rem; }
@@ -520,6 +643,128 @@ export default function UserManagement() {
         @keyframes popIn {
           from { opacity: 0; transform: scale(0.95) translateY(-10px); }
           to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(15, 23, 42, 0.4);
+          backdrop-filter: blur(4px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 2000;
+          padding: 20px;
+        }
+        .modal-card {
+          background: #ffffff;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+          width: 100%;
+          max-width: 440px;
+          box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.15);
+        }
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          padding: 1.5rem 1.75rem;
+          border-bottom: 1px solid #f1f5f9;
+        }
+        .modal-header h3 {
+          font-size: 1.125rem;
+          font-weight: 800;
+          color: #0f172a;
+          margin: 0 0 0.25rem;
+        }
+        .modal-header p {
+          font-size: 0.8125rem;
+          color: #64748b;
+          margin: 0;
+        }
+        .modal-close {
+          background: none;
+          border: none;
+          color: #94a3b8;
+          cursor: pointer;
+          padding: 4px;
+          border-radius: 4px;
+          transition: all 0.15s;
+        }
+        .modal-close:hover {
+          color: #0f172a;
+          background: #f1f5f9;
+        }
+        .modal-form {
+          padding: 1.5rem 1.75rem;
+          display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
+        }
+        .modal-field label {
+          display: block;
+          margin-bottom: 0.5rem;
+          font-size: 0.7rem;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: #64748b;
+        }
+        .modal-input-wrap {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+        .modal-input-wrap :global(svg) {
+          position: absolute;
+          left: 14px;
+          color: #94a3b8;
+          pointer-events: none;
+        }
+        .modal-input-wrap input,
+        .modal-input-wrap select {
+          width: 100%;
+          padding: 0.75rem 1rem 0.75rem 2.75rem;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          font-size: 0.875rem;
+          color: #0f172a;
+          transition: all 0.2s;
+          font-weight: 600;
+          -webkit-appearance: none;
+        }
+        .modal-input-wrap input:focus,
+        .modal-input-wrap select:focus {
+          background: white;
+          border-color: #0f172a;
+          box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.05);
+          outline: none;
+        }
+        .btn-send-invite {
+          width: 100%;
+          padding: 0.875rem;
+          background: #0f172a;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          font-size: 0.875rem;
+          font-weight: 800;
+          cursor: pointer;
+          transition: all 0.2s;
+          margin-top: 0.5rem;
+        }
+        .btn-send-invite:hover:not(:disabled) {
+          background: #1e293b;
+          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+        }
+        .btn-send-invite:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
       `}</style>
     </div>

@@ -220,7 +220,15 @@ export default function DashboardLayout({ children }) {
           <div className="header-flex">
             <h1>{getPageTitle()}</h1>
             <div className="current-user-badge">
-              <span className={`role-tag role-${user.role?.toLowerCase()}`}>{user.role}</span>
+              <span className={`role-tag role-${user.role?.toLowerCase()}`}>
+                {user.role?.toLowerCase() === 'csuit' ? 'Executive Board' : 
+                 user.role?.toLowerCase() === 'admin' ? 'Administrator' :
+                 user.role?.toLowerCase() === 'ceo' ? 'Chief Executive Officer' :
+                 user.role?.toLowerCase() === 'cfo' ? 'Chief Financial Officer' :
+                 user.role?.toLowerCase() === 'audit' ? 'Audit Officer' :
+                 user.role?.toLowerCase() === 'accountant' ? 'Accounts Manager' :
+                 user.role}
+              </span>
             </div>
           </div>
         </header>

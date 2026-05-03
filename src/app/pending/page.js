@@ -93,7 +93,6 @@ export default function PendingTransactions() {
                       </td>
                       <td>
                         <p className="tx-desc">{tx.description}</p>
-                        <span className="performed-by">Actor: {tx.performedBy}</span>
                       </td>
                       <td>
                         <div className={`type-pill-minimal type-${tx.type}`}>
@@ -234,7 +233,7 @@ export default function PendingTransactions() {
         .origin-cell .author { display: block; font-size: 0.875rem; font-weight: 700; color: #0f172a; }
         .origin-cell .date { font-size: 0.75rem; color: #64748b; display: flex; align-items: center; gap: 0.3rem; }
 
-        .tx-desc { font-size: 0.9375rem; font-weight: 600; color: #0f172a; margin-bottom: 0.125rem; }
+        .tx-desc { font-size: 0.9375rem; font-weight: 600; color: #0f172a; margin-bottom: 0.125rem; word-break: break-word; max-width: 400px; line-height: 1.4; }
         .performed-by { font-size: 0.75rem; color: #64748b; }
 
         .type-pill-minimal { 

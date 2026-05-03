@@ -47,15 +47,15 @@ export async function POST(req) {
       status: 'pending' // Force pending on creation
     });
 
-    // Notify Admins
+    // Notify CFOs
     try {
-      const admins = await User.find({ role: 'admin' });
+      const cfos = await User.find({ role: 'cfo' });
       const creator = await User.findById(userId);
       
-      for (const admin of admins) {
+      for (const cfo of cfos) {
         await sendEmail({
-          to: admin.email,
-          subject: 'New Transaction Pending Approval',
+          to: cfo.email,
+          subject: 'Action Required: New Transaction Pending Approval',
           text: `A new ${type} of BDT ${amount} was recorded by ${creator.name}. Description: ${description}`,
           html: `
             <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 6px;">

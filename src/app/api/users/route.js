@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
+import { sendEmail } from '@/lib/mail';
 
 export async function GET() {
   try {
@@ -28,9 +29,49 @@ export async function PATCH(req) {
     }
 
     if (role) user.role = role.toLowerCase();
+    
+    // Check if user is being approved
+    const isBeingApproved = isActive === true && user.isActive === false;
+    
     if (isActive !== undefined) user.isActive = isActive;
     
     await user.save();
+
+    if (isBeingApproved) {
+      try {
+        const roleLabelMap = {
+          admin: 'Administrator',
+          ceo: 'Chief Executive Officer',
+          cfo: 'Chief Financial Officer',
+          csuit: 'Executive Board',
+          audit: 'Audit Officer',
+          accountant: 'Accounts Manager',
+        };
+        const roleLabel = roleLabelMap[user.role?.toLowerCase()] || user.role;
+
+        await sendEmail({
+          to: user.email,
+          subject: 'Your Arionys Finance Account is Approved',
+          text: `Hello ${user.name},\n\nYour account has been approved by an administrator. You can now log in and access the dashboard. Your role: ${roleLabel}.`,
+          html: `
+            <div style="font-family: sans-serif; padding: 20px;">
+              <h2 style="color: #10b981;">Account Approved</h2>
+              <p>Hello <strong>${user.name}</strong>,</p>
+              <p>Great news! Your account has been approved by an administrator.</p>
+              <p>You now have full access to the Arionys Finance platform with the role of <strong>${roleLabel}</strong>.</p>
+              <div style="margin-top: 30px;">
+                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login" 
+                   style="background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                  Log In Now
+                </a>
+              </div>
+            </div>
+          `
+        });
+      } catch (mailError) {
+        console.error('Failed to send approval notification:', mailError);
+      }
+    }
 
     return NextResponse.json({ success: true, data: user });
   } catch (error) {

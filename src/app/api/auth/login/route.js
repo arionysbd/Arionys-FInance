@@ -9,7 +9,13 @@ export async function POST(req) {
     const { email, password } = await req.json();
 
     const user = await User.findOne({ email });
-    if (user && (await user.matchPassword(password))) {
+
+    // Block users who haven't confirmed their invitation yet
+    if (user && user.inviteToken) {
+      return NextResponse.json({ success: false, message: 'Please confirm your invitation email first.' }, { status: 401 });
+    }
+
+    if (user && user.password && (await user.matchPassword(password))) {
       const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
       
       return NextResponse.json({
