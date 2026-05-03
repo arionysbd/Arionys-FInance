@@ -1,6 +1,7 @@
 'use client';
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import axios from 'axios';
 
 const AuthContext = createContext();
 
@@ -11,11 +12,31 @@ export function AuthProvider({ children }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('arionys_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    setLoading(false);
+    const initSession = async () => {
+      const savedUser = localStorage.getItem('arionys_user');
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        // Set stale data immediately so the page can render
+        setUser(parsed);
+        // Then refresh from DB to pick up any role/status changes
+        try {
+          const { data } = await axios.get('/api/users/me', {
+            headers: { Authorization: `Bearer ${parsed.token}` }
+          });
+          if (data.success) {
+            const freshUser = { ...parsed, ...data.data };
+            setUser(freshUser);
+            localStorage.setItem('arionys_user', JSON.stringify(freshUser));
+          }
+        } catch {
+          // Token expired or invalid — force logout
+          localStorage.removeItem('arionys_user');
+          setUser(null);
+        }
+      }
+      setLoading(false);
+    };
+    initSession();
   }, []);
 
   useEffect(() => {

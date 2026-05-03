@@ -29,7 +29,7 @@ export default function Dashboard({ stats, recentTransactions, user }) {
         label: 'Amount (BDT)',
         data: [stats.totalRevenue, stats.totalExpense, stats.totalInvestment],
         backgroundColor: ['#10b981', '#ef4444', '#2563eb'],
-        borderRadius: 8,
+        borderRadius: 6,
         barThickness: 40,
       },
     ],
@@ -45,7 +45,7 @@ export default function Dashboard({ stats, recentTransactions, user }) {
         padding: 12,
         titleFont: { size: 14, weight: 'bold' },
         bodyFont: { size: 13 },
-        cornerRadius: 8,
+        cornerRadius: 6,
       }
     },
     scales: {
@@ -171,7 +171,7 @@ export default function Dashboard({ stats, recentTransactions, user }) {
         .stat-icon-bg {
           width: 48px;
           height: 48px;
-          border-radius: 12px;
+          border-radius: 6px;
           display: flex;
           align-items: center;
           justify-content: center;

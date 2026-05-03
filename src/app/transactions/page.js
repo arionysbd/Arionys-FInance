@@ -82,7 +82,7 @@ export default function TransactionsPage() {
           align-items: center; 
           background: #ffffff; 
           padding: 1.5rem 2rem; 
-          border-radius: 12px; 
+          border-radius: 6px; 
           border: 1px solid #e2e8f0;
           margin-bottom: 2rem;
           box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);

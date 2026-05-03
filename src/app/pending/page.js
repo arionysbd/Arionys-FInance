@@ -60,15 +60,7 @@ export default function PendingTransactions() {
   return (
     <DashboardLayout>
       <div className="pending-container animate-fade-in">
-        <div className="queue-header">
-          <div className="title-area">
-            <Clock size={24} className="icon-slate" />
-            <div className="text">
-              <h2>Approval Queue</h2>
-              <p>Verification required for {pendingTx.length} incoming financial records.</p>
-            </div>
-          </div>
-        </div>
+
 
         <div className="queue-card">
           {pendingTx.length > 0 ? (
@@ -201,7 +193,7 @@ export default function PendingTransactions() {
 
         .queue-card { 
           background: #ffffff; 
-          border-radius: 12px; 
+          border-radius: 6px; 
           border: 1px solid #e2e8f0;
           overflow: hidden;
           box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
@@ -232,7 +224,7 @@ export default function PendingTransactions() {
           height: 32px; 
           background: #0f172a; 
           color: white; 
-          border-radius: 8px; 
+          border-radius: 6px; 
           display: flex; 
           align-items: center; 
           justify-content: center; 
@@ -268,7 +260,7 @@ export default function PendingTransactions() {
         .action-btn { 
           width: 36px; 
           height: 36px; 
-          border-radius: 8px; 
+          border-radius: 6px; 
           display: flex; 
           align-items: center; 
           justify-content: center; 
@@ -304,12 +296,12 @@ export default function PendingTransactions() {
         .m-label-dim { color: #94a3b8; font-weight: 600; font-size: 0.875rem; margin-right: 0.25rem; }
         .m-actor { font-size: 0.8125rem; color: #64748b; margin-bottom: 0.5rem; }
         .m-originator { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; font-size: 0.75rem; color: #94a3b8; font-weight: 600; }
-        .m-mini-avatar { width: 20px; height: 20px; background: #f1f5f9; color: #0f172a; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 800; border: 1px solid #e2e8f0; }
+        .m-mini-avatar { width: 20px; height: 20px; background: #f1f5f9; color: #0f172a; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 800; border: 1px solid #e2e8f0; }
         .m-financials { margin-bottom: 1.25rem; }
         .m-currency { font-size: 0.75rem; font-weight: 700; color: #64748b; margin-right: 0.25rem; }
         .m-amount { font-size: 1.25rem; font-weight: 900; color: #0f172a; }
         .m-actions { display: grid; grid-template-columns: 1fr 2fr; gap: 0.75rem; }
-        .m-btn { padding: 0.75rem; border-radius: 8px; font-size: 0.8125rem; font-weight: 800; border: none; cursor: pointer; }
+        .m-btn { padding: 0.75rem; border-radius: 6px; font-size: 0.8125rem; font-weight: 800; border: none; cursor: pointer; }
         .m-approve { background: #0f172a; color: white; }
         .m-reject { background: #f8fafc; color: #ef4444; border: 1px solid #e2e8f0; }
 

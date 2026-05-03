@@ -5,15 +5,21 @@ import User from '@/models/User';
 export async function PUT(req) {
   try {
     await dbConnect();
-    const { userId, name, email, phone, position } = await req.json();
+    const { userId, name, email, phone, position, password } = await req.json();
 
-    if (!userId) {
-      return NextResponse.json({ success: false, message: 'User ID is required' }, { status: 400 });
+    if (!userId || !password) {
+      return NextResponse.json({ success: false, message: 'User ID and password are required' }, { status: 400 });
     }
 
     const user = await User.findById(userId);
     if (!user) {
       return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+    }
+
+    // Verify password
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) {
+      return NextResponse.json({ success: false, message: 'Incorrect password' }, { status: 401 });
     }
 
     // Check if email is being changed and if it's already taken

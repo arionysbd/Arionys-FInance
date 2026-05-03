@@ -11,7 +11,9 @@ import {
   Key,
   Lock,
   RefreshCw,
-  Send
+  Send,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
@@ -25,7 +27,8 @@ export default function SettingsPage() {
     name: '',
     email: '',
     phone: '',
-    position: ''
+    position: '',
+    password: ''
   });
   
   // Password Form State
@@ -42,14 +45,21 @@ export default function SettingsPage() {
   const [status, setStatus] = useState({ type: '', message: '' });
   const [passStatus, setPassStatus] = useState({ type: '', message: '' });
 
+  // Visibility States
+  const [showIdentityPass, setShowIdentityPass] = useState(false);
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+
   useEffect(() => {
     if (user) {
-      setFormData({
+      setFormData(prev => ({
+        ...prev,
         name: user.name || '',
         email: user.email || '',
         phone: user.phone || '',
         position: user.position || ''
-      });
+      }));
     }
   }, [user]);
 
@@ -66,6 +76,7 @@ export default function SettingsPage() {
 
       if (data.success) {
         updateUser(data.user);
+        setFormData(prev => ({ ...prev, password: '' }));
         setStatus({ type: 'success', message: 'Profile updated successfully!' });
         setTimeout(() => setStatus({ type: '', message: '' }), 5000);
       }
@@ -196,6 +207,28 @@ export default function SettingsPage() {
                     />
                   </div>
                 </div>
+
+                <div className="input-field full-width highlight">
+                  <label>Confirm Identity (Enter Password to Save Changes)</label>
+                  <div className="input-control">
+                    <Lock size={18} className="icon" />
+                    <input 
+                      type={showIdentityPass ? "text" : "password"} 
+                      value={formData.password}
+                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                      placeholder="Enter your current password"
+                      required
+                    />
+                    <button 
+                      type="button" 
+                      className="visibility-toggle" 
+                      onClick={() => setShowIdentityPass(!showIdentityPass)}
+                      title={showIdentityPass ? "Hide password" : "Show password"}
+                    >
+                      {showIdentityPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {status.message && (
@@ -240,12 +273,20 @@ export default function SettingsPage() {
                   <div className="input-control">
                     <Key size={18} className="icon" />
                     <input 
-                      type="password" 
+                      type={showCurrentPass ? "text" : "password"} 
                       value={passwords.current}
                       onChange={(e) => setPasswords({...passwords, current: e.target.value})}
                       placeholder="Enter current password"
                       required
                     />
+                    <button 
+                      type="button" 
+                      className="visibility-toggle" 
+                      onClick={() => setShowCurrentPass(!showCurrentPass)}
+                      title={showCurrentPass ? "Hide password" : "Show password"}
+                    >
+                      {showCurrentPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
                   </div>
                 </div>
 
@@ -254,12 +295,20 @@ export default function SettingsPage() {
                   <div className="input-control">
                     <Lock size={18} className="icon" />
                     <input 
-                      type="password" 
+                      type={showNewPass ? "text" : "password"} 
                       value={passwords.new}
                       onChange={(e) => setPasswords({...passwords, new: e.target.value})}
                       placeholder="Min. 8 characters"
                       required
                     />
+                    <button 
+                      type="button" 
+                      className="visibility-toggle" 
+                      onClick={() => setShowNewPass(!showNewPass)}
+                      title={showNewPass ? "Hide password" : "Show password"}
+                    >
+                      {showNewPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
                   </div>
                 </div>
 
@@ -268,12 +317,20 @@ export default function SettingsPage() {
                   <div className="input-control">
                     <Lock size={18} className="icon" />
                     <input 
-                      type="password" 
+                      type={showConfirmPass ? "text" : "password"} 
                       value={passwords.confirm}
                       onChange={(e) => setPasswords({...passwords, confirm: e.target.value})}
                       placeholder="Repeat new password"
                       required
                     />
+                    <button 
+                      type="button" 
+                      className="visibility-toggle" 
+                      onClick={() => setShowConfirmPass(!showConfirmPass)}
+                      title={showConfirmPass ? "Hide password" : "Show password"}
+                    >
+                      {showConfirmPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -301,7 +358,7 @@ export default function SettingsPage() {
         
         .settings-content { width: 100%; }
         
-        .settings-card { background: white; border: 1px solid #e2e8f0; border-radius: 20px; padding: 2.5rem; }
+        .settings-card { background: white; border: 1px solid #e2e8f0; border-radius: 6px; padding: 2.5rem; }
         .card-header { margin-bottom: 2.5rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 1.5rem; }
         .flex-header { display: flex; justify-content: space-between; align-items: flex-start; }
         .card-header h3 { font-size: 1.25rem; font-weight: 800; color: #0f172a; margin-bottom: 0.5rem; }
@@ -315,7 +372,7 @@ export default function SettingsPage() {
           color: #0f172a;
           border: none;
           padding: 0.6rem 1rem;
-          border-radius: 8px;
+          border-radius: 6px;
           font-size: 0.75rem;
           font-weight: 800;
           cursor: pointer;
@@ -336,7 +393,7 @@ export default function SettingsPage() {
           padding: 1rem 1.25rem;
           background: #f8fafc;
           border: 1px solid #e2e8f0;
-          border-radius: 12px;
+          border-radius: 6px;
           font-size: 0.9375rem;
           font-weight: 600;
           color: #0f172a;
@@ -344,7 +401,7 @@ export default function SettingsPage() {
         }
         .input-control input:focus { background: white; border-color: #0f172a; box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.05); outline: none; }
 
-        .notification-bar { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem; border-radius: 12px; font-weight: 700; font-size: 0.875rem; }
+        .notification-bar { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem; border-radius: 6px; font-weight: 700; font-size: 0.875rem; }
         .notification-bar.success { background: #f0fdf4; color: #16a34a; border: 1px solid #dcfce7; }
         .notification-bar.error { background: #fef2f2; color: #ef4444; border: 1px solid #fee2e2; }
 
@@ -354,7 +411,7 @@ export default function SettingsPage() {
           color: white;
           border: none;
           padding: 1rem 2.5rem;
-          border-radius: 12px;
+          border-radius: 6px;
           font-weight: 800;
           font-size: 1rem;
           display: flex;
@@ -379,6 +436,31 @@ export default function SettingsPage() {
           .flex-header { flex-direction: column; gap: 1rem; }
           .reset-btn-link { width: 100%; justify-content: center; }
         }
+        
+        .highlight {
+          padding: 1.5rem;
+          background: #f8fafc;
+          border: 1px dashed #cbd5e1;
+          border-radius: var(--radius);
+          margin-top: 0.5rem;
+        }
+        .highlight label { color: #0f172a; font-weight: 900; }
+        .highlight .input-control input { background: white; border-color: #cbd5e1; }
+
+        .visibility-toggle {
+          background: transparent;
+          border: none;
+          color: #94a3b8;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0.5rem;
+          cursor: pointer;
+          transition: all 0.2s;
+          margin-left: -3rem;
+          z-index: 10;
+        }
+        .visibility-toggle:hover { color: #0f172a; }
       `}</style>
     </DashboardLayout>
   );

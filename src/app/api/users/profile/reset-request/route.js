@@ -21,7 +21,7 @@ export async function POST(req) {
       subject: 'Password Reset Request',
       text: `Hello ${user.name}, you requested a password reset. Please contact your system administrator to proceed or visit ${resetUrl}`,
       html: `
-        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 6px;">
           <h2 style="color: #2563eb;">Password Reset Requested</h2>
           <p>Hello <strong>${user.name}</strong>,</p>
           <p>You (or someone else) requested a password reset for your Arionys Finance account.</p>

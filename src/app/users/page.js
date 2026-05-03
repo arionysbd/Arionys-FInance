@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { Shield, User as UserIcon, Mail, ShieldCheck, Briefcase, Calculator, Eye, UserCog, MoreVertical, ChevronDown, Check } from 'lucide-react';
+import { Shield, User as UserIcon, Mail, ShieldCheck, Briefcase, Calculator, Eye, UserCog, MoreVertical, ChevronDown, Check, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
@@ -53,18 +53,43 @@ export default function UserManagement() {
     }
   };
 
+  const updateStatus = async (userId, isActive) => {
+    try {
+      await axios.patch('/api/users', {
+        userId,
+        isActive,
+        adminId: currentUser._id
+      });
+      setUsers(users.map(u => u._id === userId ? { ...u, isActive } : u));
+    } catch (err) {
+      alert(err.response?.data?.message || 'Update failed');
+    }
+  };
+
+  const deleteUser = async (userId, userName) => {
+    if (!window.confirm(`Reject & permanently delete "${userName}"?\n\nThis action cannot be undone.`)) return;
+    try {
+      await axios.delete('/api/users', {
+        data: { userId, adminId: currentUser._id }
+      });
+      setUsers(users.filter(u => u._id !== userId));
+    } catch (err) {
+      alert(err.response?.data?.message || 'Delete failed');
+    }
+  };
+
   const roleOptions = [
     { value: 'admin', label: 'Administrator', icon: <ShieldCheck size={14} />, desc: 'Full system control & user oversight.' },
-    { value: 'ceo', label: 'Chief Executive', icon: <Briefcase size={14} />, desc: 'Strategic oversight & executive approvals.' },
-    { value: 'cfo', label: 'Chief Financial', icon: <Calculator size={14} />, desc: 'Fiscal monitoring & transaction verification.' },
+    { value: 'ceo', label: 'Chief Executive Officer', icon: <Briefcase size={14} />, desc: 'Strategic oversight & executive approvals.' },
+    { value: 'cfo', label: 'Chief Financial Officer', icon: <Calculator size={14} />, desc: 'Fiscal monitoring & transaction verification.' },
     { value: 'csuit', label: 'Executive Board', icon: <Briefcase size={14} />, desc: 'Analytical view of organizational health.' },
-    { value: 'audit', label: 'Audit Control', icon: <Shield size={14} />, desc: 'Independent record review & verification.' },
+    { value: 'audit', label: 'Audit Officer', icon: <Shield size={14} />, desc: 'Independent record review & verification.' },
     { value: 'accountant', label: 'Accounts Manager', icon: <Calculator size={14} />, desc: 'Transactional data entry & ledger management.' }
   ];
 
   const getRoleInfo = (role) => roleOptions.find(o => o.value === role?.toLowerCase()) || roleOptions[0];
 
-  if (loading) return (
+  if (loading || !currentUser) return (
     <DashboardLayout>
       <div className="loading-state">
         <div className="spinner"></div>
@@ -76,15 +101,7 @@ export default function UserManagement() {
   return (
     <DashboardLayout>
       <div className="users-container animate-fade-in" ref={selectRef}>
-      <div className="system-header">
-        <div className="title-area">
-          <Shield size={24} className="icon-slate" />
-          <div className="text">
-            <h2>System Management</h2>
-            <p>Assign roles and manage platform permissions for Arionys Finance.</p>
-          </div>
-        </div>
-      </div>
+
 
       <div className="table-card">
         {/* Desktop View */}
@@ -103,9 +120,6 @@ export default function UserManagement() {
                 <tr key={u._id} className={u._id === currentUser._id ? 'current-user-row' : ''}>
                   <td>
                     <div className="identity-cell">
-                      <div className="avatar-frame">
-                        {u.name.charAt(0).toUpperCase()}
-                      </div>
                       <div className="info">
                         <span className="name">
                           {u.name} {u._id === currentUser._id && <span className="self-badge">YOU</span>}
@@ -156,12 +170,35 @@ export default function UserManagement() {
                     </p>
                   </td>
                   <td className="actions-cell">
-                    <button className="icon-btn-action" title="View Profile">
-                      <Eye size={16} />
-                    </button>
-                    <button className="icon-btn-action" title="More Options">
-                      <MoreVertical size={16} />
-                    </button>
+                    {u._id !== currentUser._id && !u.isActive && (
+                      <div className="approval-actions">
+                        <button
+                          className="action-pill approve-pill"
+                          onClick={() => updateStatus(u._id, true)}
+                          title="Approve Account"
+                        >
+                          <CheckCircle size={13} />
+                          Approve
+                        </button>
+                        <button
+                          className="action-pill reject-pill"
+                          onClick={() => deleteUser(u._id, u.name)}
+                          title="Reject & Delete"
+                        >
+                          <XCircle size={13} />
+                          Reject
+                        </button>
+                      </div>
+                    )}
+                    {u.isActive && u._id !== currentUser._id && currentUser.role === 'admin' && (
+                      <button
+                        className="icon-btn-delete"
+                        onClick={() => deleteUser(u._id, u.name)}
+                        title="Delete Account"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -175,9 +212,6 @@ export default function UserManagement() {
             {users.map((u) => (
               <div key={u._id} className="mobile-user-card">
                 <div className="m-card-header">
-                  <div className="m-avatar">
-                    {u.name.charAt(0).toUpperCase()}
-                  </div>
                   <div className="m-info">
                     <span className="m-name">{u.name}</span>
                     <span className="m-email">{u.email}</span>
@@ -218,6 +252,16 @@ export default function UserManagement() {
                       </div>
                     )}
                   </div>
+                  {u._id !== currentUser._id && !u.isActive && (
+                    <div className="m-approval-actions">
+                      <button className="m-action-pill m-approve-pill" onClick={() => updateStatus(u._id, true)}>
+                        <CheckCircle size={14} /> Approve
+                      </button>
+                      <button className="m-action-pill m-reject-pill" onClick={() => deleteUser(u._id, u.name)}>
+                        <XCircle size={14} /> Reject
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -236,10 +280,10 @@ export default function UserManagement() {
 
         .table-card { 
           background: #ffffff; 
-          border-radius: 6px; 
-          border: 1px solid #e2e8f0;
-          overflow: visible; /* Allow dropdowns to overflow */
-          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+          border-radius: var(--radius); 
+          border: 1px solid var(--border);
+          overflow: visible; 
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
         }
 
         .users-table { width: 100%; border-collapse: collapse; text-align: left; }
@@ -251,7 +295,7 @@ export default function UserManagement() {
           text-transform: uppercase; 
           color: #64748b; 
           letter-spacing: 0.05em;
-          border-bottom: 1px solid #e2e8f0;
+          border-bottom: 1px solid var(--border);
         }
         .users-table td { 
           padding: 1.25rem 1.5rem; 
@@ -286,7 +330,7 @@ export default function UserManagement() {
           font-size: 0.625rem; 
           font-weight: 800; 
           padding: 0.125rem 0.4rem; 
-          border-radius: 4px; 
+          border-radius: 6px; 
           letter-spacing: 0.05em;
         }
 
@@ -300,7 +344,7 @@ export default function UserManagement() {
           padding: 0.625rem 0.875rem;
           background: #f8fafc;
           border: 1px solid #e2e8f0;
-          border-radius: 4px;
+          border-radius: 6px;
           cursor: pointer;
           transition: all 0.2s;
         }
@@ -330,7 +374,7 @@ export default function UserManagement() {
           align-items: center;
           justify-content: space-between;
           padding: 0.75rem 1rem;
-          border-radius: 4px;
+          border-radius: 6px;
           cursor: pointer;
           transition: all 0.15s;
         }
@@ -355,7 +399,7 @@ export default function UserManagement() {
           justify-content: center; 
           border: 1px solid #e2e8f0; 
           background: #ffffff; 
-          border-radius: 4px; 
+          border-radius: 6px; 
           color: #64748b; 
           cursor: pointer;
           transition: all 0.2s;
@@ -373,11 +417,102 @@ export default function UserManagement() {
         .m-name { font-size: 1rem; font-weight: 800; color: #0f172a; }
         .m-email { font-size: 0.8125rem; color: #64748b; }
         .m-role-section .role-dropdown-container { width: 100%; }
-        .m-role-section .role-options-panel { width: 100%; position: fixed; bottom: 0; left: 0; border-radius: 12px 12px 0 0; }
+        .m-role-section .role-options-panel { width: 100%; position: fixed; bottom: 0; left: 0; border-radius: var(--radius) var(--radius) 0 0; }
 
         .loading-state { height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; color: #64748b; }
         .spinner { width: 24px; height: 24px; border: 2px solid #f8fafc; border-top-color: #0f172a; border-radius: 50%; animation: spin 0.6s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Approval action pills */
+        .approval-actions {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .action-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          padding: 5px 11px;
+          border-radius: 20px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          letter-spacing: 0.01em;
+          border: 1.5px solid transparent;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          white-space: nowrap;
+        }
+        .approve-pill {
+          background: #ecfdf5;
+          color: #059669;
+          border-color: #6ee7b7;
+        }
+        .approve-pill:hover {
+          background: #10b981;
+          color: white;
+          border-color: #10b981;
+          box-shadow: 0 2px 8px rgba(16,185,129,0.3);
+        }
+        .reject-pill {
+          background: #fef2f2;
+          color: #dc2626;
+          border-color: #fca5a5;
+        }
+        .reject-pill:hover {
+          background: #ef4444;
+          color: white;
+          border-color: #ef4444;
+          box-shadow: 0 2px 8px rgba(239,68,68,0.3);
+        }
+        .icon-btn-delete {
+          width: 32px; height: 32px;
+          display: inline-flex; align-items: center; justify-content: center;
+          border-radius: var(--radius);
+          border: 1.5px solid #fca5a5;
+          background: #fef2f2;
+          color: #dc2626;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .icon-btn-delete:hover {
+          background: #ef4444;
+          color: white;
+          border-color: #ef4444;
+          box-shadow: 0 2px 8px rgba(239,68,68,0.25);
+        }
+        /* Mobile approval actions */
+        .m-approval-actions {
+          display: flex;
+          gap: 8px;
+          margin-top: 1rem;
+        }
+        .m-action-pill {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 10px;
+          border-radius: 20px;
+          font-size: 0.8rem;
+          font-weight: 700;
+          border: 1.5px solid transparent;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .m-approve-pill {
+          background: #ecfdf5;
+          color: #059669;
+          border-color: #6ee7b7;
+        }
+        .m-approve-pill:hover { background: #10b981; color: white; border-color: #10b981; }
+        .m-reject-pill {
+          background: #fef2f2;
+          color: #dc2626;
+          border-color: #fca5a5;
+        }
+        .m-reject-pill:hover { background: #ef4444; color: white; border-color: #ef4444; }
 
         .animate-pop-in {
           animation: popIn 0.2s ease-out;

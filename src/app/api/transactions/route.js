@@ -58,7 +58,7 @@ export async function POST(req) {
           subject: 'New Transaction Pending Approval',
           text: `A new ${type} of BDT ${amount} was recorded by ${creator.name}. Description: ${description}`,
           html: `
-            <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 6px;">
               <h2 style="color: #2563eb;">New Transaction Recorded</h2>
               <p>A new transaction requires your approval:</p>
               <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">

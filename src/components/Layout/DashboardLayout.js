@@ -43,12 +43,73 @@ export default function DashboardLayout({ children }) {
     );
   }
 
+  if (user.isActive === false) {
+    return (
+      <div className="pending-approval-screen">
+        <div className="pending-card">
+          <Shield size={48} className="pending-icon" />
+          <h2>Account Pending Approval</h2>
+          <p>
+            Your account has been created successfully but is currently waiting for administrator approval. You will gain full access once an admin verifies your identity.
+          </p>
+          <div className="next-step-box">
+            <strong>Next Step:</strong> Please contact your system administrator. Once they approve your account, click below to log out and then log back in to refresh your status.
+          </div>
+          <button onClick={logout} className="btn btn-outline" style={{width: '100%'}}>Log Out & Return Later</button>
+        </div>
+        <style jsx>{`
+          .pending-approval-screen { 
+            min-height: 100vh; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            background: var(--secondary); 
+            padding: 20px;
+          }
+          .pending-card {
+            background: var(--card);
+            padding: 3rem 2rem;
+            border-radius: var(--radius);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            max-width: 450px;
+            text-align: center;
+            border: 1px solid var(--border);
+          }
+          .pending-icon {
+            margin: 0 auto 1.5rem auto;
+            color: var(--primary);
+          }
+          h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--foreground);
+          }
+          p {
+            color: var(--muted-foreground);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+          }
+          .next-step-box {
+            background: var(--secondary);
+            border: 1px solid var(--border);
+            padding: 1rem;
+            border-radius: var(--radius);
+            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+            color: var(--muted-foreground);
+            text-align: left;
+          }
+        `}</style>
+      </div>
+    );
+  }
+
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: <Home size={20} />, href: '/dashboard', roles: ['admin', 'ceo', 'cfo', 'accountant'] },
-    { id: 'transactions', label: 'Transactions', icon: <ArrowRightLeft size={20} />, href: '/transactions', roles: ['admin', 'ceo', 'cfo', 'accountant'] },
+    { id: 'dashboard', label: 'Dashboard', icon: <Home size={20} />, href: '/dashboard', roles: ['admin', 'ceo', 'cfo', 'csuit', 'audit', 'accountant'] },
+    { id: 'transactions', label: 'Transactions', icon: <ArrowRightLeft size={20} />, href: '/transactions', roles: ['admin', 'ceo', 'cfo', 'csuit', 'audit', 'accountant'] },
     { id: 'pending', label: 'Pending', icon: <Bell size={20} />, href: '/pending', roles: ['admin', 'ceo', 'cfo'], showBadge: true },
     { id: 'users', label: 'Management', icon: <Shield size={20} />, href: '/users', roles: ['admin', 'ceo'] },
-    { id: 'settings', label: 'Settings', icon: <SettingsIcon size={20} />, href: '/settings', roles: ['admin', 'ceo', 'cfo', 'accountant'] },
+    { id: 'settings', label: 'Settings', icon: <SettingsIcon size={20} />, href: '/settings', roles: ['admin', 'ceo', 'cfo', 'csuit', 'audit', 'accountant'] },
   ];
 
   const getPageTitle = () => {
@@ -104,7 +165,6 @@ export default function DashboardLayout({ children }) {
             </div>
             <div className="details">
               <p className="name">{user.name}</p>
-              <p className="role">{user.role}</p>
             </div>
           </div>
           <button onClick={logout} className="logout-btn" title="Logout">
@@ -204,7 +264,7 @@ export default function DashboardLayout({ children }) {
           align-items: center;
           gap: 1rem;
           padding: 0.875rem 1rem;
-          border-radius: 10px;
+          border-radius: 6px;
           color: #64748b;
           font-weight: 600;
           font-size: 0.9375rem;
@@ -224,7 +284,7 @@ export default function DashboardLayout({ children }) {
           font-size: 0.65rem;
           font-weight: 800;
           padding: 0.125rem 0.375rem;
-          border-radius: 999px;
+          border-radius: 6px;
           border: 2px solid #ffffff;
           box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
         }
@@ -232,10 +292,10 @@ export default function DashboardLayout({ children }) {
 
         .sidebar-footer { border-top: 1px solid #f1f5f9; padding-top: 1.5rem; margin-top: auto; }
         .user-info { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; padding: 0 0.5rem; }
-        .avatar { width: 36px; height: 36px; border-radius: 10px; background: #f1f5f9; color: #0f172a; display: flex; align-items: center; justify-content: center; }
+        .avatar { width: 36px; height: 36px; border-radius: 6px; background: #f1f5f9; color: #0f172a; display: flex; align-items: center; justify-content: center; }
         .details .name { font-size: 0.875rem; font-weight: 700; color: #0f172a; margin: 0; }
         .details .role { font-size: 0.75rem; color: #64748b; margin: 0; text-transform: capitalize; }
-        .logout-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.75rem; padding: 0.75rem; border-radius: 10px; background: #fef2f2; color: #ef4444; border: none; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .logout-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.75rem; padding: 0.75rem; border-radius: 6px; background: #fef2f2; color: #ef4444; border: none; font-weight: 700; cursor: pointer; transition: all 0.2s; }
         .logout-btn:hover { background: #fee2e2; }
 
         .mobile-header { display: none; }
@@ -247,7 +307,7 @@ export default function DashboardLayout({ children }) {
         .breadcrumb .current { color: #0f172a; }
         .header-flex { display: flex; justify-content: space-between; align-items: center; }
         .header-flex h1 { font-size: 1.875rem; font-weight: 900; color: #0f172a; letter-spacing: -0.02em; }
-        .role-tag { padding: 0.4rem 0.875rem; border-radius: 8px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.025em; }
+        .role-tag { padding: 0.4rem 0.875rem; border-radius: 6px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.025em; }
         .role-admin { background: #0f172a; color: white; }
         .role-ceo { background: #0f172a; color: white; }
         .role-cfo { background: #0f172a; color: white; }

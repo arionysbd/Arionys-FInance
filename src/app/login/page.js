@@ -164,7 +164,7 @@ export default function LoginPage() {
           width: 100%;
           background: #ffffff;
           border: 1px solid #e2e8f0;
-          border-radius: 8px;
+          border-radius: 6px;
           height: 46px;
           transition: all 0.2s;
           position: relative;

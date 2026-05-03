@@ -118,7 +118,7 @@ export default function SignupPage() {
         .logo-icon {
           width: 48px;
           height: 48px;
-          border-radius: 12px;
+          border-radius: 6px;
           display: flex;
           align-items: center;
           justify-content: center;

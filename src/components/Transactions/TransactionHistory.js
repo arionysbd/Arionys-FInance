@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { Filter, User, CheckCircle, XCircle, Download, ChevronDown, Check, ArrowUpRight, TrendingDown, Tag, Wallet } from 'lucide-react';
+import { Filter, CheckCircle, XCircle, Download, ChevronDown, Check, ArrowUpRight, TrendingDown, Wallet } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -171,7 +171,6 @@ export default function TransactionHistory({ transactions, onUpdate }) {
                   <div className="tx-desc-cell">
                     <span className="tx-main-desc">{tx.description}</span>
                     <div className="tx-performed-badge">
-                      <User size={10} />
                       <span>{tx.performedBy}</span>
                     </div>
                   </div>
@@ -190,7 +189,6 @@ export default function TransactionHistory({ transactions, onUpdate }) {
                 </td>
                 <td>
                   <div className="creator-badge">
-                    <div className="avatar-mini">{tx.createdBy?.name?.charAt(0) || 'S'}</div>
                     <span>{tx.createdBy?.name || 'System'}</span>
                   </div>
                 </td>
@@ -243,7 +241,6 @@ export default function TransactionHistory({ transactions, onUpdate }) {
 
             <div className="mobile-card-footer">
               <div className="creator-badge">
-                <div className="avatar-mini">{tx.createdBy?.name?.charAt(0) || 'S'}</div>
                 <span>{tx.createdBy?.name || 'System'}</span>
               </div>
             </div>
@@ -317,7 +314,7 @@ export default function TransactionHistory({ transactions, onUpdate }) {
           align-items: center;
           justify-content: space-between;
           padding: 0.625rem 0.875rem;
-          border-radius: 4px;
+          border-radius: 6px;
           cursor: pointer;
           transition: all 0.15s;
         }
@@ -365,7 +362,7 @@ export default function TransactionHistory({ transactions, onUpdate }) {
           color: #64748b; 
           background: #f1f5f9;
           padding: 0.125rem 0.5rem;
-          border-radius: 4px;
+          border-radius: 6px;
           width: fit-content;
         }
 
@@ -490,7 +487,7 @@ export default function TransactionHistory({ transactions, onUpdate }) {
           color: #0f172a;
           cursor: pointer;
           transition: all 0.2s;
-          border-radius: 4px;
+          border-radius: 6px;
         }
         .download-menu button:hover { background: #f8fafc; padding-left: 1.25rem; }
 

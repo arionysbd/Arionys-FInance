@@ -34,7 +34,7 @@ export async function POST(req) {
           <p>Click the button below to securely sign in to your account. This link expires in 15 minutes.</p>
           <div style="margin-top: 30px;">
             <a href="${magicLink}" 
-               style="background: #2563eb; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block;">
+               style="background: #2563eb; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 700; display: inline-block;">
               Sign In Now
             </a>
           </div>

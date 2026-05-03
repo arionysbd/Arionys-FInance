@@ -27,6 +27,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['admin', 'ceo', 'csuit', 'cfo', 'accountant', 'audit'],
     default: 'accountant',
+    lowercase: true,
   },
   isActive: {
     type: Boolean,
@@ -46,4 +47,9 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-export default mongoose.models.User || mongoose.model('User', userSchema);
+// Always delete the cached model before recompiling.
+// This ensures schema changes (like adding new roles) are always picked up
+// in Next.js dev mode where the module re-evaluates but the mongoose
+// connection persists with the old compiled model.
+delete mongoose.models['User'];
+export default mongoose.model('User', userSchema);

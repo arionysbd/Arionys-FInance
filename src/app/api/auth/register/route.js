@@ -17,11 +17,14 @@ export async function POST(req) {
     const userCount = await User.countDocuments();
     const role = userCount === 0 ? 'admin' : 'accountant';
 
+    const isActive = userCount === 0;
+
     const user = await User.create({
       name,
       email,
       password,
-      role
+      role,
+      isActive
     });
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
@@ -33,6 +36,7 @@ export async function POST(req) {
         name: user.name,
         email: user.email,
         role: user.role,
+        isActive: user.isActive,
         token
       }
     }, { status: 201 });

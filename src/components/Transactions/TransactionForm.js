@@ -336,7 +336,7 @@ export default function TransactionForm({ onTransactionAdded }) {
           align-items: center;
           justify-content: space-between;
           padding: 0.75rem 1rem;
-          border-radius: 4px;
+          border-radius: 6px;
           cursor: pointer;
           transition: all 0.15s;
         }
