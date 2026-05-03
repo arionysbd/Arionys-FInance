@@ -1,13 +1,28 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { Users, Shield, User as UserIcon, Mail, Trash2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Shield, User as UserIcon, Mail, ShieldCheck, Briefcase, Calculator, Eye, UserCog, MoreVertical, ChevronDown, Check } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
+import DashboardLayout from '@/components/Layout/DashboardLayout';
 
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const { user: currentUser } = useAuth();
+  
+  // Custom Select State
+  const [openUserSelect, setOpenUserSelect] = useState(null); // stores userId
+  const selectRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (selectRef.current && !selectRef.current.contains(event.target)) {
+        setOpenUserSelect(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const fetchUsers = async () => {
     try {
@@ -32,79 +47,347 @@ export default function UserManagement() {
         adminId: currentUser._id
       });
       setUsers(users.map(u => u._id === userId ? { ...u, role: newRole } : u));
+      setOpenUserSelect(null);
     } catch (err) {
       alert(err.response?.data?.message || 'Update failed');
     }
   };
 
-  if (loading) return <div className="muted-text">Loading users...</div>;
+  const roleOptions = [
+    { value: 'admin', label: 'Administrator', icon: <ShieldCheck size={14} />, desc: 'Full system control & user oversight.' },
+    { value: 'ceo', label: 'Chief Executive', icon: <Briefcase size={14} />, desc: 'Strategic oversight & executive approvals.' },
+    { value: 'cfo', label: 'Chief Financial', icon: <Calculator size={14} />, desc: 'Fiscal monitoring & transaction verification.' },
+    { value: 'csuit', label: 'Executive Board', icon: <Briefcase size={14} />, desc: 'Analytical view of organizational health.' },
+    { value: 'audit', label: 'Audit Control', icon: <Shield size={14} />, desc: 'Independent record review & verification.' },
+    { value: 'accountant', label: 'Accounts Manager', icon: <Calculator size={14} />, desc: 'Transactional data entry & ledger management.' }
+  ];
+
+  const getRoleInfo = (role) => roleOptions.find(o => o.value === role?.toLowerCase()) || roleOptions[0];
+
+  if (loading) return (
+    <DashboardLayout>
+      <div className="loading-state">
+        <div className="spinner"></div>
+        <p>Loading System Directory...</p>
+      </div>
+    </DashboardLayout>
+  );
 
   return (
-    <div className="users-container animate-fade-in">
-      <div className="card">
-        <div className="header">
-          <div className="title-info">
-            <Shield className="text-primary" size={20} />
-            <h3>Team Management</h3>
+    <DashboardLayout>
+      <div className="users-container animate-fade-in" ref={selectRef}>
+      <div className="system-header">
+        <div className="title-area">
+          <Shield size={24} className="icon-slate" />
+          <div className="text">
+            <h2>System Management</h2>
+            <p>Assign roles and manage platform permissions for Arionys Finance.</p>
           </div>
         </div>
+      </div>
 
-        <div className="users-grid">
-          {users.map((u) => (
-            <div key={u._id} className="user-card card">
-              <div className="user-info-main">
-                <div className="user-avatar">
-                  <UserIcon size={24} />
+      <div className="table-card">
+        {/* Desktop View */}
+        <div className="desktop-only">
+          <table className="users-table">
+            <thead>
+              <tr>
+                <th>Identity</th>
+                <th>Access Level</th>
+                <th>Permissions Summary</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u._id} className={u._id === currentUser._id ? 'current-user-row' : ''}>
+                  <td>
+                    <div className="identity-cell">
+                      <div className="avatar-frame">
+                        {u.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="info">
+                        <span className="name">
+                          {u.name} {u._id === currentUser._id && <span className="self-badge">YOU</span>}
+                        </span>
+                        <span className="email">{u.email}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    {/* Custom Role Dropdown */}
+                    <div className="role-dropdown-container">
+                      <div 
+                        className={`role-trigger ${openUserSelect === u._id ? 'active' : ''} ${u._id === currentUser._id ? 'disabled' : ''}`}
+                        onClick={() => u._id !== currentUser._id && setOpenUserSelect(openUserSelect === u._id ? null : u._id)}
+                      >
+                        <div className="trigger-inner">
+                          {getRoleInfo(u.role).icon}
+                          <span>{getRoleInfo(u.role).label}</span>
+                        </div>
+                        {u._id !== currentUser._id && <ChevronDown size={14} className={`arrow ${openUserSelect === u._id ? 'rotate' : ''}`} />}
+                      </div>
+
+                      {openUserSelect === u._id && (
+                        <div className="role-options-panel animate-pop-in">
+                          {roleOptions.map((opt) => (
+                            <div 
+                              key={opt.value}
+                              className={`role-option-item ${u.role === opt.value ? 'selected' : ''}`}
+                              onClick={() => updateRole(u._id, opt.value)}
+                            >
+                              <div className="item-main">
+                                <div className="icon-wrap">{opt.icon}</div>
+                                <div className="text-wrap">
+                                  <span className="l-label">{opt.label}</span>
+                                  <span className="l-desc">{opt.desc}</span>
+                                </div>
+                              </div>
+                              {u.role === opt.value && <Check size={14} className="check-icon" />}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td>
+                    <p className="permission-note-stable">
+                      {getRoleInfo(u.role).desc}
+                    </p>
+                  </td>
+                  <td className="actions-cell">
+                    <button className="icon-btn-action" title="View Profile">
+                      <Eye size={16} />
+                    </button>
+                    <button className="icon-btn-action" title="More Options">
+                      <MoreVertical size={16} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile View */}
+        <div className="mobile-only">
+          <div className="user-mobile-list">
+            {users.map((u) => (
+              <div key={u._id} className="mobile-user-card">
+                <div className="m-card-header">
+                  <div className="m-avatar">
+                    {u.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="m-info">
+                    <span className="m-name">{u.name}</span>
+                    <span className="m-email">{u.email}</span>
+                  </div>
+                  {u._id === currentUser._id && <span className="self-badge">YOU</span>}
                 </div>
-                <div className="user-details">
-                  <h4>{u.name} {u._id === currentUser._id && <span className="self-tag">(You)</span>}</h4>
-                  <p><Mail size={12} /> {u.email}</p>
+                
+                <div className="m-role-section">
+                  <div className="role-dropdown-container">
+                    <div 
+                      className={`role-trigger ${openUserSelect === u._id ? 'active' : ''} ${u._id === currentUser._id ? 'disabled' : ''}`}
+                      onClick={() => u._id !== currentUser._id && setOpenUserSelect(openUserSelect === u._id ? null : u._id)}
+                    >
+                      <div className="trigger-inner">
+                        {getRoleInfo(u.role).icon}
+                        <span>{getRoleInfo(u.role).label}</span>
+                      </div>
+                      {u._id !== currentUser._id && <ChevronDown size={14} className={`arrow ${openUserSelect === u._id ? 'rotate' : ''}`} />}
+                    </div>
+
+                    {openUserSelect === u._id && (
+                      <div className="role-options-panel animate-pop-in">
+                        {roleOptions.map((opt) => (
+                          <div 
+                            key={opt.value}
+                            className={`role-option-item ${u.role === opt.value ? 'selected' : ''}`}
+                            onClick={() => updateRole(u._id, opt.value)}
+                          >
+                            <div className="item-main">
+                              <div className="icon-wrap">{opt.icon}</div>
+                              <div className="text-wrap">
+                                <span className="l-label">{opt.label}</span>
+                              </div>
+                            </div>
+                            {u.role === opt.value && <Check size={14} className="check-icon" />}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-
-              <div className="role-management">
-                <label>System Role</label>
-                <select 
-                  className="input-field role-select"
-                  value={u.role}
-                  onChange={(e) => updateRole(u._id, e.target.value)}
-                  disabled={u._id === currentUser._id}
-                >
-                  <option value="admin">Admin</option>
-                  <option value="moderator">Moderator</option>
-                  <option value="accountant">Accountant</option>
-                </select>
-                <p className="role-desc">
-                  {u.role?.toLowerCase() === 'admin' && 'Full access to all features and user management.'}
-                  {u.role?.toLowerCase() === 'moderator' && 'Can view and approve transactions.'}
-                  {u.role?.toLowerCase() === 'accountant' && 'Can record transactions and view approved history.'}
-                </p>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
       <style jsx>{`
-        .users-container { max-width: 1000px; }
-        .header { margin-bottom: 2rem; }
-        .title-info { display: flex; align-items: center; gap: 0.75rem; }
-        .title-info h3 { font-size: 1.25rem; font-weight: 700; margin: 0; }
-
-        .users-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
-        .user-card { padding: 1.5rem; border-color: #f1f5f9; }
+        .users-container { max-width: 1200px; margin: 0 auto; }
         
-        .user-info-main { display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem; }
-        .user-avatar { width: 48px; height: 48px; background: #eff6ff; color: var(--primary); border-radius: 12px; display: flex; align-items: center; justify-content: center; }
-        .user-details h4 { font-size: 1rem; font-weight: 700; color: #1e293b; margin-bottom: 0.25rem; }
-        .self-tag { color: var(--primary); font-size: 0.75rem; font-weight: 500; }
-        .user-details p { font-size: 0.75rem; color: var(--muted-foreground); display: flex; align-items: center; gap: 0.4rem; }
+        .system-header { margin-bottom: 2.5rem; padding: 0 0.5rem; }
+        .title-area { display: flex; align-items: flex-start; gap: 1rem; }
+        .title-area h2 { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin-bottom: 0.25rem; }
+        .title-area p { color: #64748b; font-size: 0.875rem; }
+        .icon-slate { color: #0f172a; }
 
-        .role-management { border-top: 1px solid #f1f5f9; padding-top: 1rem; }
-        label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--muted-foreground); margin-bottom: 0.5rem; text-transform: uppercase; }
-        .role-select { padding: 0.5rem; font-size: 0.875rem; font-weight: 600; }
-        .role-desc { font-size: 0.75rem; color: var(--muted-foreground); margin-top: 0.75rem; line-height: 1.4; }
+        .table-card { 
+          background: #ffffff; 
+          border-radius: 6px; 
+          border: 1px solid #e2e8f0;
+          overflow: visible; /* Allow dropdowns to overflow */
+          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+        }
+
+        .users-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .users-table th { 
+          padding: 1rem 1.5rem; 
+          background: #f8fafc; 
+          font-size: 0.65rem; 
+          font-weight: 800; 
+          text-transform: uppercase; 
+          color: #64748b; 
+          letter-spacing: 0.05em;
+          border-bottom: 1px solid #e2e8f0;
+        }
+        .users-table td { 
+          padding: 1.25rem 1.5rem; 
+          border-bottom: 1px solid #f8fafc; 
+          vertical-align: middle;
+          position: relative; /* Context for absolute menus */
+        }
+        .users-table tr:hover { background: #fafafa; }
+        .current-user-row { background: #fdfdfd; }
+
+        .identity-cell { display: flex; align-items: center; gap: 1rem; }
+        .avatar-frame { 
+          width: 40px; 
+          height: 40px; 
+          background: #0f172a; 
+          color: #ffffff; 
+          border-radius: 6px; 
+          display: flex; 
+          align-items: center; 
+          justify-content: center; 
+          font-weight: 800; 
+          font-size: 1.125rem;
+        }
+        
+        .info { display: flex; flex-direction: column; }
+        .info .name { font-size: 0.9375rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 0.5rem; }
+        .info .email { font-size: 0.8125rem; color: #64748b; }
+        
+        .self-badge { 
+          background: #0f172a; 
+          color: #ffffff; 
+          font-size: 0.625rem; 
+          font-weight: 800; 
+          padding: 0.125rem 0.4rem; 
+          border-radius: 4px; 
+          letter-spacing: 0.05em;
+        }
+
+        /* Role Dropdown Styling */
+        .role-dropdown-container { position: relative; width: 220px; }
+        
+        .role-trigger {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0.625rem 0.875rem;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .role-trigger:not(.disabled):hover { border-color: #cbd5e1; }
+        .role-trigger.active { border-color: #0f172a; background: white; box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.05); }
+        .role-trigger.disabled { opacity: 0.7; cursor: not-allowed; }
+
+        .trigger-inner { display: flex; align-items: center; gap: 0.625rem; font-size: 0.8125rem; font-weight: 700; color: #0f172a; }
+        .arrow { color: #64748b; transition: transform 0.2s; }
+        .arrow.rotate { transform: rotate(180deg); }
+
+        .role-options-panel {
+          position: absolute;
+          top: calc(100% + 8px);
+          left: 0;
+          width: 280px;
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          padding: 0.5rem;
+          z-index: 1000;
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .role-option-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0.75rem 1rem;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+        .role-option-item:hover { background: #f8fafc; }
+        .role-option-item.selected { background: #f1f5f9; }
+
+        .item-main { display: flex; align-items: flex-start; gap: 0.875rem; }
+        .icon-wrap { color: #64748b; margin-top: 2px; }
+        .text-wrap { display: flex; flex-direction: column; }
+        .l-label { font-size: 0.8125rem; font-weight: 700; color: #0f172a; }
+        .l-desc { font-size: 0.6875rem; color: #64748b; line-height: 1.3; margin-top: 1px; }
+        .check-icon { color: #0f172a; }
+
+        .permission-note-stable { font-size: 0.8125rem; color: #64748b; max-width: 240px; line-height: 1.4; }
+
+        .actions-cell { display: flex; gap: 0.5rem; }
+        .icon-btn-action { 
+          width: 32px; 
+          height: 32px; 
+          display: flex; 
+          align-items: center; 
+          justify-content: center; 
+          border: 1px solid #e2e8f0; 
+          background: #ffffff; 
+          border-radius: 4px; 
+          color: #64748b; 
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .icon-btn-action:hover { border-color: #0f172a; color: #0f172a; }
+
+        /* Mobile View Styling */
+        .mobile-user-card { padding: 1.5rem; border-bottom: 1px solid #e2e8f0; }
+        .m-card-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem; }
+        .m-avatar { 
+          width: 44px; height: 44px; background: #0f172a; color: white; border-radius: 6px; 
+          display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.25rem;
+        }
+        .m-info { display: flex; flex-direction: column; flex: 1; }
+        .m-name { font-size: 1rem; font-weight: 800; color: #0f172a; }
+        .m-email { font-size: 0.8125rem; color: #64748b; }
+        .m-role-section .role-dropdown-container { width: 100%; }
+        .m-role-section .role-options-panel { width: 100%; position: fixed; bottom: 0; left: 0; border-radius: 12px 12px 0 0; }
+
+        .loading-state { height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; color: #64748b; }
+        .spinner { width: 24px; height: 24px; border: 2px solid #f8fafc; border-top-color: #0f172a; border-radius: 50%; animation: spin 0.6s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .animate-pop-in {
+          animation: popIn 0.2s ease-out;
+        }
+        @keyframes popIn {
+          from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
       `}</style>
     </div>
+    </DashboardLayout>
   );
 }

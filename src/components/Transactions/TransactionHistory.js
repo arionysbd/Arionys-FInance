@@ -1,118 +1,542 @@
 'use client';
-import { useState } from 'react';
-import { Filter, User, CheckCircle } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Filter, User, CheckCircle, XCircle, Download, ChevronDown, Check, ArrowUpRight, TrendingDown, Tag, Wallet } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function TransactionHistory({ transactions, onUpdate }) {
   const [filterType, setFilterType] = useState('');
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const filterRef = useRef(null);
+
+  // Close menus on click outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (filterRef.current && !filterRef.current.contains(event.target)) {
+        setShowFilterMenu(false);
+        setShowDownloadMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const generatePDF = (type) => {
+    setShowDownloadMenu(false);
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // 1. Simple Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setTextColor(15, 23, 42);
+    doc.text("Arionys Finance", 15, 20);
+    
+    doc.setFontSize(14);
+    doc.setTextColor(100);
+    const title = type === 'all' ? 'General Financial Statement' : `${type.charAt(0).toUpperCase() + type.slice(1)} Statement`;
+    doc.text(title, 15, 30);
+    
+    doc.setFontSize(9);
+    doc.setTextColor(150);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 15, 38);
+    doc.text(`Report Scope: ${type.toUpperCase()}`, 15, 43);
+
+    // 2. Table Data
+    const txToExport = type === 'all' 
+      ? transactions 
+      : transactions.filter(t => t.type === type);
+
+    const tableData = txToExport.map(tx => [
+      new Date(tx.date).toLocaleDateString(),
+      tx.description,
+      tx.performedBy,
+      tx.type.toUpperCase(),
+      `BDT ${tx.amount.toLocaleString()}`
+    ]);
+
+    autoTable(doc, {
+      startY: 50,
+      head: [['Date', 'Description', 'Performed By', 'Type', 'Amount']],
+      body: tableData,
+      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: 15, right: 15 },
+      styles: { fontSize: 9, cellPadding: 4 }
+    });
+
+    doc.save(`${type}_statement_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  const filterOptions = [
+    { value: '', label: 'All Records', icon: <Filter size={14} /> },
+    { value: 'revenue', label: 'Revenue', icon: <ArrowUpRight size={14} className="text-tx-revenue" /> },
+    { value: 'expense', label: 'Expense', icon: <TrendingDown size={14} className="text-tx-expense" /> },
+    { value: 'investment', label: 'Investment', icon: <Wallet size={14} className="text-tx-investment" /> },
+    { value: 'rejected', label: 'Rejected Items', icon: <XCircle size={14} className="text-danger" /> }
+  ];
+
+  const currentFilter = filterOptions.find(o => o.value === filterType);
 
   const filteredTransactions = filterType 
-    ? transactions.filter(tx => tx.type === filterType)
+    ? (filterType === 'rejected' 
+        ? transactions.filter(tx => tx.status === 'rejected')
+        : transactions.filter(tx => tx.type === filterType && tx.status === 'approved'))
     : transactions;
 
   return (
-    <div className="card">
+    <div className="card" ref={filterRef}>
       <div className="history-header">
         <div className="title-area">
           <h3>Approved History</h3>
           <p className="subtitle">Verified and finalized financial records</p>
         </div>
-        <div className="filters">
-          <Filter size={14} />
-          <select 
-            className="filter-select"
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-          >
-            <option value="">All Types</option>
-            <option value="revenue">Revenue</option>
-            <option value="expense">Expense</option>
-            <option value="investment">Investment</option>
-          </select>
+        
+        <div className="header-actions">
+          {/* Custom Filter Dropdown */}
+          <div className="custom-dropdown-wrapper">
+            <div 
+              className={`custom-filter-trigger ${showFilterMenu ? 'active' : ''}`}
+              onClick={() => setShowFilterMenu(!showFilterMenu)}
+            >
+              <div className="trigger-content">
+                {currentFilter?.icon}
+                <span>{currentFilter?.label}</span>
+              </div>
+              <ChevronDown size={14} className={`arrow ${showFilterMenu ? 'rotate' : ''}`} />
+            </div>
+
+            {showFilterMenu && (
+              <div className="custom-dropdown-menu animate-pop-in">
+                {filterOptions.map((opt) => (
+                  <div 
+                    key={opt.value}
+                    className={`dropdown-item ${filterType === opt.value ? 'selected' : ''}`}
+                    onClick={() => {
+                      setFilterType(opt.value);
+                      setShowFilterMenu(false);
+                    }}
+                  >
+                    <div className="item-label">
+                      {opt.icon}
+                      <span>{opt.label}</span>
+                    </div>
+                    {filterType === opt.value && <Check size={14} className="check-icon" />}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="download-area">
+            <button 
+              className="btn btn-secondary download-btn"
+              onClick={() => setShowDownloadMenu(!showDownloadMenu)}
+            >
+              <Download size={14} />
+              <span>Download</span>
+              <ChevronDown size={14} className={`arrow ${showDownloadMenu ? 'rotate' : ''}`} />
+            </button>
+            
+            {showDownloadMenu && (
+              <div className="download-menu animate-pop-in">
+                <button onClick={() => generatePDF('all')}>General Statement</button>
+                <button onClick={() => generatePDF('revenue')}>Revenue Statement</button>
+                <button onClick={() => generatePDF('investment')}>Investment Statement</button>
+                <button onClick={() => generatePDF('expense')}>Expenses Statement</button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="table-container">
+      <div className="table-container desktop-only">
         <table>
           <thead>
             <tr>
               <th>Date</th>
-              <th>Description</th>
+              <th>Transaction Details</th>
               <th>Type</th>
-              <th>Amount</th>
-              <th>Creator</th>
+              <th>Value</th>
+              <th>Initiated By</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody>
             {filteredTransactions.map((tx) => (
-              <tr key={tx._id}>
-                <td>{new Date(tx.date).toLocaleDateString()}</td>
+              <tr key={tx._id} className="tx-row">
+                <td className="date-cell">{new Date(tx.date).toLocaleDateString()}</td>
                 <td>
                   <div className="tx-desc-cell">
-                    <span>{tx.description}</span>
-                    <small>{tx.category}</small>
-                  </div>
-                </td>
-                <td><span className={`badge badge-${tx.type}`}>{tx.type}</span></td>
-                <td className={`amount-cell ${tx.type}`}>
-                  {tx.type === 'expense' ? '-' : '+'}${tx.amount.toLocaleString()}
-                </td>
-                <td>
-                  <div className="user-badge">
-                    <User size={12} />
-                    {tx.createdBy?.name || 'System'}
+                    <span className="tx-main-desc">{tx.description}</span>
+                    <div className="tx-performed-badge">
+                      <User size={10} />
+                      <span>{tx.performedBy}</span>
+                    </div>
                   </div>
                 </td>
                 <td>
-                  <div className="status-badge">
-                    <CheckCircle size={14} className="text-success" />
-                    <span>Approved</span>
+                  <div className={`type-pill-minimal type-${tx.type}`}>
+                    {tx.type === 'revenue' && <ArrowUpRight size={12} />}
+                    {tx.type === 'expense' && <TrendingDown size={12} />}
+                    {tx.type === 'investment' && <Wallet size={12} />}
+                    <span>{tx.type}</span>
+                  </div>
+                </td>
+                <td className="amount-cell-premium">
+                  <span className="currency">BDT</span>
+                  <span className="value">{tx.amount.toLocaleString()}</span>
+                </td>
+                <td>
+                  <div className="creator-badge">
+                    <div className="avatar-mini">{tx.createdBy?.name?.charAt(0) || 'S'}</div>
+                    <span>{tx.createdBy?.name || 'System'}</span>
+                  </div>
+                </td>
+                <td>
+                  <div className="status-cell">
+                    <div className={`status-chip ${tx.status}`}>
+                      {tx.status === 'approved' ? <CheckCircle size={12} /> : <XCircle size={12} />}
+                      <span>{tx.status === 'approved' ? 'Verified' : 'Rejected'}</span>
+                    </div>
+                    {tx.approvedBy?.name && (
+                      <span className="verifier-name">By: {tx.approvedBy.name}</span>
+                    )}
                   </div>
                 </td>
               </tr>
             ))}
-            {filteredTransactions.length === 0 && (
-              <tr>
-                <td colSpan="6" className="empty-state">No approved transactions found</td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
+
+      <div className="mobile-only tx-card-list">
+        {filteredTransactions.map((tx) => (
+          <div key={tx._id} className="tx-premium-mobile-card">
+            <div className="mobile-card-header">
+              <div className={`type-pill-minimal type-${tx.type}`}>
+                <span>{tx.type}</span>
+              </div>
+              <span className="mobile-date">{new Date(tx.date).toLocaleDateString()}</span>
+            </div>
+            
+            <div className="mobile-card-body">
+              <h4 className="mobile-desc"><span className="label-dim">Description:</span> {tx.description}</h4>
+              
+              <div className="mobile-financials">
+                <div className="mobile-amount-value">
+                  <span className="m-curr">BDT</span>
+                  <span className="m-val">{tx.amount.toLocaleString()}</span>
+                </div>
+                <div className="status-stack">
+                  <div className={`status-chip ${tx.status} mini`}>
+                    {tx.status === 'approved' ? <CheckCircle size={10} /> : <XCircle size={10} />}
+                    {tx.status === 'approved' ? 'Verified' : 'Rejected'}
+                  </div>
+                  {tx.approvedBy?.name && (
+                    <span className="m-verifier">By: {tx.approvedBy.name}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="mobile-card-footer">
+              <div className="creator-badge">
+                <div className="avatar-mini">{tx.createdBy?.name?.charAt(0) || 'S'}</div>
+                <span>{tx.createdBy?.name || 'System'}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {filteredTransactions.length === 0 && (
+        <div className="premium-empty-state">
+          <div className="empty-icon-container">
+            <Filter size={32} />
+          </div>
+          <h4>No Records Found</h4>
+          <p>We couldn't find any finalized transactions matching your criteria.</p>
+        </div>
+      )}
 
       <style jsx>{`
         .history-header {
           display: flex;
           justify-content: space-between;
-          align-items: flex-start;
+          align-items: center;
           margin-bottom: 2rem;
+          padding: 0.5rem 0;
         }
-        .title-area h3 { font-size: 1.125rem; font-weight: 700; color: #1e293b; margin-bottom: 0.25rem; }
-        .subtitle { font-size: 0.8125rem; color: var(--muted-foreground); }
+        .header-actions { display: flex; align-items: center; gap: 1rem; }
+        .title-area h3 { font-size: 1.25rem; font-weight: 800; color: #0f172a; margin-bottom: 0.25rem; }
+        .subtitle { font-size: 0.875rem; color: #64748b; }
+
+        /* Custom Dropdown Styling */
+        .custom-dropdown-wrapper { position: relative; width: 180px; }
         
-        .filters { display: flex; align-items: center; gap: 0.5rem; background: #f8fafc; padding: 0.5rem 0.75rem; border-radius: 0.5rem; border: 1px solid var(--border); }
-        .filter-select { background: transparent; border: none; color: #475569; font-size: 0.8125rem; font-weight: 600; outline: none; }
+        .custom-filter-trigger {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 1rem;
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: all 0.2s;
+          min-height: 42px;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        }
         
-        .table-container { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; min-width: 600px; }
-        th { text-align: left; padding: 1rem; border-bottom: 1px solid var(--border); color: #64748b; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
-        td { padding: 1.25rem 1rem; border-bottom: 1px solid #f1f5f9; font-size: 0.875rem; color: #334155; }
-        tr:last-child td { border-bottom: none; }
+        .custom-filter-trigger:hover { border-color: #cbd5e1; }
+        .custom-filter-trigger.active { border-color: #0f172a; box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.05); }
+
+        .trigger-content { display: flex; align-items: center; gap: 0.625rem; font-size: 0.8125rem; font-weight: 700; color: #0f172a; }
+        .trigger-content :global(svg) { color: #64748b; }
         
-        .tx-desc-cell { display: flex; flex-direction: column; }
-        .tx-desc-cell span { font-weight: 600; color: #1e293b; }
-        .tx-desc-cell small { color: #94a3b8; font-size: 0.75rem; margin-top: 0.1rem; }
+        .arrow { color: #64748b; transition: transform 0.2s; }
+        .arrow.rotate { transform: rotate(180deg); }
+
+        .custom-dropdown-menu {
+          position: absolute;
+          top: calc(100% + 8px);
+          left: 0;
+          right: 0;
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          padding: 0.5rem;
+          z-index: 1000;
+          box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+        }
+
+        .dropdown-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0.625rem 0.875rem;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+        .dropdown-item:hover { background: #f8fafc; }
+        .dropdown-item.selected { background: #f1f5f9; }
+
+        .item-label { display: flex; align-items: center; gap: 0.625rem; font-size: 0.8125rem; font-weight: 700; color: #0f172a; }
+        .check-icon { color: #0f172a; }
+
+        /* Table & Data Styling */
+        .table-container { 
+          background: white;
+          border-radius: 6px;
+          border: 1px solid #e2e8f0;
+          overflow: hidden;
+        }
+        table { width: 100%; border-collapse: collapse; min-width: 800px; }
         
-        .amount-cell { font-weight: 700; }
-        .amount-cell.revenue { color: #10b981; }
-        .amount-cell.expense { color: #ef4444; }
-        .amount-cell.investment { color: #2563eb; }
+        th { 
+          text-align: left; 
+          padding: 1rem 1.5rem; 
+          background: #f8fafc;
+          border-bottom: 1px solid #e2e8f0; 
+          color: #64748b; 
+          font-size: 0.7rem; 
+          font-weight: 800; 
+          text-transform: uppercase; 
+          letter-spacing: 0.05em; 
+        }
         
-        .user-badge { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: #64748b; background: #f1f5f9; padding: 0.25rem 0.6rem; border-radius: 999px; width: fit-content; }
+        .tx-row { border-bottom: 1px solid #f1f5f9; transition: all 0.15s; }
+        .tx-row:hover { background: #fafafa; }
         
-        .status-badge { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; font-weight: 600; color: #10b981; }
+        td { padding: 1.25rem 1.5rem; vertical-align: middle; }
+        .date-cell { font-weight: 600; color: #64748b; font-size: 0.8125rem; }
+
+        .tx-desc-cell { display: flex; flex-direction: column; gap: 0.3rem; }
+        .tx-main-desc { font-weight: 700; color: #0f172a; font-size: 0.9375rem; }
+        .tx-performed-badge { 
+          display: flex; 
+          align-items: center; 
+          gap: 0.3rem; 
+          font-size: 0.7rem; 
+          font-weight: 700; 
+          color: #64748b; 
+          background: #f1f5f9;
+          padding: 0.125rem 0.5rem;
+          border-radius: 4px;
+          width: fit-content;
+        }
+
+        .type-pill-minimal {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.25rem 0.6rem;
+          border-radius: 6px;
+          font-size: 0.7rem;
+          font-weight: 800;
+          text-transform: uppercase;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          color: #0f172a;
+          width: fit-content;
+        }
+        .type-revenue { background: #f0fdf4; border-color: #dcfce7; color: #15803d; }
+        .type-expense { background: #fef2f2; border-color: #fee2e2; color: #b91c1c; }
+
+        .amount-cell-premium { font-weight: 800; color: #0f172a; display: flex; align-items: baseline; gap: 0.25rem; }
+        .amount-cell-premium .currency { font-size: 0.7rem; color: #64748b; }
+        .amount-cell-premium .value { font-size: 1rem; }
+
+        .creator-badge { display: flex; align-items: center; gap: 0.625rem; }
+        .avatar-mini { 
+          width: 24px; 
+          height: 24px; 
+          background: #0f172a; 
+          border-radius: 6px; 
+          display: flex; 
+          align-items: center; 
+          justify-content: center; 
+          font-size: 0.7rem; 
+          font-weight: 800; 
+          color: white;
+        }
+        .creator-badge span { font-weight: 700; color: #0f172a; font-size: 0.8125rem; }
+
+        .status-chip {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          padding: 0.25rem 0.625rem;
+          border-radius: 6px;
+          font-size: 0.75rem;
+          font-weight: 800;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          width: fit-content;
+        }
+        .status-chip.approved { color: #10b981; border-color: #dcfce7; background: #f0fdf4; }
+        .status-chip.rejected { color: #ef4444; border-color: #fee2e2; background: #fef2f2; }
         
-        .empty-state { text-align: center; color: var(--muted-foreground); padding: 4rem !important; font-size: 0.875rem; }
+        .status-cell { display: flex; flex-direction: column; gap: 0.25rem; }
+        .verifier-name { font-size: 0.65rem; color: #94a3b8; font-weight: 600; padding-left: 2px; }
+        .status-stack { display: flex; flex-direction: column; align-items: flex-end; gap: 0.2rem; }
+        .m-verifier { font-size: 0.6rem; color: #94a3b8; font-weight: 600; }
+
+        /* Mobile Premium Cards */
+        .tx-card-list { display: flex; flex-direction: column; gap: 1rem; }
+        .tx-premium-mobile-card { 
+          background: white; 
+          border-radius: 6px; 
+          padding: 1.25rem; 
+          border: 1px solid #e2e8f0;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+        .mobile-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+        .mobile-date { font-size: 0.75rem; font-weight: 700; color: #64748b; }
+        .mobile-desc { font-size: 1rem; font-weight: 800; color: #0f172a; margin-bottom: 0.25rem; }
+        .label-dim { color: #94a3b8; font-weight: 600; font-size: 0.875rem; margin-right: 0.25rem; }
+        .mobile-performed { font-size: 0.8125rem; color: #64748b; margin-bottom: 1.25rem; }
+        .mobile-financials { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .mobile-amount-value { display: flex; align-items: baseline; gap: 0.25rem; font-weight: 900; color: #0f172a; }
+        .m-curr { font-size: 0.7rem; color: #64748b; }
+        .m-val { font-size: 1.25rem; }
+        .status-chip.mini { padding: 0.125rem 0.5rem; font-size: 0.7rem; }
+        .mobile-card-footer { border-top: 1px solid #f1f5f9; padding-top: 1rem; }
+
+        .download-area { position: relative; }
+        .download-btn { 
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.625rem; 
+          font-size: 0.8125rem; 
+          font-weight: 700; 
+          min-height: 42px !important; 
+          border-radius: 6px;
+          background: #f8fafc;
+          color: #0f172a;
+          border: 1px solid #e2e8f0;
+          padding: 0 1rem;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .download-btn:hover { background: #f1f5f9; border-color: #cbd5e1; }
+        
+        .download-menu {
+          position: absolute;
+          top: calc(100% + 8px);
+          right: 0;
+          width: 220px;
+          background: white;
+          border-radius: 6px;
+          border: 1px solid #e2e8f0;
+          box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          z-index: 50;
+          padding: 0.5rem;
+        }
+        .download-menu button {
+          padding: 0.75rem 1rem;
+          text-align: left;
+          background: transparent;
+          border: none;
+          font-size: 0.8125rem;
+          font-weight: 700;
+          color: #0f172a;
+          cursor: pointer;
+          transition: all 0.2s;
+          border-radius: 4px;
+        }
+        .download-menu button:hover { background: #f8fafc; padding-left: 1.25rem; }
+
+        .premium-empty-state { 
+          text-align: center; 
+          padding: 5rem 2rem; 
+          background: #ffffff; 
+          border-radius: 6px; 
+          border: 1px dashed #e2e8f0;
+        }
+        .empty-icon-container { 
+          width: 56px; 
+          height: 56px; 
+          background: #f8fafc; 
+          border-radius: 6px; 
+          display: flex; 
+          align-items: center; 
+          justify-content: center; 
+          margin: 0 auto 1.25rem;
+          color: #64748b;
+        }
+        .premium-empty-state h4 { font-size: 1.125rem; font-weight: 800; color: #0f172a; margin-bottom: 0.5rem; }
+        .premium-empty-state p { color: #64748b; font-size: 0.875rem; }
+
+        .desktop-only { display: block; }
+        .mobile-only { display: none; }
+
+        @media (max-width: 768px) {
+          .desktop-only { display: none; }
+          .mobile-only { display: block; }
+          .history-header { flex-direction: column; align-items: flex-start; gap: 1.25rem; }
+          .header-actions { flex-direction: row; width: 100%; gap: 0.75rem; align-items: center; }
+          .custom-dropdown-wrapper, .download-area { flex: 1; min-width: 0; }
+          .custom-filter-trigger, .download-btn { width: 100%; padding: 0 0.75rem; font-size: 0.75rem; }
+          .trigger-content span, .download-btn span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .download-menu { width: 200px; left: auto; right: 0; }
+        }
+
+        .animate-pop-in {
+          animation: popIn 0.2s ease-out;
+        }
+
+        @keyframes popIn {
+          from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
       `}</style>
     </div>
   );

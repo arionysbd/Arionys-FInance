@@ -5,7 +5,7 @@ import Transaction from '@/models/Transaction';
 export async function GET() {
   try {
     await dbConnect();
-    const transactions = await Transaction.find();
+    const transactions = await Transaction.find({ status: 'approved' });
 
     const stats = transactions.reduce((acc, curr) => {
       if (curr.type === 'investment') acc.totalInvestment += curr.amount;

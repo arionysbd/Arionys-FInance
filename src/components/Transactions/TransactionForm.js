@@ -1,8 +1,8 @@
 'use client';
-import { useState } from 'react';
-import { DollarSign, FileText, Tag, Send } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import axios from 'axios';
+import { FileText, Tag, Send, User, Wallet, ArrowUpRight, TrendingDown, DollarSign, ChevronDown, Check } from 'lucide-react';
 
 export default function TransactionForm({ onTransactionAdded }) {
   const { user } = useAuth();
@@ -10,30 +10,74 @@ export default function TransactionForm({ onTransactionAdded }) {
     type: 'revenue',
     amount: '',
     description: '',
-    category: ''
+    performedBy: user?.name || '',
+    otherName: ''
   });
+  
+  const [isOther, setIsOther] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Custom Select State
+  const [openSelect, setOpenSelect] = useState(null); // 'type' or 'attribution'
+  const selectRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (selectRef.current && !selectRef.current.contains(event.target)) {
+        setOpenSelect(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
 
+  const handleSelectOption = (name, value) => {
+    if (name === 'performedBy') {
+      if (value === 'other') {
+        setIsOther(true);
+        setFormData({ ...formData, performedBy: 'other' });
+      } else {
+        setIsOther(false);
+        setFormData({ ...formData, performedBy: value });
+      }
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
+    setOpenSelect(null);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
+      const finalPerformedBy = isOther ? formData.otherName : formData.performedBy;
+      
+      if (!finalPerformedBy) {
+        alert('Please specify who did the transaction');
+        setLoading(false);
+        return;
+      }
+
       await axios.post('/api/transactions', {
         ...formData,
+        performedBy: finalPerformedBy,
         amount: parseFloat(formData.amount),
         userId: user._id
       });
+      
       setFormData({
         type: 'revenue',
         amount: '',
         description: '',
-        category: ''
+        performedBy: user?.name || '',
+        otherName: ''
       });
+      setIsOther(false);
       onTransactionAdded();
       alert('Transaction submitted and awaiting approval.');
     } catch (err) {
@@ -43,28 +87,77 @@ export default function TransactionForm({ onTransactionAdded }) {
     }
   };
 
-  return (
-    <div className="card">
-      <h3 style={{ marginBottom: '1.5rem' }}>Submit New Transaction</h3>
-      <form onSubmit={handleSubmit} className="tx-form">
-        <div className="form-group">
-          <label>Type</label>
-          <select name="type" className="input-field" value={formData.type} onChange={handleInputChange}>
-            <option value="revenue">Revenue/Income</option>
-            <option value="expense">Expense</option>
-            <option value="investment">Investment</option>
-          </select>
-        </div>
+  const typeOptions = [
+    { value: 'revenue', label: 'Revenue/Income', icon: <ArrowUpRight size={16} className="text-tx-revenue" /> },
+    { value: 'expense', label: 'Expense', icon: <TrendingDown size={16} className="text-tx-expense" /> },
+    { value: 'investment', label: 'Investment', icon: <Wallet size={16} className="text-tx-investment" /> }
+  ];
 
-        <div className="form-row">
-          <div className="form-group flex-1">
-            <label>Amount ($)</label>
+  const attributionOptions = [
+    { value: user?.name, label: `${user?.name} (Self)`, icon: <User size={16} /> },
+    { value: 'other', label: 'Other Person', icon: <User size={16} /> }
+  ];
+
+  const currentType = typeOptions.find(o => o.value === formData.type);
+  const currentAttribution = attributionOptions.find(o => o.value === formData.performedBy) || attributionOptions[0];
+
+  return (
+    <div className="card form-premium-card" ref={selectRef}>
+      <div className="form-header">
+        <div className="header-text">
+          <h3>Create Transaction</h3>
+          <p>Record financial transaction for approval</p>
+        </div>
+        <div className="header-icon">
+          <Wallet size={24} />
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="tx-form">
+        <div className="form-grid">
+          {/* Transaction Type Custom Select */}
+          <div className="form-group">
+            <label>Transaction Type</label>
+            <div className="custom-select-container">
+              <div 
+                className={`custom-select-trigger ${openSelect === 'type' ? 'active' : ''}`}
+                onClick={() => setOpenSelect(openSelect === 'type' ? null : 'type')}
+              >
+                <div className="trigger-content">
+                  {currentType?.icon}
+                  <span>{currentType?.label}</span>
+                </div>
+                <ChevronDown size={16} className={`arrow-icon ${openSelect === 'type' ? 'rotate' : ''}`} />
+              </div>
+              
+              {openSelect === 'type' && (
+                <div className="custom-options animate-pop-in">
+                  {typeOptions.map((opt) => (
+                    <div 
+                      key={opt.value}
+                      className={`custom-option ${formData.type === opt.value ? 'selected' : ''}`}
+                      onClick={() => handleSelectOption('type', opt.value)}
+                    >
+                      <div className="option-label">
+                        {opt.icon}
+                        <span>{opt.label}</span>
+                      </div>
+                      {formData.type === opt.value && <Check size={14} className="check-icon" />}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Amount (BDT)</label>
             <div className="input-with-icon">
-              <DollarSign size={16} />
+              <span className="currency-label">BDT</span>
               <input 
                 type="number" 
                 name="amount" 
-                className="input-field" 
+                className="input-field amount-input" 
                 placeholder="0.00" 
                 value={formData.amount} 
                 onChange={handleInputChange} 
@@ -74,52 +167,271 @@ export default function TransactionForm({ onTransactionAdded }) {
               />
             </div>
           </div>
-          <div className="form-group flex-1">
-            <label>Category</label>
+
+          {/* Attribution Custom Select */}
+          <div className="form-group">
+            <label>Attribution</label>
+            <div className="custom-select-container">
+              <div 
+                className={`custom-select-trigger ${openSelect === 'attribution' ? 'active' : ''}`}
+                onClick={() => setOpenSelect(openSelect === 'attribution' ? null : 'attribution')}
+              >
+                <div className="trigger-content">
+                  <User size={16} />
+                  <span>{currentAttribution?.label}</span>
+                </div>
+                <ChevronDown size={16} className={`arrow-icon ${openSelect === 'attribution' ? 'rotate' : ''}`} />
+              </div>
+              
+              {openSelect === 'attribution' && (
+                <div className="custom-options animate-pop-in">
+                  {attributionOptions.map((opt) => (
+                    <div 
+                      key={opt.value}
+                      className={`custom-option ${formData.performedBy === opt.value ? 'selected' : ''}`}
+                      onClick={() => handleSelectOption('performedBy', opt.value)}
+                    >
+                      <div className="option-label">
+                        {opt.icon}
+                        <span>{opt.label}</span>
+                      </div>
+                      {formData.performedBy === opt.value && <Check size={14} className="check-icon" />}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {isOther && (
+            <div className="form-group animate-slide-in">
+              <label>Person's Name</label>
+              <div className="input-with-icon">
+                <FileText size={16} />
+                <input 
+                  type="text" 
+                  name="otherName" 
+                  className="input-field" 
+                  placeholder="Full Name" 
+                  value={formData.otherName} 
+                  onChange={handleInputChange}
+                  required={isOther}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="form-group">
+            <label>Description</label>
             <div className="input-with-icon">
-              <Tag size={16} />
+              <FileText size={16} />
               <input 
                 type="text" 
-                name="category" 
+                name="description" 
                 className="input-field" 
-                placeholder="Marketing, Rent..." 
-                value={formData.category} 
+                placeholder="What is this for?" 
+                value={formData.description} 
                 onChange={handleInputChange} 
+                required 
               />
             </div>
           </div>
         </div>
 
-        <div className="form-group">
-          <label>Description</label>
-          <div className="input-with-icon">
-            <FileText size={16} />
-            <input 
-              type="text" 
-              name="description" 
-              className="input-field" 
-              placeholder="What is this for?" 
-              value={formData.description} 
-              onChange={handleInputChange} 
-              required 
-            />
-          </div>
-        </div>
-
-        <button type="submit" className="btn btn-primary full-width" disabled={loading}>
-          {loading ? 'Submitting...' : <><Send size={16} /> Submit for Approval</>}
+        <button type="submit" className="btn-submit-premium" disabled={loading}>
+          {loading ? (
+            <span className="loader-dots">Processing...</span>
+          ) : (
+            <>
+              <Send size={18} />
+              <span>Submit for Verification</span>
+            </>
+          )}
         </button>
       </form>
 
       <style jsx>{`
-        .tx-form { display: flex; flex-direction: column; gap: 1rem; }
-        .form-row { display: flex; gap: 1rem; }
-        .flex-1 { flex: 1; }
-        label { display: block; margin-bottom: 0.4rem; font-size: 0.8125rem; font-weight: 600; color: var(--muted-foreground); }
-        .input-with-icon { position: relative; }
-        .input-with-icon :global(svg) { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted-foreground); }
-        .input-with-icon input { padding-left: 2.5rem; }
-        .full-width { width: 100%; margin-top: 1rem; }
+        .form-premium-card {
+          padding: 2rem;
+          border: 1px solid #e2e8f0;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+          background: white;
+          position: relative;
+        }
+
+        .form-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 2rem;
+          border-bottom: 1px solid #f1f5f9;
+          padding-bottom: 1.5rem;
+        }
+
+        .header-text h3 { font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0; }
+        .header-text p { font-size: 0.875rem; color: #64748b; margin-top: 0.25rem; }
+        .header-icon { background: #f8fafc; padding: 0.75rem; border-radius: 6px; color: #0f172a; border: 1px solid #e2e8f0; }
+
+        .form-grid {
+          display: flex;
+          flex-direction: column;
+          gap: 1.25rem;
+          margin-bottom: 2rem;
+        }
+
+        label {
+          display: block;
+          margin-bottom: 0.625rem;
+          font-size: 0.75rem;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: #64748b;
+        }
+
+        /* Custom Select Styles */
+        .custom-select-container { position: relative; }
+        
+        .custom-select-trigger {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0.75rem 1rem;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: all 0.2s;
+          min-height: 46px;
+        }
+        
+        .custom-select-trigger:hover { border-color: #cbd5e1; }
+        .custom-select-trigger.active { 
+          background: white;
+          border-color: #0f172a; 
+          box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.05); 
+        }
+
+        .trigger-content { display: flex; align-items: center; gap: 0.75rem; font-size: 0.9375rem; font-weight: 700; color: #0f172a; }
+        .trigger-content :global(svg) { color: #64748b; }
+
+        .arrow-icon { color: #64748b; transition: transform 0.3s; }
+        .arrow-icon.rotate { transform: rotate(180deg); }
+
+        .custom-options {
+          position: absolute;
+          top: calc(100% + 8px);
+          left: 0;
+          right: 0;
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          padding: 0.5rem;
+          z-index: 1000;
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+
+        .custom-option {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0.75rem 1rem;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+        .custom-option:hover { background: #f8fafc; }
+        .custom-option.selected { background: #f1f5f9; }
+
+        .option-label { display: flex; align-items: center; gap: 0.75rem; font-size: 0.875rem; font-weight: 700; color: #0f172a; }
+        .option-label :global(svg) { color: #64748b; }
+        .check-icon { color: #0f172a; }
+
+        /* Standard Input Styles */
+        .input-with-icon { position: relative; display: flex; align-items: center; }
+        .input-with-icon :global(svg) { position: absolute; left: 14px; color: #94a3b8; pointer-events: none; }
+
+        .input-field {
+          width: 100%;
+          padding: 0.75rem 1rem 0.75rem 2.75rem;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 6px;
+          font-size: 0.9375rem;
+          color: #0f172a;
+          transition: all 0.2s;
+        }
+
+        .input-field:focus {
+          background: white;
+          border-color: #0f172a;
+          box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.05);
+          outline: none;
+        }
+
+        .currency-label {
+          position: absolute;
+          left: 14px;
+          top: 50%;
+          transform: translateY(-50%);
+          font-weight: 800;
+          font-size: 0.75rem;
+          color: #64748b;
+        }
+
+        .amount-input { padding-left: 3.25rem; font-weight: 700; font-size: 1.125rem; }
+
+        .btn-submit-premium {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.75rem;
+          padding: 1rem;
+          background: #0f172a;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          font-size: 0.9375rem;
+          font-weight: 800;
+          cursor: pointer;
+          transition: all 0.3s;
+          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
+        }
+
+        .btn-submit-premium:hover:not(:disabled) {
+          background: #1e293b;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2);
+        }
+
+        .btn-submit-premium:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+          background: #94a3b8;
+        }
+
+        @media (max-width: 768px) {
+          .form-premium-card { padding: 1.5rem; }
+        }
+
+        .animate-pop-in {
+          animation: popIn 0.2s ease-out;
+        }
+
+        @keyframes popIn {
+          from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .animate-slide-in {
+          animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
     </div>
   );

@@ -11,13 +11,21 @@ const userSchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
+  phone: {
+    type: String,
+    required: false,
+  },
+  position: {
+    type: String,
+    required: false,
+  },
   password: {
     type: String,
     required: true,
   },
   role: {
     type: String,
-    enum: ['admin', 'moderator', 'accountant'],
+    enum: ['admin', 'ceo', 'csuit', 'cfo', 'accountant', 'audit'],
     default: 'accountant',
   },
   isActive: {

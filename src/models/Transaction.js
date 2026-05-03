@@ -15,9 +15,9 @@ const transactionSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  category: {
+  performedBy: {
     type: String,
-    default: 'General',
+    required: true,
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,

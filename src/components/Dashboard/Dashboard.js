@@ -20,12 +20,13 @@ ChartJS.register(
   Legend
 );
 
-export default function Dashboard({ stats, recentTransactions }) {
+export default function Dashboard({ stats, recentTransactions, user }) {
+  const isAccountant = user?.role?.toLowerCase() === 'accountant';
   const chartData = {
     labels: ['Revenue', 'Expenses', 'Investments'],
     datasets: [
       {
-        label: 'Amount (USD)',
+        label: 'Amount (BDT)',
         data: [stats.totalRevenue, stats.totalExpense, stats.totalInvestment],
         backgroundColor: ['#10b981', '#ef4444', '#2563eb'],
         borderRadius: 8,
@@ -64,45 +65,58 @@ export default function Dashboard({ stats, recentTransactions }) {
   return (
     <div className="animate-fade-in">
       <div className="grid-stats">
+        {/* Net Balance - Always visible */}
         <div className="card stat-card">
           <div className="stat-icon-bg" style={{ backgroundColor: '#eff6ff' }}>
             <Wallet style={{ color: '#2563eb' }} size={20} />
           </div>
           <div className="stat-content">
             <span className="stat-label">Net Balance</span>
-            <div className="stat-value">${stats.netBalance.toLocaleString()}</div>
+            <div className="stat-value">
+              <span className="currency-label">BDT</span> {stats.netBalance.toLocaleString()}
+            </div>
           </div>
         </div>
 
-        <div className="card stat-card">
-          <div className="stat-icon-bg" style={{ backgroundColor: '#ecfdf5' }}>
-            <TrendingUp style={{ color: '#10b981' }} size={20} />
-          </div>
-          <div className="stat-content">
-            <span className="stat-label">Total Revenue</span>
-            <div className="stat-value text-success">${stats.totalRevenue.toLocaleString()}</div>
-          </div>
-        </div>
+        {!isAccountant && (
+          <>
+            <div className="card stat-card">
+              <div className="stat-icon-bg" style={{ backgroundColor: '#ecfdf5' }}>
+                <TrendingUp style={{ color: '#10b981' }} size={20} />
+              </div>
+              <div className="stat-content">
+                <span className="stat-label">Total Revenue</span>
+                <div className="stat-value text-success">
+                  <span className="currency-label">BDT</span> {stats.totalRevenue.toLocaleString()}
+                </div>
+              </div>
+            </div>
 
-        <div className="card stat-card">
-          <div className="stat-icon-bg" style={{ backgroundColor: '#fef2f2' }}>
-            <TrendingDown style={{ color: '#ef4444' }} size={20} />
-          </div>
-          <div className="stat-content">
-            <span className="stat-label">Total Expenses</span>
-            <div className="stat-value text-danger">${stats.totalExpense.toLocaleString()}</div>
-          </div>
-        </div>
+            <div className="card stat-card">
+              <div className="stat-icon-bg" style={{ backgroundColor: '#fef2f2' }}>
+                <TrendingDown style={{ color: '#ef4444' }} size={20} />
+              </div>
+              <div className="stat-content">
+                <span className="stat-label">Total Expenses</span>
+                <div className="stat-value text-danger">
+                  <span className="currency-label">BDT</span> {stats.totalExpense.toLocaleString()}
+                </div>
+              </div>
+            </div>
 
-        <div className="card stat-card">
-          <div className="stat-icon-bg" style={{ backgroundColor: '#f5f3ff' }}>
-            <PlusCircle style={{ color: '#8b5cf6' }} size={20} />
-          </div>
-          <div className="stat-content">
-            <span className="stat-label">Investments</span>
-            <div className="stat-value text-accent">${stats.totalInvestment.toLocaleString()}</div>
-          </div>
-        </div>
+            <div className="card stat-card">
+              <div className="stat-icon-bg" style={{ backgroundColor: '#f5f3ff' }}>
+                <PlusCircle style={{ color: '#8b5cf6' }} size={20} />
+              </div>
+              <div className="stat-content">
+                <span className="stat-label">Investments</span>
+                <div className="stat-value text-accent">
+                  <span className="currency-label">BDT</span> {stats.totalInvestment.toLocaleString()}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="grid-content">
@@ -111,7 +125,7 @@ export default function Dashboard({ stats, recentTransactions }) {
             <h3>Financial Performance</h3>
             <p>Distribution of capital across categories</p>
           </div>
-          <div style={{ height: '300px', marginTop: '1rem' }}>
+          <div className="chart-wrapper">
             <Bar data={chartData} options={chartOptions} />
           </div>
         </div>
@@ -129,7 +143,7 @@ export default function Dashboard({ stats, recentTransactions }) {
                   <span className="tx-date">{new Date(tx.date).toLocaleDateString()}</span>
                 </div>
                 <div className={`tx-amount ${tx.type}`}>
-                  {tx.type === 'expense' ? '-' : '+'}${tx.amount.toLocaleString()}
+                  {tx.type === 'expense' ? '-' : '+'} <small>BDT</small> {tx.amount.toLocaleString()}
                 </div>
               </div>
             ))}
@@ -144,6 +158,9 @@ export default function Dashboard({ stats, recentTransactions }) {
           grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
           gap: 1.5rem;
           margin-bottom: 2.5rem;
+        }
+        @media (max-width: 640px) {
+          .grid-stats { grid-template-columns: 1fr; gap: 1rem; }
         }
         .stat-card {
           display: flex;
@@ -172,7 +189,15 @@ export default function Dashboard({ stats, recentTransactions }) {
           font-size: 1.5rem;
           font-weight: 800;
           color: #1e293b;
+          display: flex;
+          align-items: baseline;
+          gap: 0.35rem;
         }
+        @media (max-width: 480px) {
+          .stat-value { font-size: 1.25rem; }
+          .stat-card { padding: 1rem; }
+        }
+        .currency-label { font-size: 0.875rem; font-weight: 600; color: var(--muted-foreground); }
         
         .grid-content {
           display: grid;
@@ -183,9 +208,12 @@ export default function Dashboard({ stats, recentTransactions }) {
           .grid-content { grid-template-columns: 1fr; }
         }
         
-        .card-header { margin-bottom: 1rem; }
-        .card-header h3 { font-size: 1.125rem; font-weight: 700; color: #1e293b; }
         .card-header p { font-size: 0.8125rem; color: #94a3b8; }
+        
+        .chart-wrapper { height: 300px; margin-top: 1rem; }
+        @media (max-width: 640px) {
+          .chart-wrapper { height: 220px; }
+        }
         
         .transaction-list {
           display: flex;

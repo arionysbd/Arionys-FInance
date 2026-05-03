@@ -31,7 +31,9 @@ export default function SignupPage() {
     <div className="auth-container">
       <div className="auth-card card glass animate-fade-in">
         <div className="auth-header">
-          <div className="logo-icon">A</div>
+          <div className="logo-icon">
+            <img src="https://files.edgestore.dev/58ak0uq249vmf7cf/publicFiles/_public/303ae74c-97f0-41f5-be5a-45a951af0d72.png" alt="Arionys" />
+          </div>
           <h1>Create Account</h1>
           <p>The first account will be the <strong>Admin</strong>.</p>
         </div>
@@ -116,16 +118,14 @@ export default function SignupPage() {
         .logo-icon {
           width: 48px;
           height: 48px;
-          background: var(--primary);
-          color: white;
           border-radius: 12px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-weight: 800;
-          font-size: 1.5rem;
+          overflow: hidden;
           margin: 0 auto 1.5rem;
         }
+        .logo-icon img { width: 100%; height: 100%; object-fit: contain; }
         .auth-header h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; }
         .auth-header p { color: var(--muted-foreground); font-size: 0.875rem; }
         
