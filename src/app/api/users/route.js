@@ -69,7 +69,7 @@ export async function PATCH(req) {
               <p>Great news! Your account has been approved by an administrator.</p>
               <p>You now have full access to the Arionys Finance platform with the role of <strong>${roleLabel}</strong>.</p>
               <div style="margin-top: 30px;">
-                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login" 
+                <a href="${process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin}/login" 
                    style="background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
                   Log In Now
                 </a>

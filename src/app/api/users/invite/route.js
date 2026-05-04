@@ -42,7 +42,7 @@ export async function POST(req) {
     });
 
     // Build the confirmation link
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
     const confirmUrl = `${baseUrl}/invite/confirm?token=${inviteToken}`;
 
     // Send the confirmation email

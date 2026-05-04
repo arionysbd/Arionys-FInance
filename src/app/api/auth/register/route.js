@@ -63,7 +63,7 @@ export async function POST(req) {
                   <li><strong>Email:</strong> ${email}</li>
                 </ul>
                 <div style="margin-top: 20px;">
-                  <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/users" 
+                  <a href="${process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin}/users" 
                      style="background: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
                     Review User
                   </a>

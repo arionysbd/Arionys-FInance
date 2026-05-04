@@ -14,7 +14,7 @@ export async function POST(req) {
     }
 
     // In a real app, you'd generate a token. For now, we'll send a direct reset link.
-    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login`; // Redirecting to login for now
+    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin}/login`; // Redirecting to login for now
 
     await sendEmail({
       to: user.email,

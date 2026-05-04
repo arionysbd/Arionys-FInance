@@ -22,7 +22,9 @@ export async function sendEmail({ to, subject, text, html }) {
   let passRaw = process.env.SMTP_PASSWORD || process.env.EMAIL_SERVER_PASSWORD;
   let pass = passRaw ? passRaw.replace(/^"|"$/g, '') : undefined; // Strip quotes if present
   
-  let from = process.env.EMAIL_FROM || process.env.SMTP_USERNAME || '"Arionys Finance" <noreply@arionys.com>';
+  let from = process.env.EMAIL_FROM || 
+             (process.env.SMTP_NAME && process.env.SMTP_USERNAME ? `"${process.env.SMTP_NAME}" <${process.env.SMTP_USERNAME}>` : process.env.SMTP_USERNAME) || 
+             '"Arionys" <noreply@arionys.com>';
 
   if (!host || !user || !pass) {
     console.error('SMTP configuration missing in environment variables.');

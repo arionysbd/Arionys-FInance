@@ -70,7 +70,7 @@ export async function POST(req) {
                 <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Recorded By:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${creator.name}</td></tr>
               </table>
               <div style="margin-top: 30px;">
-                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/pending" 
+                <a href="${process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin}/pending" 
                    style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
                   Review Transaction
                 </a>

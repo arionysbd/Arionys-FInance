@@ -21,7 +21,7 @@ export async function POST(req) {
       { expiresIn: '15m' }
     );
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
     const magicLink = `${appUrl}/verify?token=${token}`;
 
     await sendEmail({
