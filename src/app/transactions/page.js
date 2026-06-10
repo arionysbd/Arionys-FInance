@@ -72,7 +72,7 @@ export default function TransactionsPage() {
       <div className="tx-layout">
         <div className="tx-quick-stats-bar animate-slide-up">
           <div className="tx-stat-item">
-            <span className="tx-stat-label">Total Approved Value</span>
+            <span className="tx-stat-label">Net Balance</span>
             <span className="tx-stat-value">BDT {stats.netBalance.toLocaleString()}</span>
           </div>
           <div className="tx-stat-divider"></div>
@@ -97,6 +97,7 @@ export default function TransactionsPage() {
         .tx-layout { max-width: 1200px; margin: 0 auto; padding-right: 5vw; }
         .tx-quick-stats-bar { 
           display: flex; 
+          width: 100%;
           align-items: center; 
           background: #ffffff; 
           padding: clamp(1rem, 4vw, 1.5rem) clamp(1.25rem, 5vw, 2rem); 
@@ -112,8 +113,9 @@ export default function TransactionsPage() {
         .tx-form-container { margin-bottom: 2rem; }
         
         @media (max-width: 768px) {
-          .tx-quick-stats-bar { flex-direction: column; gap: 1.5rem; align-items: flex-start; padding: 1.5rem; }
-          .tx-stat-divider { display: none; }
+          .tx-layout { padding-right: 0; }
+          .tx-quick-stats-bar { flex-direction: row; gap: 0; align-items: center; padding: 1rem 1.25rem; }
+          .tx-stat-divider { display: block; height: 30px; margin: 0 1rem; }
           .tx-stat-value { font-size: 1.1rem; }
         }
       `}</style>

@@ -4,7 +4,16 @@ const transactionSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['investment', 'revenue', 'expense'],
+    enum: ['investment', 'revenue', 'expense', 'transfer'],
+  },
+  account: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Account',
+    required: true,
+  },
+  toAccount: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Account',
   },
   amount: {
     type: Number,
@@ -40,5 +49,10 @@ const transactionSchema = new mongoose.Schema({
 }, {
   timestamps: true,
 });
+
+if (mongoose.models.Transaction) {
+  delete mongoose.models.Transaction;
+  delete mongoose.connection.models.Transaction;
+}
 
 export default mongoose.models.Transaction || mongoose.model('Transaction', transactionSchema);

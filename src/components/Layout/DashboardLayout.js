@@ -10,7 +10,8 @@ import {
   FileCheck,
   Users as UsersIcon,
   Settings as SettingsIcon,
-  User as UserIcon
+  User as UserIcon,
+  Wallet
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
@@ -111,11 +112,13 @@ export default function DashboardLayout({ children }) {
     { id: 'transactions', label: 'Transactions', icon: <ArrowRightLeft size={20} />, href: '/transactions', roles: ['admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
     { id: 'pending', label: 'Pending', icon: <FileCheck size={20} />, href: '/pending', roles: ['admin', 'ceo', 'cfo'] },
     { id: 'users', label: 'User Management', icon: <UsersIcon size={20} />, href: '/users', roles: ['admin'] },
+    { id: 'accounts', label: 'Accounts', icon: <Wallet size={20} />, href: '/accounts', roles: ['admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
     { id: 'settings', label: 'Settings', icon: <SettingsIcon size={20} />, href: '/settings', roles: ['admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
   ];
 
   const getPageTitle = () => {
     if (pathname === '/dashboard') return 'Financial Overview';
+    if (pathname === '/accounts') return 'Account Management';
     if (pathname === '/transactions') return 'Transaction History';
     if (pathname === '/pending') return 'Approval Queue';
     if (pathname === '/users') return 'System Management';
@@ -124,6 +127,7 @@ export default function DashboardLayout({ children }) {
 
   const getBreadcrumb = () => {
     if (pathname === '/dashboard') return 'Dashboard';
+    if (pathname === '/accounts') return 'Accounts';
     if (pathname === '/transactions') return 'Transactions';
     if (pathname === '/pending') return 'Pending';
     if (pathname === '/users') return 'System';
@@ -244,13 +248,13 @@ export default function DashboardLayout({ children }) {
           </div>
         </header>
 
-        <div className="content-area animate-fade-in">
+        <div className="content-area">
           {children}
         </div>
       </main>
 
       <style jsx>{`
-        .layout { display: flex; min-height: 100vh; background: #ffffff; }
+        .layout { display: flex; min-height: 100vh; background: transparent; }
         
         .sidebar {
           width: 260px;
@@ -259,8 +263,10 @@ export default function DashboardLayout({ children }) {
           padding: 0.5rem 1.25rem 2rem;
           display: flex;
           flex-direction: column;
-          background: #ffffff;
-          border-right: 1px solid #f1f5f9;
+          background: rgba(255, 255, 255, 0.4);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
+          border-right: 1px solid rgba(255, 255, 255, 0.5);
           z-index: 100;
         }
 
@@ -272,7 +278,7 @@ export default function DashboardLayout({ children }) {
           margin-bottom: 0.75rem; 
           padding: 0 0 0.5rem 2.5rem; 
           width: 100%; 
-          border-bottom: 1px solid #f1f5f9;
+          border-bottom: 1px solid rgba(0,0,0,0.05);
         }
         .logo-icon { width: 140px; display: flex; align-items: center; justify-content: center; }
         .logo-icon img { width: 100%; height: auto; object-fit: contain; }
@@ -283,15 +289,15 @@ export default function DashboardLayout({ children }) {
           align-items: center;
           gap: 1rem;
           padding: 0.875rem 1rem;
-          border-radius: 6px;
+          border-radius: 8px;
           color: #64748b;
           font-weight: 600;
           font-size: 0.9375rem;
           transition: all 0.2s;
           text-decoration: none;
         }
-        :global(.nav-item:hover) { background: #f8fafc; color: #0f172a; }
-        :global(.nav-item.active) { background: #0f172a; color: #ffffff; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15); }
+        :global(.nav-item:hover) { background: rgba(255,255,255,0.8); color: var(--foreground); box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+        :global(.nav-item.active) { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: #ffffff; box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.39); }
 
         .nav-icon-wrapper { position: relative; display: flex; align-items: center; justify-content: center; }
         .notification-badge {

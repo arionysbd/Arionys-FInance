@@ -24,23 +24,15 @@ export const addTransaction = async (transactionData) => {
   return data;
 };
 
-export const updateTransaction = async (id, transactionData) => {
-  const { data } = await api.put(`/transactions/${id}`, transactionData);
+
+
+export const getAccounts = async () => {
+  const { data } = await api.get('/accounts');
   return data;
 };
 
-export const deleteTransaction = async (id, verificationData) => {
-  const { data } = await api.delete(`/transactions/${id}`, { data: verificationData });
-  return data;
-};
-
-export const getFounders = async () => {
-  const { data } = await api.get('/founders');
-  return data;
-};
-
-export const validateFounder = async (verificationData) => {
-  const { data } = await api.post('/founders/validate', verificationData);
+export const addAccount = async (accountData) => {
+  const { data } = await api.post('/accounts', accountData);
   return data;
 };
 

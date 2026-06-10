@@ -62,6 +62,15 @@ export default function Dashboard({ stats, recentTransactions, user }) {
     },
   };
 
+  const CARD_COLORS = [
+    { bg: '#e0e7ff', text: '#4f46e5' }, // Indigo
+    { bg: '#dcfce7', text: '#16a34a' }, // Green
+    { bg: '#fef3c7', text: '#d97706' }, // Amber
+    { bg: '#f3e8ff', text: '#9333ea' }, // Purple
+    { bg: '#fee2e2', text: '#dc2626' }, // Red
+    { bg: '#ccfbf1', text: '#0d9488' }, // Teal
+  ];
+
   return (
     <div className="animate-fade-in">
       <div className="grid-stats">
@@ -118,6 +127,28 @@ export default function Dashboard({ stats, recentTransactions, user }) {
           </>
         )}
       </div>
+
+      {stats.accountBalances && stats.accountBalances.length > 0 && (
+        <div className="account-balances-container">
+          <h3 className="section-title">Account Balances</h3>
+          <div className="accounts-grid">
+            {stats.accountBalances.map((acc, index) => {
+              const color = CARD_COLORS[index % CARD_COLORS.length];
+              return (
+                <div key={acc.name} className="card acc-card" style={{ borderTop: `3px solid ${color.text}` }}>
+                  <div className="acc-icon-bg" style={{ backgroundColor: color.bg }}>
+                    <Wallet style={{ color: color.text }} size={18} />
+                  </div>
+                  <div className="acc-info">
+                    <span className="acc-name">{acc.name}</span>
+                    <span className="acc-bal">BDT {acc.balance.toLocaleString()}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="grid-content">
         <div className="card chart-container">
@@ -199,6 +230,36 @@ export default function Dashboard({ stats, recentTransactions, user }) {
         }
         .currency-label { font-size: 0.875rem; font-weight: 600; color: var(--muted-foreground); }
         
+        .section-title { font-size: 1.125rem; font-weight: 800; color: #0f172a; margin-bottom: 1rem; margin-top: 1rem; }
+        .account-balances-container { margin-bottom: 2.5rem; }
+        .accounts-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 1rem;
+        }
+        .acc-card {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          padding: 1rem 1.25rem;
+          background: white;
+          border-radius: 6px;
+          border: 1px solid var(--border);
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+          overflow: hidden;
+        }
+        .acc-icon-bg {
+          width: 36px; height: 36px; border-radius: 6px; background: #e0f2fe; display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0;
+        }
+        .acc-info { display: flex; flex-direction: column; overflow: hidden; width: 100%; }
+        .acc-name { 
+          font-size: 0.75rem; font-weight: 700; color: #64748b; 
+          text-transform: uppercase; margin-bottom: 0.15rem; 
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .acc-bal { font-size: 1.1rem; font-weight: 800; color: #0f172a; }
+
         .grid-content {
           display: grid;
           grid-template-columns: 1.8fr 1.2fr;

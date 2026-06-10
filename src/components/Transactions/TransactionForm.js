@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import axios from 'axios';
-import { FileText, Tag, Send, User, Wallet, ArrowUpRight, TrendingDown, DollarSign, ChevronDown, Check } from 'lucide-react';
+import { FileText, Tag, Send, User, Wallet, ArrowUpRight, TrendingDown, DollarSign, ChevronDown, Check, ArrowRightLeft, CreditCard } from 'lucide-react';
 
 export default function TransactionForm({ onTransactionAdded }) {
   const { user } = useAuth();
@@ -11,17 +11,31 @@ export default function TransactionForm({ onTransactionAdded }) {
     amount: '',
     description: '',
     performedBy: user?.name || '',
-    otherName: ''
+    otherName: '',
+    account: '',
+    toAccount: ''
   });
   
   const [isOther, setIsOther] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [accounts, setAccounts] = useState([]);
   
   // Custom Select State
-  const [openSelect, setOpenSelect] = useState(null); // 'type' or 'attribution'
+  const [openSelect, setOpenSelect] = useState(null); // 'type', 'attribution', 'account', 'toAccount'
   const selectRef = useRef(null);
 
   useEffect(() => {
+    const fetchAccounts = async () => {
+      try {
+        const { data } = await axios.get('/api/accounts');
+        setAccounts(data.data || []);
+      } catch (err) {
+        console.error('Error fetching accounts:', err);
+      }
+    };
+
+    fetchAccounts();
+
     const handleClickOutside = (event) => {
       if (selectRef.current && !selectRef.current.contains(event.target)) {
         setOpenSelect(null);
@@ -30,6 +44,13 @@ export default function TransactionForm({ onTransactionAdded }) {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Sync performedBy when user loads (user is null on first render due to async auth)
+  useEffect(() => {
+    if (user?.name && !formData.performedBy) {
+      setFormData(prev => ({ ...prev, performedBy: user.name }));
+    }
+  }, [user]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -57,8 +78,14 @@ export default function TransactionForm({ onTransactionAdded }) {
     try {
       const finalPerformedBy = isOther ? formData.otherName : formData.performedBy;
       
-      if (!finalPerformedBy) {
-        alert('Please specify who did the transaction');
+      if (!formData.account) {
+        alert('Please select an account');
+        setLoading(false);
+        return;
+      }
+
+      if (formData.type === 'transfer' && !formData.toAccount) {
+        alert('Please select a destination account for the transfer');
         setLoading(false);
         return;
       }
@@ -75,7 +102,9 @@ export default function TransactionForm({ onTransactionAdded }) {
         amount: '',
         description: '',
         performedBy: user?.name || '',
-        otherName: ''
+        otherName: '',
+        account: '',
+        toAccount: ''
       });
       setIsOther(false);
       onTransactionAdded();
@@ -90,7 +119,8 @@ export default function TransactionForm({ onTransactionAdded }) {
   const typeOptions = [
     { value: 'revenue', label: 'Revenue/Income', icon: <ArrowUpRight size={16} className="text-tx-revenue" /> },
     { value: 'expense', label: 'Expense', icon: <TrendingDown size={16} className="text-tx-expense" /> },
-    { value: 'investment', label: 'Investment', icon: <Wallet size={16} className="text-tx-investment" /> }
+    { value: 'investment', label: 'Investment', icon: <Wallet size={16} className="text-tx-investment" /> },
+    { value: 'transfer', label: 'Transfer', icon: <ArrowRightLeft size={16} style={{ color: '#8b5cf6' }} /> }
   ];
 
   const attributionOptions = [
@@ -117,7 +147,7 @@ export default function TransactionForm({ onTransactionAdded }) {
         <div className="form-grid">
           {/* Transaction Type Custom Select */}
           <div className="form-group">
-            <label>Transaction Type</label>
+            <label>Transaction Type <span style={{ color: '#ef4444' }}>*</span></label>
             <div className="custom-select-container">
               <div 
                 className={`custom-select-trigger ${openSelect === 'type' ? 'active' : ''}`}
@@ -151,7 +181,7 @@ export default function TransactionForm({ onTransactionAdded }) {
           </div>
 
           <div className="form-group">
-            <label>Amount (BDT)</label>
+            <label>Amount (BDT) <span style={{ color: '#ef4444' }}>*</span></label>
             <div className="input-with-icon">
               <span className="currency-label">BDT</span>
               <input 
@@ -168,9 +198,121 @@ export default function TransactionForm({ onTransactionAdded }) {
             </div>
           </div>
 
+          {/* Account Selection */}
+          {formData.type !== 'transfer' ? (
+            <div className="form-group">
+              <label>Account <span style={{ color: '#ef4444' }}>*</span></label>
+              <div className="custom-select-container">
+                <div 
+                  className={`custom-select-trigger ${openSelect === 'account' ? 'active' : ''}`}
+                  onClick={() => setOpenSelect(openSelect === 'account' ? null : 'account')}
+                >
+                  <div className="trigger-content">
+                    <CreditCard size={16} />
+                    <span>{accounts.find(a => a._id === formData.account)?.bankName || 'Select Account'}</span>
+                  </div>
+                  <ChevronDown size={16} className={`arrow-icon ${openSelect === 'account' ? 'rotate' : ''}`} />
+                </div>
+                
+                {openSelect === 'account' && (
+                  <div className="custom-options animate-pop-in">
+                    {accounts.map((acc) => (
+                      <div 
+                        key={acc._id}
+                        className={`custom-option ${formData.account === acc._id ? 'selected' : ''}`}
+                        onClick={() => handleSelectOption('account', acc._id)}
+                      >
+                        <div className="option-label">
+                          <CreditCard size={16} />
+                          <span>{acc.bankName}</span>
+                        </div>
+                        {formData.account === acc._id && <Check size={14} className="check-icon" />}
+                      </div>
+                    ))}
+                    {accounts.length === 0 && (
+                      <div className="custom-option" style={{ color: '#94a3b8', cursor: 'default' }}>
+                        No accounts available
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="form-group">
+                <label>From Account <span style={{ color: '#ef4444' }}>*</span></label>
+                <div className="custom-select-container">
+                  <div 
+                    className={`custom-select-trigger ${openSelect === 'account' ? 'active' : ''}`}
+                    onClick={() => setOpenSelect(openSelect === 'account' ? null : 'account')}
+                  >
+                    <div className="trigger-content">
+                      <CreditCard size={16} />
+                      <span>{accounts.find(a => a._id === formData.account)?.bankName || 'Select Source Account'}</span>
+                    </div>
+                    <ChevronDown size={16} className={`arrow-icon ${openSelect === 'account' ? 'rotate' : ''}`} />
+                  </div>
+                  
+                  {openSelect === 'account' && (
+                    <div className="custom-options animate-pop-in">
+                      {accounts.map((acc) => (
+                        <div 
+                          key={acc._id}
+                          className={`custom-option ${formData.account === acc._id ? 'selected' : ''}`}
+                          onClick={() => handleSelectOption('account', acc._id)}
+                        >
+                          <div className="option-label">
+                            <CreditCard size={16} />
+                            <span>{acc.bankName}</span>
+                          </div>
+                          {formData.account === acc._id && <Check size={14} className="check-icon" />}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="form-group">
+                <label>To Account <span style={{ color: '#ef4444' }}>*</span></label>
+                <div className="custom-select-container">
+                  <div 
+                    className={`custom-select-trigger ${openSelect === 'toAccount' ? 'active' : ''}`}
+                    onClick={() => setOpenSelect(openSelect === 'toAccount' ? null : 'toAccount')}
+                  >
+                    <div className="trigger-content">
+                      <CreditCard size={16} />
+                      <span>{accounts.find(a => a._id === formData.toAccount)?.bankName || 'Select Destination Account'}</span>
+                    </div>
+                    <ChevronDown size={16} className={`arrow-icon ${openSelect === 'toAccount' ? 'rotate' : ''}`} />
+                  </div>
+                  
+                  {openSelect === 'toAccount' && (
+                    <div className="custom-options animate-pop-in">
+                      {accounts.map((acc) => (
+                        <div 
+                          key={acc._id}
+                          className={`custom-option ${formData.toAccount === acc._id ? 'selected' : ''}`}
+                          onClick={() => handleSelectOption('toAccount', acc._id)}
+                        >
+                          <div className="option-label">
+                            <CreditCard size={16} />
+                            <span>{acc.bankName}</span>
+                          </div>
+                          {formData.toAccount === acc._id && <Check size={14} className="check-icon" />}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
           {/* Attribution Custom Select */}
           <div className="form-group">
-            <label>Attribution</label>
+            <label>Attribution <span style={{ color: '#ef4444' }}>*</span></label>
             <div className="custom-select-container">
               <div 
                 className={`custom-select-trigger ${openSelect === 'attribution' ? 'active' : ''}`}
@@ -205,7 +347,7 @@ export default function TransactionForm({ onTransactionAdded }) {
 
           {isOther && (
             <div className="form-group animate-slide-in">
-              <label>Person's Name</label>
+              <label>Person's Name <span style={{ color: '#ef4444' }}>*</span></label>
               <div className="input-with-icon">
                 <FileText size={16} />
                 <input 
@@ -222,7 +364,7 @@ export default function TransactionForm({ onTransactionAdded }) {
           )}
 
           <div className="form-group">
-            <label>Description</label>
+            <label>Description <span style={{ color: '#ef4444' }}>*</span></label>
             <div className="input-with-icon">
               <FileText size={16} />
               <input 
@@ -377,6 +519,15 @@ export default function TransactionForm({ onTransactionAdded }) {
           font-weight: 800;
           font-size: 0.75rem;
           color: #64748b;
+        }
+
+        .overlay {
+          position: fixed; inset: 0; z-index: 10000;
+          background: rgba(15,23,42,0.25);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          display: flex; align-items: center; justify-content: center;
+          padding: 1rem;
         }
 
         .amount-input { padding-left: 3.25rem; font-weight: 700; font-size: 1.125rem; }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Transaction from '@/models/Transaction';
 import User from '@/models/User';
+import Account from '@/models/Account';
 import { sendEmail } from '@/lib/mail';
 
 export async function GET(req) {
@@ -25,6 +26,8 @@ export async function GET(req) {
     const transactions = await Transaction.find(query)
       .populate('createdBy', 'name')
       .populate('approvedBy', 'name')
+      .populate('account', 'bankName')
+      .populate('toAccount', 'bankName')
       .sort({ date: -1 })
       .lean();
     return NextResponse.json({ success: true, data: transactions });
@@ -37,7 +40,15 @@ export async function POST(req) {
   try {
     await dbConnect();
     const body = await req.json();
-    const { type, amount, description, performedBy, userId } = body;
+    const { type, amount, description, performedBy, userId, account, toAccount } = body;
+
+    if (!account) {
+      return NextResponse.json({ success: false, message: 'Account selection is mandatory' }, { status: 400 });
+    }
+
+    if (type === 'transfer' && !toAccount) {
+      return NextResponse.json({ success: false, message: 'Destination account is mandatory for transfers' }, { status: 400 });
+    }
 
     const transaction = await Transaction.create({
       type,
@@ -45,6 +56,8 @@ export async function POST(req) {
       description,
       performedBy,
       createdBy: userId,
+      account,
+      toAccount: type === 'transfer' ? toAccount : undefined,
       status: 'pending' // Force pending on creation
     });
 

@@ -1,26 +1,26 @@
 :root {
-  --background: #ffffff;
+  --background: #f8faff;
   --foreground: #0f172a;
   --card: #ffffff;
   --card-foreground: #0f172a;
   --popover: #ffffff;
   --popover-foreground: #0f172a;
-  --primary: #0f172a;
+  --primary: #6366f1;
   --primary-foreground: #ffffff;
-  --secondary: #f8fafc;
-  --secondary-foreground: #475569;
-  --muted: #f8fafc;
+  --secondary: #e0e7ff;
+  --secondary-foreground: #3730a3;
+  --muted: #f1f5f9;
   --muted-foreground: #64748b;
-  --accent: #f8fafc;
-  --accent-foreground: #0f172a;
-  --destructive: #0f172a;
+  --accent: #eef2ff;
+  --accent-foreground: #4f46e5;
+  --destructive: #ef4444;
   --destructive-foreground: #ffffff;
   --border: #e2e8f0;
   --input: #ffffff;
-  --ring: #0f172a;
-  --radius: 6px;
-  --success: #0f172a;
-  --warning: #0f172a;
+  --ring: #6366f1;
+  --radius: 8px;
+  --success: #10b981;
+  --warning: #f59e0b;
   --font-hero: 'Outfit', sans-serif;
 }
 
@@ -32,6 +32,11 @@
 
 body {
   background-color: var(--background);
+  background-image: 
+    radial-gradient(at 0% 0%, hsla(253,16%,7%,0) 0, transparent 50%), 
+    radial-gradient(at 50% 0%, hsla(225,39%,30%,0) 0, transparent 50%), 
+    radial-gradient(at 100% 0%, hsla(339,49%,30%,0) 0, transparent 50%);
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-hero);
   letter-spacing: 0.015em;
@@ -121,13 +126,14 @@ input, select, textarea, button {
 }
 
 .btn-primary {
-  background: var(--primary);
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
   color: var(--primary-foreground);
+  box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.39);
 }
 
 .btn-primary:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.23);
+  transform: translateY(-2px);
 }
 
 .btn-secondary {

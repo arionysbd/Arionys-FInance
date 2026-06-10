@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { Filter, CheckCircle, XCircle, Download, ChevronDown, Check, ArrowUpRight, TrendingDown, Wallet } from 'lucide-react';
+import { Filter, CheckCircle, XCircle, Download, ChevronDown, Check, ArrowUpRight, TrendingDown, Wallet, ArrowRightLeft } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -53,15 +53,21 @@ export default function TransactionHistory({ transactions, onUpdate }) {
       txToExport = transactions.filter(t => t.type === type && t.status !== 'rejected');
     }
 
-    const tableData = txToExport.map(tx => [
-      new Date(tx.date).toLocaleDateString(),
-      tx.description,
-      tx.type.toUpperCase(),
-      `BDT ${tx.amount.toLocaleString()}`,
-      tx.performedBy || 'N/A',
-      tx.createdBy?.name || 'System',
-      tx.approvedBy?.name || '—'
-    ]);
+    const tableData = txToExport.map(tx => {
+      const accountInfo = tx.type === 'transfer' 
+        ? `From: ${tx.account?.bankName || 'Unknown'} -> To: ${tx.toAccount?.bankName || 'Unknown'}` 
+        : tx.account?.bankName || 'Unknown';
+
+      return [
+        new Date(tx.date).toLocaleDateString(),
+        tx.description,
+        tx.type.toUpperCase(),
+        `BDT ${tx.amount.toLocaleString()}\n${accountInfo}`,
+        tx.performedBy || 'N/A',
+        tx.createdBy?.name || 'System',
+        tx.approvedBy?.name || '—'
+      ];
+    });
 
     autoTable(doc, {
       startY: 48,
@@ -91,6 +97,35 @@ export default function TransactionHistory({ transactions, onUpdate }) {
         4: { cellWidth: 24 },   // By (Performed By)
         5: { cellWidth: 24 },   // Rec. (Recorded By)
         6: { cellWidth: 24 },   // Appr. (Approved By)
+      },
+      willDrawCell: (data) => {
+        if (data.section === 'body' && data.column.index === 3) {
+          data.cell.text = []; // Prevent autoTable from drawing the default text
+        }
+      },
+      didDrawCell: (data) => {
+        if (data.section === 'body' && data.column.index === 3) {
+          const rawValue = data.row.raw[3] || '';
+          const lines = rawValue.split('\n');
+          const amountText = lines[0] || '';
+          const accText = lines[1] || '';
+          
+          const { x, y, styles, width } = data.cell;
+          
+          // Draw Amount (Bold, Black)
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(7);
+          doc.setTextColor(0, 0, 0);
+          doc.text(amountText, x + styles.cellPadding, y + styles.cellPadding + 2.5);
+          
+          // Draw Account Name (Normal, Dark Gray)
+          if (accText) {
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(100, 100, 100);
+            const splitAcc = doc.splitTextToSize(accText, width - (styles.cellPadding * 2));
+            doc.text(splitAcc, x + styles.cellPadding, y + styles.cellPadding + 6.5);
+          }
+        }
       }
     });
 
@@ -133,6 +168,7 @@ export default function TransactionHistory({ transactions, onUpdate }) {
     { value: 'revenue', label: 'Revenue', icon: <ArrowUpRight size={14} className="text-tx-revenue" /> },
     { value: 'expense', label: 'Expense', icon: <TrendingDown size={14} className="text-tx-expense" /> },
     { value: 'investment', label: 'Investment', icon: <Wallet size={14} className="text-tx-investment" /> },
+    { value: 'transfer', label: 'Transfer', icon: <ArrowRightLeft size={14} style={{ color: '#8b5cf6' }} /> },
     { value: 'rejected', label: 'Rejected Items', icon: <XCircle size={14} className="text-danger" /> }
   ];
 
@@ -142,7 +178,7 @@ export default function TransactionHistory({ transactions, onUpdate }) {
     ? (filterType === 'rejected' 
         ? transactions.filter(tx => tx.status === 'rejected')
         : transactions.filter(tx => tx.type === filterType && tx.status === 'approved'))
-    : transactions.filter(tx => tx.status !== 'rejected');
+    : transactions.filter(tx => tx.status === 'approved');
 
   return (
     <div className="card" ref={filterRef}>
@@ -220,7 +256,7 @@ export default function TransactionHistory({ transactions, onUpdate }) {
               <th>Transaction Details</th>
               <th>Type</th>
               <th>Value</th>
-              <th>Initiated By</th>
+              <th className="initiated-by-cell">Initiated By</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -238,14 +274,33 @@ export default function TransactionHistory({ transactions, onUpdate }) {
                     {tx.type === 'revenue' && <ArrowUpRight size={12} />}
                     {tx.type === 'expense' && <TrendingDown size={12} />}
                     {tx.type === 'investment' && <Wallet size={12} />}
+                    {tx.type === 'transfer' && <ArrowRightLeft size={12} />}
                     <span>{tx.type}</span>
                   </div>
                 </td>
                 <td className="amount-cell-premium">
-                  <span className="currency">BDT</span>
-                  <span className="value">{tx.amount.toLocaleString()}</span>
+                  <div>
+                    <span className="currency">BDT</span>
+                    <span className="value">{tx.amount.toLocaleString()}</span>
+                  </div>
+                  <div className="tx-account-desc" style={{ 
+                    marginTop: '0.25rem', 
+                    display: '-webkit-box', 
+                    WebkitLineClamp: 2, 
+                    WebkitBoxOrient: 'vertical', 
+                    overflow: 'hidden', 
+                    textOverflow: 'ellipsis', 
+                    whiteSpace: 'normal', 
+                    wordBreak: 'break-word',
+                    minWidth: '130px',
+                    fontSize: '0.75rem', 
+                    fontWeight: '600', 
+                    color: '#64748b' 
+                  }}>
+                    {tx.type === 'transfer' ? `From: ${tx.account?.bankName || 'Unknown'} → To: ${tx.toAccount?.bankName || 'Unknown'}` : `Account: ${tx.account?.bankName || 'Unknown'}`}
+                  </div>
                 </td>
-                <td>
+                <td className="initiated-by-cell">
                   <div className="audit-stack">
                     <div className="audit-line">
                       <span className="audit-label">Perf:</span>
@@ -287,10 +342,15 @@ export default function TransactionHistory({ transactions, onUpdate }) {
             <div className="mobile-card-body">
               <h4 className="mobile-desc"><span className="label-dim">Description:</span> {tx.description}</h4>
               
-              <div className="mobile-financials">
-                <div className="mobile-amount-value">
-                  <span className="m-curr">BDT</span>
-                  <span className="m-val">{tx.amount.toLocaleString()}</span>
+              <div className="mobile-financials" style={{ marginTop: '1rem' }}>
+                <div>
+                  <div className="mobile-amount-value">
+                    <span className="m-curr">BDT</span>
+                    <span className="m-val">{tx.amount.toLocaleString()}</span>
+                  </div>
+                  <div className="mobile-account" style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem', fontWeight: 600 }}>
+                    {tx.type === 'transfer' ? `From: ${tx.account?.bankName || 'Unknown'} → To: ${tx.toAccount?.bankName || 'Unknown'}` : `Account: ${tx.account?.bankName || 'Unknown'}`}
+                  </div>
                 </div>
                 <div className="status-stack">
                   <div className={`status-chip ${tx.status} mini`}>
@@ -414,6 +474,8 @@ export default function TransactionHistory({ transactions, onUpdate }) {
         .tx-row:hover { background: #fafafa; }
         
         td { padding: 1.25rem 1.5rem; vertical-align: middle; }
+        th.initiated-by-cell { padding-left: 4rem; }
+        td.initiated-by-cell { padding-left: 4rem; }
         .date-cell { font-weight: 600; color: #64748b; font-size: 0.8125rem; }
 
         .tx-desc-cell { display: flex; flex-direction: column; gap: 0.3rem; }
@@ -447,6 +509,9 @@ export default function TransactionHistory({ transactions, onUpdate }) {
         }
         .type-revenue { background: #f0fdf4; border-color: #dcfce7; color: #15803d; }
         .type-expense { background: #fef2f2; border-color: #fee2e2; color: #b91c1c; }
+        .type-transfer { background: #f5f3ff; border-color: #ede9fe; color: #6d28d9; }
+        
+        .tx-account-desc { font-size: 0.75rem; color: #64748b; font-weight: 600; margin-top: 0.1rem; }
 
         .amount-cell-premium { font-weight: 800; color: #0f172a; white-space: nowrap; }
         .amount-cell-premium .currency { font-size: 0.7rem; color: #64748b; margin-right: 0.25rem; }
@@ -593,6 +658,7 @@ export default function TransactionHistory({ transactions, onUpdate }) {
         @media (max-width: 768px) {
           .desktop-only { display: none; }
           .mobile-only { display: block; }
+          .tx-card-list { display: flex; }
           .history-header { flex-direction: column; align-items: flex-start; gap: 1.25rem; }
           .header-actions { flex-direction: row; width: 100%; gap: 0.75rem; align-items: center; }
           .custom-dropdown-wrapper, .download-area { flex: 1; min-width: 0; }

@@ -23,8 +23,8 @@ export default function PendingTransactions() {
   };
 
   useEffect(() => {
-    fetchPending();
-  }, []);
+    if (user) fetchPending();
+  }, [user]);
 
   const handleAction = async (id, status) => {
     setProcessing(id);
