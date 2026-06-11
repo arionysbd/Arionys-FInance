@@ -38,9 +38,10 @@ export default function AccountsPage() {
 
   const fetchData = async () => {
     try {
+      const params = { companyId: user.companyId };
       const [accountsRes, statsRes] = await Promise.all([
-        getAccounts(),
-        getStats()
+        getAccounts(params),
+        getStats(params)
       ]);
       setAccounts(accountsRes.data || []);
 
@@ -64,7 +65,7 @@ export default function AccountsPage() {
   };
 
   useEffect(() => {
-    if (user) fetchData();
+    if (user?.companyId) fetchData();
   }, [user]);
 
   const handleInputChange = (e) => {
@@ -89,7 +90,7 @@ export default function AccountsPage() {
   const handleDownloadStatement = async (account, balance) => {
     setOpenMenuId(null);
     try {
-      const txRes = await getTransactions({ status: 'approved' });
+      const txRes = await getTransactions({ status: 'approved', companyId: user.companyId });
       const allTx = txRes.data || [];
       const txForAccount = allTx.filter(tx =>
         tx.account?._id === account._id || tx.toAccount?._id === account._id
@@ -219,7 +220,8 @@ export default function AccountsPage() {
         bankName: formData.bankName,
         branch: formData.branch,
         routingNo: formData.routingNo,
-        userId: user._id
+        userId: user._id,
+        companyId: user.companyId
       });
       setFormData({ accountNo: '', acName: '', bankName: '', branch: '', routingNo: '' });
       setShowForm(false);

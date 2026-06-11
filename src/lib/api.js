@@ -14,8 +14,8 @@ export const getTransactions = async (filters = {}) => {
   return data;
 };
 
-export const getStats = async () => {
-  const { data } = await api.get('/transactions/stats');
+export const getStats = async (filters = {}) => {
+  const { data } = await api.get('/transactions/stats', { params: filters });
   return data;
 };
 
@@ -24,10 +24,24 @@ export const addTransaction = async (transactionData) => {
   return data;
 };
 
+export const approveTransaction = async (approvalData) => {
+  const { data } = await api.post('/transactions/approve', approvalData);
+  return data;
+};
+
+export const exportTransactions = async (companyId) => {
+  const { data } = await api.get('/transactions/export', { params: { companyId } });
+  return data;
+};
+
+export const importTransactions = async (payload) => {
+  const { data } = await api.post('/transactions/import', payload);
+  return data;
+};
 
 
-export const getAccounts = async () => {
-  const { data } = await api.get('/accounts');
+export const getAccounts = async (filters = {}) => {
+  const { data } = await api.get('/accounts', { params: filters });
   return data;
 };
 

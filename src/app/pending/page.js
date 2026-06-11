@@ -1,150 +1,148 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, Clock, Check, X, User as UserIcon, Calendar, ArrowUpRight, TrendingDown, Wallet } from 'lucide-react';
-import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
+import { getTransactions, approveTransaction } from '@/lib/api';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
+import { CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
 
-export default function PendingTransactions() {
-  const [pendingTx, setPendingTx] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(null);
+export default function PendingApprovalsPage() {
   const { user } = useAuth();
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [processingId, setProcessingId] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, transactionId: null, status: null });
 
   const fetchPending = async () => {
     try {
-      const { data } = await axios.get('/api/transactions?status=pending');
-      setPendingTx(data.data);
+      const { data } = await getTransactions({ status: 'pending', companyId: user.companyId });
+      setTransactions(data);
     } catch (err) {
-      console.error('Error fetching pending:', err);
+      console.error('Error fetching pending transactions:', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (user) fetchPending();
+    if (user?.companyId) {
+      fetchPending();
+    }
   }, [user]);
 
-  const handleAction = async (id, status) => {
-    setProcessing(id);
+  const initiateAction = (transactionId, status) => {
+    setConfirmDialog({ isOpen: true, transactionId, status });
+  };
+
+  const handleAction = async () => {
+    const { transactionId, status } = confirmDialog;
+    setConfirmDialog({ isOpen: false, transactionId: null, status: null });
+    
+    setProcessingId(transactionId);
     try {
-      await axios.post('/api/transactions/approve', {
-        transactionId: id,
+      await approveTransaction({
+        transactionId,
         status,
         userId: user._id
       });
-      await fetchPending(); // Re-fetch data instead of reloading the whole page
+      await fetchPending();
     } catch (err) {
-      alert(err.response?.data?.message || 'Action failed');
+      console.error(`Error ${status} transaction:`, err);
+      alert(`Failed to ${status} transaction. You may not have permission.`);
     } finally {
-      setProcessing(null);
+      setProcessingId(null);
     }
   };
 
-  const getTxIcon = (type) => {
-    switch (type?.toLowerCase()) {
-      case 'revenue': return <ArrowUpRight size={14} className="text-tx-revenue" />;
-      case 'expense': return <TrendingDown size={14} className="text-tx-expense" />;
-      default: return <Wallet size={14} className="text-tx-investment" />;
-    }
-  };
-
-  const PendingSkeleton = () => (
-    <div className="skeleton-queue">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <div key={i} className="skeleton-row">
-          <div className="skeleton-col originator">
-            <div className="skeleton-avatar shim"></div>
-            <div className="skeleton-info">
-              <div className="skeleton-line shim w-60"></div>
-              <div className="skeleton-line shim w-40"></div>
-            </div>
-          </div>
-          <div className="skeleton-col details"><div className="skeleton-line shim w-80"></div></div>
-          <div className="skeleton-col type"><div className="skeleton-pill shim"></div></div>
-          <div className="skeleton-col amount"><div className="skeleton-line shim w-50"></div></div>
-          <div className="skeleton-col actions"><div className="skeleton-btn-group shim"></div></div>
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex justify-center items-center h-64 text-gray-500">
+          <Loader2 size={32} className="animate-spin" />
         </div>
-      ))}
-    </div>
-  );
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
-      <div className="pending-container animate-fade-in">
-        <div className="queue-header">
-          <div className="title-area">
-            <div className="icon-slate"><Clock size={28} /></div>
-            <div>
-              <h2>Pending Queue</h2>
-              <p>Transactions awaiting executive verification</p>
-            </div>
+      <div className="pending-layout">
+        <div className="pending-header">
+          <div>
+            <h2 className="title">Pending Approvals</h2>
+            <p className="subtitle">Review and authorize financial records waiting for confirmation.</p>
+          </div>
+          <div className="stat-badge">
+            <Clock size={16} />
+            <span>{transactions.length} Pending</span>
           </div>
         </div>
 
-        <div className="queue-card">
-          {loading ? (
-            <PendingSkeleton />
-          ) : pendingTx.length > 0 ? (
-            <div className="desktop-only">
-              <table className="queue-table">
+        {transactions.length === 0 ? (
+          <div className="premium-empty-state">
+            <div className="empty-icon-container">
+              <CheckCircle size={32} className="text-success" />
+            </div>
+            <h4>All caught up!</h4>
+            <p>There are no pending transactions waiting for your approval right now.</p>
+          </div>
+        ) : (
+          <div className="card">
+            <div className="table-responsive">
+              <table className="table">
                 <thead>
                   <tr>
-                    <th>Originator</th>
-                    <th>Transaction Details</th>
-                    <th>Classification</th>
-                    <th>Amount (BDT)</th>
-                    <th>Decision</th>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Submitted By</th>
+                    <th className="text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {pendingTx.map((tx) => (
-                    <tr key={tx._id} className={processing === tx._id ? 'processing-row' : ''}>
-                      <td>
-                        <div className="origin-cell">
-                          <div className="mini-avatar">
-                            {tx.createdBy?.name?.charAt(0) || 'U'}
-                          </div>
-                          <div className="info">
-                            <span className="author">{tx.createdBy?.name || 'Unknown'}</span>
-                            <span className="date">
-                              <Calendar size={10} /> {new Date(tx.date).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <p className="tx-desc">{tx.description}</p>
-                      </td>
+                  {transactions.map(tx => (
+                    <tr key={tx._id} className="tx-row">
+                      <td className="date-cell">{new Date(tx.date).toLocaleDateString()}</td>
                       <td>
                         <div className={`type-pill-minimal type-${tx.type}`}>
-                          {getTxIcon(tx.type)}
                           <span>{tx.type}</span>
                         </div>
                       </td>
                       <td>
-                        <span className="tx-amount-value">
-                          {tx.amount.toLocaleString()}
-                        </span>
+                        <div className="tx-desc-cell">
+                          <span className="tx-main-desc">{tx.description}</span>
+                          <span className="tx-account">
+                            {tx.type === 'transfer' 
+                              ? `From: ${tx.account?.bankName || 'N/A'} → To: ${tx.toAccount?.bankName || 'N/A'}`
+                              : `Account: ${tx.account?.bankName || 'N/A'}`}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="amount-cell">
+                        BDT {tx.amount.toLocaleString()}
                       </td>
                       <td>
-                        <div className="action-cluster">
+                        <div className="creator-badge">
+                          <span>{tx.createdBy?.name || tx.performedBy || 'System'}</span>
+                        </div>
+                      </td>
+                      <td className="text-right">
+                        <div className="action-buttons">
                           <button 
-                            className="action-btn reject"
-                            onClick={() => handleAction(tx._id, 'rejected')}
-                            disabled={processing === tx._id}
-                            title="Reject Transaction"
+                            className="btn-action approve"
+                            disabled={processingId === tx._id}
+                            onClick={() => initiateAction(tx._id, 'approved')}
                           >
-                            {processing === tx._id ? <div className="spinner-mini" /> : <X size={16} />}
+                            {processingId === tx._id ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                            Approve
                           </button>
                           <button 
-                            className="action-btn approve"
-                            onClick={() => handleAction(tx._id, 'approved')}
-                            disabled={processing === tx._id}
-                            title="Verify Transaction"
+                            className="btn-action reject"
+                            disabled={processingId === tx._id}
+                            onClick={() => initiateAction(tx._id, 'rejected')}
                           >
-                            {processing === tx._id ? <div className="spinner-mini" /> : <Check size={16} />}
+                            {processingId === tx._id ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />}
+                            Reject
                           </button>
                         </div>
                       </td>
@@ -153,275 +151,243 @@ export default function PendingTransactions() {
                 </tbody>
               </table>
             </div>
-          ) : (
-            <div className="empty-state-zen">
-              <div className="zen-icon-frame">
-                <CheckCircle size={40} strokeWidth={1.5} />
-              </div>
-              <h4>Queue Synchronized</h4>
-              <p>All transactions have been processed and verified.</p>
-            </div>
-          )}
-
-          {/* Mobile View Skeleton */}
-          {loading && (
-            <div className="mobile-only">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="mobile-tx-card skeleton-mobile">
-                  <div className="shim w-100" style={{height: '80px', borderRadius: '6px'}}></div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Mobile View Actual */}
-          {!loading && (
-            <div className="mobile-only">
-              <div className="mobile-queue-list">
-                {pendingTx.map((tx) => (
-                  <div key={tx._id} className={`mobile-tx-card ${processing === tx._id ? 'dim' : ''}`}>
-                    <div className="card-top">
-                      <span className="m-date">{new Date(tx.date).toLocaleDateString()}</span>
-                      <div className={`type-pill-minimal type-${tx.type}`}>
-                        {tx.type}
-                      </div>
-                    </div>
-                    <h4 className="m-desc"><span className="m-label-dim">Description:</span> {tx.description}</h4>
-                    <div className="m-originator">
-                      <span>Initiated by: {tx.createdBy?.name || 'Unknown'}</span>
-                    </div>
-                    <div className="m-financials">
-                      <span className="m-currency">BDT</span>
-                      <span className="m-amount">{tx.amount.toLocaleString()}</span>
-                    </div>
-                    <div className="m-actions">
-                      <button 
-                        className="m-btn m-reject"
-                        onClick={() => handleAction(tx._id, 'rejected')}
-                        disabled={processing === tx._id}
-                      >
-                        {processing === tx._id ? 'Wait...' : 'Reject'}
-                      </button>
-                      <button 
-                        className="m-btn m-approve"
-                        onClick={() => handleAction(tx._id, 'approved')}
-                        disabled={processing === tx._id}
-                      >
-                        {processing === tx._id ? 'Processing...' : 'Approve'}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
-      <style jsx>{`
-        .pending-container { max-width: 1100px; margin: 0 auto; }
-        
-        .queue-header { margin-bottom: 2.5rem; padding: 0 0.5rem; }
-        .title-area { display: flex; align-items: flex-start; gap: 1rem; }
-        .title-area h2 { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin-bottom: 0.25rem; }
-        .title-area p { color: #64748b; font-size: 0.875rem; }
-        .icon-slate { color: #0f172a; }
 
-        .queue-card { 
-          background: #ffffff; 
-          border-radius: 6px; 
+      {confirmDialog.isOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content animate-scale">
+            <h3 className="modal-title">Confirm Action</h3>
+            <p className="modal-message">
+              Are you sure you want to <strong>{confirmDialog.status === 'approved' ? 'approve' : 'reject'}</strong> this transaction?
+            </p>
+            <div className="modal-actions">
+              <button 
+                className="btn-cancel" 
+                onClick={() => setConfirmDialog({ isOpen: false, transactionId: null, status: null })}
+              >
+                Cancel
+              </button>
+              <button 
+                className={`btn-confirm ${confirmDialog.status}`} 
+                onClick={handleAction}
+              >
+                Yes, {confirmDialog.status === 'approved' ? 'Approve' : 'Reject'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        .pending-layout {
+          max-width: 1200px;
+          margin: 0 auto;
+        }
+        .pending-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 2rem;
+          background: #fff;
+          padding: 1.5rem 2rem;
+          border-radius: 8px;
           border: 1px solid #e2e8f0;
-          overflow: hidden;
           box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
         }
-
-        .queue-table { width: 100%; border-collapse: collapse; text-align: left; }
-        .queue-table th { 
-          padding: 1rem 1.5rem; 
-          background: #f8fafc; 
-          font-size: 0.65rem; 
-          font-weight: 800; 
-          text-transform: uppercase; 
-          color: #64748b; 
+        .title {
+          font-size: 1.5rem;
+          font-weight: 800;
+          color: #0f172a;
+          margin: 0 0 0.5rem 0;
+        }
+        .subtitle {
+          color: #64748b;
+          font-size: 0.875rem;
+          margin: 0;
+        }
+        .stat-badge {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          background: #fffbeb;
+          color: #d97706;
+          padding: 0.5rem 1rem;
+          border-radius: 999px;
+          font-weight: 700;
+          font-size: 0.875rem;
+          border: 1px solid #fef3c7;
+        }
+        .table-responsive {
+          overflow-x: auto;
+        }
+        .table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        .table th {
+          text-align: left;
+          padding: 1rem;
+          font-size: 0.75rem;
+          text-transform: uppercase;
+          font-weight: 800;
           letter-spacing: 0.05em;
+          color: #64748b;
+          background: #f8fafc;
           border-bottom: 1px solid #e2e8f0;
         }
-        .queue-table td { 
-          padding: 1.25rem 1.5rem; 
-          border-bottom: 1px solid #f8fafc; 
+        .table td {
+          padding: 1.25rem 1rem;
+          border-bottom: 1px solid #f1f5f9;
           vertical-align: middle;
         }
-        .queue-table tr:hover { background: #fafafa; }
-        .processing-row { opacity: 0.5; pointer-events: none; }
-
-        .origin-cell { display: flex; align-items: center; gap: 0.75rem; }
-        .mini-avatar { 
-          width: 32px; 
-          height: 32px; 
-          background: #0f172a; 
-          color: white; 
-          border-radius: 6px; 
-          display: flex; 
-          align-items: center; 
-          justify-content: center; 
-          font-weight: 800; 
-          font-size: 0.8125rem;
+        .tx-row:last-child td { border-bottom: none; }
+        .date-cell { font-size: 0.875rem; font-weight: 600; color: #475569; }
+        .amount-cell { font-weight: 800; font-size: 1rem; color: #0f172a; }
+        .tx-desc-cell { display: flex; flex-direction: column; gap: 0.25rem; }
+        .tx-main-desc { font-weight: 700; color: #0f172a; font-size: 0.9375rem; max-width: 300px; word-break: break-word; }
+        .tx-account { font-size: 0.75rem; font-weight: 600; color: #64748b; }
+        
+        .creator-badge {
+          display: inline-flex;
+          background: #f1f5f9;
+          padding: 0.25rem 0.75rem;
+          border-radius: 999px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: #475569;
         }
-        .origin-cell .author { display: block; font-size: 0.875rem; font-weight: 700; color: #0f172a; }
-        .origin-cell .date { font-size: 0.75rem; color: #64748b; display: flex; align-items: center; gap: 0.3rem; }
-
-        .tx-desc { font-size: 0.9375rem; font-weight: 600; color: #0f172a; margin-bottom: 0.125rem; word-break: break-word; max-width: 400px; line-height: 1.4; }
-        .performed-by { font-size: 0.75rem; color: #64748b; }
-
-        .type-pill-minimal { 
-          display: flex; 
-          align-items: center; 
-          gap: 0.4rem; 
-          padding: 0.25rem 0.6rem; 
-          border-radius: 6px; 
-          font-size: 0.7rem; 
-          font-weight: 800; 
+        
+        .type-pill-minimal {
+          display: inline-flex;
+          align-items: center;
+          padding: 0.25rem 0.75rem;
+          border-radius: 999px;
+          font-size: 0.7rem;
+          font-weight: 800;
           text-transform: uppercase;
-          width: fit-content;
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-          color: #0f172a;
+          letter-spacing: 0.05em;
         }
-        .type-revenue { background: #f0fdf4; border-color: #dcfce7; color: #15803d; }
-        .type-expense { background: #fef2f2; border-color: #fee2e2; color: #b91c1c; }
+        .type-revenue { background: #dcfce7; color: #166534; }
+        .type-expense { background: #fee2e2; color: #991b1b; }
+        .type-investment { background: #e0e7ff; color: #3730a3; }
+        .type-transfer { background: #f3e8ff; color: #6b21a8; }
+        
+        .action-buttons {
+          display: flex;
+          gap: 0.5rem;
+          justify-content: flex-end;
+        }
+        .btn-action {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.375rem;
+          padding: 0.5rem 0.875rem;
+          border-radius: 6px;
+          font-size: 0.8125rem;
+          font-weight: 700;
+          cursor: pointer;
+          border: none;
+          transition: all 0.2s;
+        }
+        .btn-action:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-action.approve { background: #10b981; color: white; }
+        .btn-action.approve:hover:not(:disabled) { background: #059669; transform: translateY(-1px); }
+        .btn-action.reject { background: #f87171; color: white; }
+        .btn-action.reject:hover:not(:disabled) { background: #dc2626; transform: translateY(-1px); }
+        
+        .premium-empty-state {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 5rem 2rem;
+          text-align: center;
+          background: #ffffff;
+          border-radius: 8px;
+          border: 1px dashed #cbd5e1;
+        }
+        .empty-icon-container {
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          background: #f1f5f9;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 1.5rem;
+          color: #94a3b8;
+        }
+        .premium-empty-state h4 { font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0 0 0.5rem 0; }
+        .premium-empty-state p { font-size: 0.9375rem; color: #64748b; margin: 0; max-width: 400px; }
 
-        .tx-amount-value { font-size: 1rem; font-weight: 800; color: #0f172a; }
-
-        .action-cluster { display: flex; gap: 0.5rem; }
-        .action-btn { 
-          width: 36px; 
-          height: 36px; 
-          border-radius: 6px; 
-          display: flex; 
-          align-items: center; 
-          justify-content: center; 
-          border: 1px solid #e2e8f0;
+        .modal-overlay {
+          position: fixed;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(15, 23, 42, 0.4);
+          backdrop-filter: blur(4px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+        }
+        .modal-content {
+          background: white;
+          padding: 2rem;
+          border-radius: 12px;
+          width: 90%;
+          max-width: 400px;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .animate-scale {
+          animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes scaleIn {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .modal-title {
+          font-size: 1.25rem;
+          font-weight: 800;
+          color: #0f172a;
+          margin: 0 0 1rem 0;
+        }
+        .modal-message {
+          color: #475569;
+          font-size: 0.9375rem;
+          line-height: 1.5;
+          margin: 0 0 1.5rem 0;
+        }
+        .modal-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 1rem;
+        }
+        .btn-cancel {
+          padding: 0.625rem 1rem;
+          background: #f1f5f9;
+          color: #475569;
+          border: none;
+          border-radius: 6px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+        .btn-cancel:hover { background: #e2e8f0; }
+        .btn-confirm {
+          padding: 0.625rem 1rem;
+          border: none;
+          border-radius: 6px;
+          color: white;
+          font-weight: 600;
           cursor: pointer;
           transition: all 0.2s;
-          background: white;
         }
-        .action-btn.approve:hover { background: #0f172a; border-color: #0f172a; color: white; }
-        .action-btn.reject:hover { border-color: #ef4444; color: #ef4444; }
-
-        .empty-state-zen { text-align: center; padding: 6rem 2rem; }
-        .zen-icon-frame { 
-          width: 64px; 
-          height: 64px; 
-          background: #f8fafc; 
-          border-radius: 50%; 
-          display: flex; 
-          align-items: center; 
-          justify-content: center; 
-          margin: 0 auto 1.5rem; 
-          color: #10b981; 
-          border: 1px solid #dcfce7;
-        }
-        .empty-state-zen h4 { font-size: 1.125rem; font-weight: 800; color: #0f172a; margin-bottom: 0.5rem; }
-        .empty-state-zen p { color: #64748b; font-size: 0.875rem; }
-
-        /* Mobile */
-        .mobile-tx-card { padding: 1.25rem; border-bottom: 1px solid #e2e8f0; }
-        .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
-        .m-date { font-size: 0.75rem; color: #64748b; font-weight: 600; }
-        .m-desc { font-size: 1rem; font-weight: 800; color: #0f172a; margin-bottom: 0.25rem; }
-        .m-label-dim { color: #94a3b8; font-weight: 600; font-size: 0.875rem; margin-right: 0.25rem; }
-        .m-actor { font-size: 0.8125rem; color: #64748b; margin-bottom: 0.5rem; }
-        .m-originator { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; font-size: 0.75rem; color: #94a3b8; font-weight: 600; }
-        .m-mini-avatar { width: 20px; height: 20px; background: #f1f5f9; color: #0f172a; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 800; border: 1px solid #e2e8f0; }
-        .m-financials { margin-bottom: 1.25rem; }
-        .m-currency { font-size: 0.75rem; font-weight: 700; color: #64748b; margin-right: 0.25rem; }
-        .m-amount { font-size: 1.25rem; font-weight: 900; color: #0f172a; }
-        .m-actions { display: grid; grid-template-columns: 1fr 2fr; gap: 0.75rem; }
-        .m-btn { padding: 0.75rem; border-radius: 6px; font-size: 0.8125rem; font-weight: 800; border: none; cursor: pointer; }
-        .m-approve { background: #0f172a; color: white; }
-        .m-reject { background: #f8fafc; color: #ef4444; border: 1px solid #e2e8f0; }
-
-        .animate-fade-in { animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* Skeleton Styles */
-        .skeleton-queue { padding: 1rem; }
-        .skeleton-row { display: flex; align-items: center; padding: 1.25rem 0.5rem; border-bottom: 1px solid #f1f5f9; gap: 2rem; }
-        .skeleton-col { flex: 1; }
-        .skeleton-col.originator { flex: 1.5; display: flex; gap: 0.75rem; align-items: center; }
-        .skeleton-col.details { flex: 2; }
-        .skeleton-col.type { flex: 1; }
-        .skeleton-col.amount { flex: 1; }
-        .skeleton-col.actions { flex: 1; display: flex; justify-content: flex-end; }
-        
-        .skeleton-avatar { width: 32px; height: 32px; border-radius: 6px; flex-shrink: 0; }
-        .skeleton-info { display: flex; flex-direction: column; gap: 0.4rem; width: 100%; }
-        .skeleton-line { height: 10px; background: #f1f5f9; border-radius: 4px; }
-        .skeleton-pill { height: 24px; width: 70px; background: #f1f5f9; border-radius: 6px; }
-        .skeleton-btn-group { height: 32px; width: 80px; background: #f1f5f9; border-radius: 6px; }
-        
-        .w-40 { width: 40%; }
-        .w-50 { width: 50%; }
-        .w-60 { width: 60%; }
-        .w-80 { width: 80%; }
-        .w-100 { width: 100%; }
-
-        .shim {
-          background: linear-gradient(90deg, #f1f5f9 25%, #f8fafc 50%, #f1f5f9 75%);
-          background-size: 200% 100%;
-          animation: shimmer 1.5s infinite;
-        }
-
-        @keyframes shimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
-
-        .skeleton-mobile { padding: 1rem; }
-        
-        .loading-state { 
-          height: 70vh; 
-          display: flex; 
-          flex-direction: column; 
-          align-items: center; 
-          justify-content: center; 
-          gap: 1.5rem; 
-          color: #64748b; 
-        }
-
-        .premium-loader {
-          position: relative;
-          width: 60px;
-          height: 60px;
-        }
-
-        .loader-ring {
-          position: absolute;
-          width: 100%;
-          height: 100%;
-          border: 4px solid transparent;
-          border-top-color: #0f172a;
-          border-radius: 50%;
-          animation: loader-spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
-        }
-        .loader-ring:nth-child(1) { animation-delay: -0.45s; }
-        .loader-ring:nth-child(2) { animation-delay: -0.3s; }
-        .loader-ring:nth-child(3) { animation-delay: -0.15s; }
-
-        @keyframes loader-spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-
-        .spinner-mini { 
-          width: 14px; 
-          height: 14px; 
-          border: 2px solid rgba(0,0,0,0.1); 
-          border-top-color: currentColor; 
-          border-radius: 50%; 
-          animation: spin 0.6s linear infinite; 
-        }
-
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .btn-confirm.approved { background: #10b981; }
+        .btn-confirm.approved:hover { background: #059669; }
+        .btn-confirm.rejected { background: #f87171; }
+        .btn-confirm.rejected:hover { background: #dc2626; }
       `}</style>
     </DashboardLayout>
   );

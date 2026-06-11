@@ -10,9 +10,9 @@ export async function POST(req) {
     const { transactionId, status, userId } = await req.json();
 
     const user = await User.findById(userId);
-    const authorizedRoles = ['admin', 'ceo', 'cfo'];
+    const authorizedRoles = ['owner', 'admin', 'ceo', 'cfo'];
     if (!user || !authorizedRoles.includes(user.role)) {
-      return NextResponse.json({ success: false, message: 'Unauthorized. Only Admin, CEO, or CFO can approve.' }, { status: 403 });
+      return NextResponse.json({ success: false, message: 'Unauthorized. Only Owner, Admin, CEO, or CFO can approve.' }, { status: 403 });
     }
 
     const transaction = await Transaction.findById(transactionId).populate('createdBy', 'name');

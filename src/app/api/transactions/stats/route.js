@@ -3,11 +3,18 @@ import dbConnect from '@/lib/db';
 import Transaction from '@/models/Transaction';
 import Account from '@/models/Account';
 
-export async function GET() {
+export async function GET(req) {
   try {
     await dbConnect();
-    const transactions = await Transaction.find({ status: 'approved' });
-    const accounts = await Account.find();
+    const { searchParams } = new URL(req.url);
+    const companyId = searchParams.get('companyId');
+
+    if (!companyId) {
+      return NextResponse.json({ success: false, message: 'Company ID is required' }, { status: 400 });
+    }
+
+    const transactions = await Transaction.find({ status: 'approved', companyId });
+    const accounts = await Account.find({ companyId });
 
     const accountBalances = {};
     accounts.forEach(acc => {

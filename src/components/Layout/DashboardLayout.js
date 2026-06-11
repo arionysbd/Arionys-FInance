@@ -11,7 +11,8 @@ import {
   Users as UsersIcon,
   Settings as SettingsIcon,
   User as UserIcon,
-  Wallet
+  Wallet,
+  Clock
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
@@ -28,7 +29,8 @@ export default function DashboardLayout({ children }) {
     const fetchPending = async () => {
       if (user && ['admin', 'ceo', 'cfo'].includes(user.role?.toLowerCase())) {
         try {
-          const data = await getTransactions({ status: 'pending' });
+          const params = { status: 'pending', companyId: user.companyId };
+          const data = await getTransactions(params);
           setPendingCount(data.data.length);
         } catch (err) {
           console.error('Error fetching pending count:', err);
@@ -108,19 +110,23 @@ export default function DashboardLayout({ children }) {
   }
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: <Home size={20} />, href: '/dashboard', roles: ['admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
-    { id: 'transactions', label: 'Transactions', icon: <ArrowRightLeft size={20} />, href: '/transactions', roles: ['admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
-    { id: 'pending', label: 'Pending', icon: <FileCheck size={20} />, href: '/pending', roles: ['admin', 'ceo', 'cfo'] },
-    { id: 'users', label: 'User Management', icon: <UsersIcon size={20} />, href: '/users', roles: ['admin'] },
-    { id: 'accounts', label: 'Accounts', icon: <Wallet size={20} />, href: '/accounts', roles: ['admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
-    { id: 'settings', label: 'Settings', icon: <SettingsIcon size={20} />, href: '/settings', roles: ['admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+    { id: 'dashboard', label: 'Dashboard', icon: <Home size={20} />, href: '/dashboard', roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+    { id: 'transactions', label: 'Transactions', icon: <ArrowRightLeft size={20} />, href: '/transactions', roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+    { id: 'create-tx', label: 'Create Transaction', icon: <FileCheck size={20} />, href: '/transactions/create', roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+    { id: 'pending', label: 'Pending Approvals', icon: <Clock size={20} />, href: '/pending', roles: ['owner', 'admin', 'ceo', 'cfo'] },
+    { id: 'members', label: 'Members', icon: <UsersIcon size={20} />, href: '/members', roles: ['owner', 'admin', 'ceo', 'cfo'] },
+    { id: 'users', label: 'System Management', icon: <SettingsIcon size={20} />, href: '/users', roles: ['admin'] },
+    { id: 'accounts', label: 'Accounts', icon: <Wallet size={20} />, href: '/accounts', roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+    { id: 'settings', label: 'Settings', icon: <SettingsIcon size={20} />, href: '/settings', roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
   ];
 
   const getPageTitle = () => {
     if (pathname === '/dashboard') return 'Financial Overview';
     if (pathname === '/accounts') return 'Account Management';
     if (pathname === '/transactions') return 'Transaction History';
-    if (pathname === '/pending') return 'Approval Queue';
+    if (pathname === '/transactions/create') return 'Create Transaction';
+    if (pathname === '/pending') return 'Pending Approvals';
+    if (pathname === '/members') return 'Company Members';
     if (pathname === '/users') return 'System Management';
     return 'Settings';
   };
@@ -129,7 +135,9 @@ export default function DashboardLayout({ children }) {
     if (pathname === '/dashboard') return 'Dashboard';
     if (pathname === '/accounts') return 'Accounts';
     if (pathname === '/transactions') return 'Transactions';
-    if (pathname === '/pending') return 'Pending';
+    if (pathname === '/transactions/create') return 'Transactions / Create';
+    if (pathname === '/pending') return 'Pending Approvals';
+    if (pathname === '/members') return 'Members';
     if (pathname === '/users') return 'System';
     return 'Pages';
   };
@@ -228,7 +236,8 @@ export default function DashboardLayout({ children }) {
             <div className="current-user-badge">
               <span className={`role-tag role-${user.role?.toLowerCase()}`}>
                 <span className="desktop-role">
-                  {user.role?.toLowerCase() === 'admin' ? 'Administrator' :
+                  {user.role?.toLowerCase() === 'owner' ? 'Company Owner' :
+                   user.role?.toLowerCase() === 'admin' ? 'Administrator' :
                    user.role?.toLowerCase() === 'ceo' ? 'Chief Executive Officer' :
                    user.role?.toLowerCase() === 'cfo' ? 'Chief Financial Officer' :
                    user.role?.toLowerCase() === 'csuit' ? 'Executive Board' :
@@ -236,7 +245,8 @@ export default function DashboardLayout({ children }) {
                    user.role}
                 </span>
                 <span className="mobile-role">
-                  {user.role?.toLowerCase() === 'admin' ? 'ADMIN' :
+                  {user.role?.toLowerCase() === 'owner' ? 'OWNR' :
+                   user.role?.toLowerCase() === 'admin' ? 'ADMIN' :
                    user.role?.toLowerCase() === 'ceo' ? 'CEO' :
                    user.role?.toLowerCase() === 'cfo' ? 'CFO' :
                    user.role?.toLowerCase() === 'csuit' ? 'EXEC' :
@@ -333,6 +343,7 @@ export default function DashboardLayout({ children }) {
         .header-flex { display: flex; justify-content: space-between; align-items: center; }
         .header-flex h1 { font-size: 1.875rem; font-weight: 900; color: #0f172a; letter-spacing: -0.02em; }
         .role-tag { padding: 0.4rem 0.875rem; border-radius: 6px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.025em; margin-right: 0.5rem; }
+        .role-owner { background: #4f46e5; color: white; }
         .role-admin { background: #0f172a; color: white; }
         .role-ceo { background: #0f172a; color: white; }
         .role-cfo { background: #0f172a; color: white; }

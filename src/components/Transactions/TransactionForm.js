@@ -27,8 +27,9 @@ export default function TransactionForm({ onTransactionAdded }) {
 
   useEffect(() => {
     const fetchAccounts = async () => {
+      if (!user?.companyId) return;
       try {
-        const { data } = await axios.get('/api/accounts');
+        const { data } = await axios.get(`/api/accounts?companyId=${user.companyId}`);
         setAccounts(data.data || []);
       } catch (err) {
         console.error('Error fetching accounts:', err);
@@ -44,7 +45,7 @@ export default function TransactionForm({ onTransactionAdded }) {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [user]);
 
   // Sync performedBy when user loads (user is null on first render due to async auth)
   useEffect(() => {
@@ -95,7 +96,8 @@ export default function TransactionForm({ onTransactionAdded }) {
         ...formData,
         performedBy: finalPerformedBy,
         amount: parseFloat(formData.amount),
-        userId: user._id
+        userId: user._id,
+        companyId: user.companyId
       });
       
       setFormData({

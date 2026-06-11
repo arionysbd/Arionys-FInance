@@ -11,6 +11,11 @@ const accountSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
+  companyId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Company',
+    required: false, // Make it false for existing records
+  },
 }, {
   timestamps: true,
 });

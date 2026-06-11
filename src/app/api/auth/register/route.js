@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
+import Company from '@/models/Company';
 import jwt from 'jsonwebtoken';
 import { sendEmail } from '@/lib/mail';
 
@@ -10,7 +11,7 @@ const otpStore = global.__otpStore || (global.__otpStore = new Map());
 export async function POST(req) {
   try {
     await dbConnect();
-    const { name, email, password, otp } = await req.json();
+    const { name, email, password, otp, companyName } = await req.json();
 
     // --- OTP Verification ---
     const stored = otpStore.get(email);
@@ -32,50 +33,30 @@ export async function POST(req) {
       return NextResponse.json({ success: false, message: 'User already exists' }, { status: 400 });
     }
 
-    // Check if it's the first user
-    const userCount = await User.countDocuments();
-    const role = userCount === 0 ? 'admin' : 'accountant';
+    if (!companyName) {
+      return NextResponse.json({ success: false, message: 'Company name is required' }, { status: 400 });
+    }
 
-    const isActive = userCount === 0;
+    // Since this is a new signup, they create a new company
+    const mongoose = require('mongoose');
+    const companyId = new mongoose.Types.ObjectId();
+    const userId = new mongoose.Types.ObjectId();
+
+    const newCompany = await Company.create({
+      _id: companyId,
+      name: companyName,
+      ownerId: userId,
+    });
 
     const user = await User.create({
+      _id: userId,
       name,
       email,
       password,
-      role,
-      isActive
+      role: 'owner',
+      isActive: true,
+      companyId: companyId,
     });
-
-    if (!isActive) {
-      try {
-        const admins = await User.find({ role: 'admin' });
-        for (const admin of admins) {
-          await sendEmail({
-            to: admin.email,
-            subject: 'New User Pending Approval',
-            text: `A new user named ${name} (${email}) has registered and is pending approval.`,
-            html: `
-              <div style="font-family: sans-serif; padding: 20px;">
-                <h2 style="color: #2563eb;">New User Registration</h2>
-                <p>A new user has registered and requires your approval:</p>
-                <ul>
-                  <li><strong>Name:</strong> ${name}</li>
-                  <li><strong>Email:</strong> ${email}</li>
-                </ul>
-                <div style="margin-top: 20px;">
-                  <a href="${process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin}/users" 
-                     style="background: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-                    Review User
-                  </a>
-                </div>
-              </div>
-            `
-          });
-        }
-      } catch (mailError) {
-        console.error('Failed to send admin notification:', mailError);
-      }
-    }
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 

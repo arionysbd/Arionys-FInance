@@ -46,6 +46,11 @@ const transactionSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  companyId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Company',
+    required: false,
+  },
 }, {
   timestamps: true,
 });

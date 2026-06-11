@@ -23,9 +23,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
+  companyId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Company',
+    required: false, // For backward compatibility if needed, but should be true in production
+  },
   role: {
     type: String,
-    enum: ['admin', 'ceo', 'csuit', 'cfo', 'accountant'],
+    enum: ['owner', 'admin', 'ceo', 'csuit', 'cfo', 'accountant'],
     default: 'accountant',
     lowercase: true,
   },

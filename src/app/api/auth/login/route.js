@@ -26,6 +26,7 @@ export async function POST(req) {
           email: user.email,
           role: user.role,
           isActive: user.isActive,
+          companyId: user.companyId,
           token
         }
       });

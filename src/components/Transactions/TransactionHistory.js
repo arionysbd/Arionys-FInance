@@ -1,11 +1,10 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { Filter, CheckCircle, XCircle, Download, ChevronDown, Check, ArrowUpRight, TrendingDown, Wallet, ArrowRightLeft } from 'lucide-react';
+import { Filter, CheckCircle, XCircle, Download, ChevronDown, Check, ArrowUpRight, TrendingDown, Wallet, ArrowRightLeft, Loader2 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-export default function TransactionHistory({ transactions, onUpdate }) {
-  const [filterType, setFilterType] = useState('');
+export default function TransactionHistory({ transactions, onUpdate, filterType, setFilterType, hasMore, loadingMore, onLoadMore }) {
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const filterRef = useRef(null);
@@ -173,12 +172,26 @@ export default function TransactionHistory({ transactions, onUpdate }) {
   ];
 
   const currentFilter = filterOptions.find(o => o.value === filterType);
+  const observerTarget = useRef(null);
 
-  const filteredTransactions = filterType 
-    ? (filterType === 'rejected' 
-        ? transactions.filter(tx => tx.status === 'rejected')
-        : transactions.filter(tx => tx.type === filterType && tx.status === 'approved'))
-    : transactions.filter(tx => tx.status === 'approved');
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore && onLoadMore) {
+          onLoadMore();
+        }
+      },
+      { threshold: 1.0 }
+    );
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+    return () => {
+      if (observerTarget.current) {
+        observer.unobserve(observerTarget.current);
+      }
+    };
+  }, [hasMore, loadingMore, onLoadMore]);
 
   return (
     <div className="card" ref={filterRef}>
@@ -261,7 +274,7 @@ export default function TransactionHistory({ transactions, onUpdate }) {
             </tr>
           </thead>
           <tbody>
-            {filteredTransactions.map((tx) => (
+            {transactions.map((tx) => (
               <tr key={tx._id} className="tx-row">
                 <td className="date-cell">{new Date(tx.date).toLocaleDateString()}</td>
                 <td>
@@ -330,7 +343,7 @@ export default function TransactionHistory({ transactions, onUpdate }) {
       </div>
 
       <div className="mobile-only tx-card-list">
-        {filteredTransactions.map((tx) => (
+        {transactions.map((tx) => (
           <div key={tx._id} className="tx-premium-mobile-card">
             <div className="mobile-card-header">
               <div className={`type-pill-minimal type-${tx.type}`}>
@@ -373,13 +386,26 @@ export default function TransactionHistory({ transactions, onUpdate }) {
         ))}
       </div>
 
-      {filteredTransactions.length === 0 && (
+      {transactions.length === 0 && (
         <div className="premium-empty-state">
           <div className="empty-icon-container">
             <Filter size={32} />
           </div>
           <h4>No Records Found</h4>
           <p>We couldn't find any finalized transactions matching your criteria.</p>
+        </div>
+      )}
+
+      {hasMore && (
+        <div ref={observerTarget} className="infinite-scroll-loader">
+          {loadingMore ? (
+            <div className="loader-content">
+              <Loader2 size={24} className="animate-spin text-primary" />
+              <span>Loading more records...</span>
+            </div>
+          ) : (
+            <div style={{ height: '20px' }}></div>
+          )}
         </div>
       )}
 
@@ -491,6 +517,20 @@ export default function TransactionHistory({ transactions, onUpdate }) {
           padding: 0.125rem 0.5rem;
           border-radius: 6px;
           width: fit-content;
+        }
+
+        .infinite-scroll-loader {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding: 2rem 0;
+          color: #64748b;
+        }
+        .loader-content {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          font-weight: 500;
         }
 
         .type-pill-minimal {

@@ -8,6 +8,7 @@ import { Mail, Lock, User, UserPlus, ShieldCheck, ArrowLeft } from 'lucide-react
 export default function SignupPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState(1); // 1 = form, 2 = OTP
@@ -51,7 +52,7 @@ export default function SignupPage() {
     setLoading(true);
     setError('');
     try {
-      const { data } = await axios.post('/api/auth/register', { name, email, password, otp });
+      const { data } = await axios.post('/api/auth/register', { name, email, companyName, password, otp });
       login(data.data);
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
@@ -94,6 +95,21 @@ export default function SignupPage() {
                   placeholder="John Doe"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Company Name</label>
+              <div className="input-with-icon">
+                <ShieldCheck size={18} />
+                <input 
+                  type="text" 
+                  className="input-field" 
+                  placeholder="Acme Corp"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
                   required
                 />
               </div>

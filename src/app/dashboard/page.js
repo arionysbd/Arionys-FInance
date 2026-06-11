@@ -14,9 +14,10 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const params = { companyId: user.companyId };
         const [statsData, txData] = await Promise.all([
-          getStats(),
-          getTransactions({ status: 'approved' }) // Only approved for recent items on dashboard
+          getStats(params),
+          getTransactions({ status: 'approved', ...params }) // Only approved for recent items on dashboard
         ]);
         setStats(statsData.data);
         setTransactions(txData.data);
@@ -27,7 +28,7 @@ export default function DashboardPage() {
       }
     };
 
-    if (user) {
+    if (user?.companyId) {
       fetchData();
     }
   }, [user]);

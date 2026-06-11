@@ -29,7 +29,6 @@ export async function GET(req) {
         isActive: user.isActive,
         phone: user.phone,
         position: user.position,
-        companyId: user.companyId,
       }
     });
   } catch (error) {

@@ -11,8 +11,13 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const statusParam = searchParams.get('status') || 'approved';
     const type = searchParams.get('type');
+    const companyId = searchParams.get('companyId');
+    const page = parseInt(searchParams.get('page')) || 1;
+    const limit = parseInt(searchParams.get('limit')) || 20;
+    const skip = (page - 1) * limit;
 
     let query = {};
+    if (companyId) query.companyId = companyId;
     
     // Support comma separated status: status=approved,rejected
     if (statusParam.includes(',')) {
@@ -29,8 +34,14 @@ export async function GET(req) {
       .populate('account', 'bankName')
       .populate('toAccount', 'bankName')
       .sort({ date: -1 })
+      .skip(skip)
+      .limit(limit)
       .lean();
-    return NextResponse.json({ success: true, data: transactions });
+    
+    const total = await Transaction.countDocuments(query);
+    const hasMore = total > skip + transactions.length;
+
+    return NextResponse.json({ success: true, data: transactions, hasMore, total });
   } catch (error) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
@@ -40,7 +51,11 @@ export async function POST(req) {
   try {
     await dbConnect();
     const body = await req.json();
-    const { type, amount, description, performedBy, userId, account, toAccount } = body;
+    const { type, amount, description, performedBy, userId, companyId, account, toAccount } = body;
+
+    if (!companyId) {
+      return NextResponse.json({ success: false, message: 'Company ID is required' }, { status: 400 });
+    }
 
     if (!account) {
       return NextResponse.json({ success: false, message: 'Account selection is mandatory' }, { status: 400 });
@@ -56,6 +71,7 @@ export async function POST(req) {
       description,
       performedBy,
       createdBy: userId,
+      companyId,
       account,
       toAccount: type === 'transfer' ? toAccount : undefined,
       status: 'pending' // Force pending on creation
@@ -63,7 +79,7 @@ export async function POST(req) {
 
     // Notify CFOs
     try {
-      const cfos = await User.find({ role: 'cfo' });
+      const cfos = await User.find({ role: 'cfo', companyId });
       const creator = await User.findById(userId);
       
       for (const cfo of cfos) {
