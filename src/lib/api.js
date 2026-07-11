@@ -9,6 +9,29 @@ const api = axios.create({
   },
 });
 
+// Attach the logged-in user's JWT to every outgoing request so the API can
+// authenticate and scope the response to the caller's company. Applied to both
+// the dedicated `api` instance and the default axios instance (many components
+// call `axios` directly).
+const attachAuthHeader = (config) => {
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('arionys_user');
+      const token = saved ? JSON.parse(saved)?.token : null;
+      if (token) {
+        config.headers = config.headers || {};
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch {
+      // ignore malformed localStorage
+    }
+  }
+  return config;
+};
+
+api.interceptors.request.use(attachAuthHeader);
+axios.interceptors.request.use(attachAuthHeader);
+
 export const getTransactions = async (filters = {}) => {
   const { data } = await api.get('/transactions', { params: filters });
   return data;

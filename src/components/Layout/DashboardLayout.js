@@ -1,18 +1,18 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { 
-  Home, 
-  ArrowRightLeft, 
-  Bell, 
-  Shield, 
-  LogOut, 
+  Home,
+  ArrowRightLeft,
+  History,
+  Hourglass,
+  SlidersHorizontal,
+  ShieldCheck,
+  Landmark,
+  Settings,
+  Shield,
+  LogOut,
   ChevronRight,
-  FileCheck,
-  Users as UsersIcon,
-  Settings as SettingsIcon,
   User as UserIcon,
-  Wallet,
-  Clock
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
@@ -27,7 +27,7 @@ export default function DashboardLayout({ children }) {
 
   useEffect(() => {
     const fetchPending = async () => {
-      if (user && ['admin', 'ceo', 'cfo'].includes(user.role?.toLowerCase())) {
+      if (user && ['owner', 'admin', 'ceo', 'cfo'].includes(user.role?.toLowerCase())) {
         try {
           const params = { status: 'pending', companyId: user.companyId };
           const data = await getTransactions(params);
@@ -110,14 +110,13 @@ export default function DashboardLayout({ children }) {
   }
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: <Home size={20} />, href: '/dashboard', roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
-    { id: 'transactions', label: 'Transactions', icon: <ArrowRightLeft size={20} />, href: '/transactions', roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
-    { id: 'create-tx', label: 'Create Transaction', icon: <FileCheck size={20} />, href: '/transactions/create', roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
-    { id: 'pending', label: 'Pending Approvals', icon: <Clock size={20} />, href: '/pending', roles: ['owner', 'admin', 'ceo', 'cfo'] },
-    { id: 'members', label: 'Members', icon: <UsersIcon size={20} />, href: '/members', roles: ['owner', 'admin', 'ceo', 'cfo'] },
-    { id: 'users', label: 'System Management', icon: <SettingsIcon size={20} />, href: '/users', roles: ['admin'] },
-    { id: 'accounts', label: 'Accounts', icon: <Wallet size={20} />, href: '/accounts', roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
-    { id: 'settings', label: 'Settings', icon: <SettingsIcon size={20} />, href: '/settings', roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+    { id: 'dashboard',    label: 'Dashboard',          icon: <Home size={20} />,  href: '/dashboard',           roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+    { id: 'create-tx',   label: 'Create Transaction',  icon: <ArrowRightLeft size={20} />,       href: '/transactions/create', roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+    { id: 'pending',     label: 'Pending Approvals',   icon: <Hourglass size={20} />,        href: '/pending',             roles: ['owner', 'admin', 'ceo', 'cfo'], showBadge: true },
+    { id: 'transactions',label: 'Transaction History',  icon: <History size={20} />,          href: '/transactions',        roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+    { id: 'accounts',    label: 'Accounts',             icon: <Landmark size={20} />,         href: '/accounts',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+    { id: 'business-administration', label: 'Business Administration', icon: <SlidersHorizontal size={20} />, href: '/business-administration', roles: ['admin', 'ceo'] },
+    { id: 'settings',    label: 'Settings',             icon: < Settings size={20} />,href: '/settings',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
   ];
 
   const getPageTitle = () => {
@@ -126,8 +125,8 @@ export default function DashboardLayout({ children }) {
     if (pathname === '/transactions') return 'Transaction History';
     if (pathname === '/transactions/create') return 'Create Transaction';
     if (pathname === '/pending') return 'Pending Approvals';
-    if (pathname === '/members') return 'Company Members';
-    if (pathname === '/users') return 'System Management';
+    if (pathname === '/business-administration') return 'Business Administration';
+
     return 'Settings';
   };
 
@@ -137,8 +136,8 @@ export default function DashboardLayout({ children }) {
     if (pathname === '/transactions') return 'Transactions';
     if (pathname === '/transactions/create') return 'Transactions / Create';
     if (pathname === '/pending') return 'Pending Approvals';
-    if (pathname === '/members') return 'Members';
-    if (pathname === '/users') return 'System';
+    if (pathname === '/business-administration') return 'Business Administration';
+
     return 'Pages';
   };
 
@@ -336,7 +335,7 @@ export default function DashboardLayout({ children }) {
         .mobile-header { display: none; }
         .mobile-nav { display: none; }
 
-        .main-content { flex: 1; margin-left: 260px; padding: 2rem 3rem; min-height: 100vh; background: #fcfcfc; }
+        .main-content { flex: 1; margin-left: 260px; padding: 2rem 3rem; min-height: 100vh; background: #fcfcfc; max-width: 100vw; overflow-x: hidden; }
         .top-header { margin-bottom: 2.5rem; }
         .breadcrumb { display: flex; align-items: center; gap: 0.5rem; color: #94a3b8; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; }
         .breadcrumb .current { color: #0f172a; }

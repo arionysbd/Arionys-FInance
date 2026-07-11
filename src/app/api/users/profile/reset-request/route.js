@@ -2,16 +2,14 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import { sendEmail } from '@/lib/mail';
+import { getAuthUser, unauthorized } from '@/lib/auth';
 
 export async function POST(req) {
   try {
     await dbConnect();
-    const { userId } = await req.json();
 
-    const user = await User.findById(userId);
-    if (!user) {
-      return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
-    }
+    const user = await getAuthUser(req);
+    if (!user) return unauthorized();
 
     // In a real app, you'd generate a token. For now, we'll send a direct reset link.
     const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin}/login`; // Redirecting to login for now

@@ -56,8 +56,46 @@ export default function PendingApprovalsPage() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex justify-center items-center h-64 text-gray-500">
-          <Loader2 size={32} className="animate-spin" />
+        <div className="pending-layout">
+          <div className="pending-header">
+            <div>
+              <div className="skeleton skeleton-title"></div>
+              <div className="skeleton skeleton-subtitle"></div>
+            </div>
+            <div className="skeleton skeleton-badge"></div>
+          </div>
+          
+          <div className="card">
+            <div className="table-responsive">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th><div className="skeleton skeleton-th"></div></th>
+                    <th><div className="skeleton skeleton-th"></div></th>
+                    <th><div className="skeleton skeleton-th"></div></th>
+                    <th><div className="skeleton skeleton-th"></div></th>
+                    <th><div className="skeleton skeleton-th"></div></th>
+                    <th><div className="skeleton skeleton-th right"></div></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...Array(5)].map((_, i) => (
+                    <tr key={i} className="tx-row">
+                      <td><div className="skeleton skeleton-td short"></div></td>
+                      <td><div className="skeleton skeleton-td"></div></td>
+                      <td><div className="skeleton skeleton-td long"></div></td>
+                      <td><div className="skeleton skeleton-td"></div></td>
+                      <td><div className="skeleton skeleton-td"></div></td>
+                      <td className="action-buttons">
+                        <div className="skeleton skeleton-btn"></div>
+                        <div className="skeleton skeleton-btn"></div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </DashboardLayout>
     );
@@ -181,6 +219,27 @@ export default function PendingApprovalsPage() {
       )}
 
       <style jsx>{`
+        /* Skeleton Loading */
+        .skeleton {
+          background: #e2e8f0;
+          border-radius: 6px;
+          animation: pulse 1.5s infinite ease-in-out;
+        }
+        .skeleton-title { width: 220px; height: 28px; margin-bottom: 0.5rem; }
+        .skeleton-subtitle { width: 380px; height: 16px; max-width: 100%; }
+        .skeleton-badge { width: 110px; height: 34px; border-radius: 999px; }
+        .skeleton-th { width: 80px; height: 14px; }
+        .skeleton-th.right { margin-left: auto; }
+        .skeleton-td { height: 18px; width: 90px; }
+        .skeleton-td.short { width: 60px; }
+        .skeleton-td.long { width: 200px; max-width: 100%; }
+        .skeleton-btn { width: 85px; height: 32px; border-radius: 6px; }
+        
+        @keyframes pulse {
+          0%, 100% { opacity: 0.4; }
+          50% { opacity: 0.8; }
+        }
+
         .pending-layout {
           max-width: 1200px;
           margin: 0 auto;

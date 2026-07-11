@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Account from '@/models/Account';
+import { getAuthUser, unauthorized } from '@/lib/auth';
 
 export async function GET(req) {
   try {
     await dbConnect();
-    const { searchParams } = new URL(req.url);
-    const companyId = searchParams.get('companyId');
 
+    const authUser = await getAuthUser(req);
+    if (!authUser) return unauthorized();
+
+    const companyId = authUser.companyId;
     if (!companyId) {
       return NextResponse.json({ success: false, message: 'Company ID is required' }, { status: 400 });
     }
@@ -22,8 +25,14 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     await dbConnect();
+
+    const authUser = await getAuthUser(req);
+    if (!authUser) return unauthorized();
+
     const body = await req.json();
-    const { accountNo, acName, bankName, branch, routingNo, userId, companyId } = body;
+    const { accountNo, acName, bankName, branch, routingNo } = body;
+    const userId = authUser._id;
+    const companyId = authUser.companyId;
 
     if (!companyId) {
       return NextResponse.json({ success: false, message: 'Company ID is required' }, { status: 400 });

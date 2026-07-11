@@ -3,15 +3,19 @@ import crypto from 'crypto';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import { sendEmail } from '@/lib/mail';
+import { getAuthUser, unauthorized } from '@/lib/auth';
 
 export async function POST(req) {
   try {
     await dbConnect();
-    const { name, email, role, adminId } = await req.json();
 
-    // Verify the requester is an admin
-    const admin = await User.findById(adminId);
-    if (!admin || admin.role !== 'admin') {
+    // Verify the requester is an authenticated admin
+    const admin = await getAuthUser(req);
+    if (!admin) return unauthorized();
+
+    const { name, email, role } = await req.json();
+
+    if (admin.role !== 'admin') {
       return NextResponse.json(
         { success: false, message: 'Only administrators can invite users.' },
         { status: 403 }
@@ -37,6 +41,7 @@ export async function POST(req) {
       email,
       role: role || 'accountant',
       isActive: false,
+      companyId: admin.companyId,
       inviteToken,
       inviteExpires,
     });

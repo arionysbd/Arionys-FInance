@@ -4,21 +4,27 @@ import Transaction from '@/models/Transaction';
 import User from '@/models/User';
 import Account from '@/models/Account';
 import { sendEmail } from '@/lib/mail';
+import { getAuthUser, unauthorized } from '@/lib/auth';
 
 export async function GET(req) {
   try {
     await dbConnect();
+
+    const authUser = await getAuthUser(req);
+    if (!authUser) return unauthorized();
+
     const { searchParams } = new URL(req.url);
     const statusParam = searchParams.get('status') || 'approved';
     const type = searchParams.get('type');
-    const companyId = searchParams.get('companyId');
+    // Always scope to the caller's own company — never trust a client companyId
+    const companyId = authUser.companyId;
     const page = parseInt(searchParams.get('page')) || 1;
     const limit = parseInt(searchParams.get('limit')) || 20;
     const skip = (page - 1) * limit;
 
     let query = {};
     if (companyId) query.companyId = companyId;
-    
+
     // Support comma separated status: status=approved,rejected
     if (statusParam.includes(',')) {
       query.status = { $in: statusParam.split(',') };
@@ -50,8 +56,15 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     await dbConnect();
+
+    const authUser = await getAuthUser(req);
+    if (!authUser) return unauthorized();
+
     const body = await req.json();
-    const { type, amount, description, performedBy, userId, companyId, account, toAccount } = body;
+    const { type, amount, description, performedBy, account, toAccount } = body;
+    // Identity and company come from the verified token, not the request body
+    const userId = authUser._id;
+    const companyId = authUser.companyId;
 
     if (!companyId) {
       return NextResponse.json({ success: false, message: 'Company ID is required' }, { status: 400 });
@@ -63,6 +76,10 @@ export async function POST(req) {
 
     if (type === 'transfer' && !toAccount) {
       return NextResponse.json({ success: false, message: 'Destination account is mandatory for transfers' }, { status: 400 });
+    }
+
+    if (type === 'transfer' && String(account) === String(toAccount)) {
+      return NextResponse.json({ success: false, message: 'Source and destination accounts must be different' }, { status: 400 });
     }
 
     const transaction = await Transaction.create({

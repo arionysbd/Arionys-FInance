@@ -33,6 +33,8 @@ export async function POST(req) {
         name: user.name,
         email: user.email,
         role: user.role,
+        isActive: user.isActive,
+        companyId: user.companyId,
         token: sessionToken
       }
     });

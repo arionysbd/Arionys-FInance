@@ -1,12 +1,18 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Transaction from '@/models/Transaction';
+import { getAuthUser, unauthorized } from '@/lib/auth';
 
 export async function POST(req) {
   try {
     await dbConnect();
+
+    const authUser = await getAuthUser(req);
+    if (!authUser) return unauthorized();
+
     const body = await req.json();
-    const { companyId, transactions } = body;
+    const { transactions } = body;
+    const companyId = authUser.companyId;
 
     if (!companyId) {
       return NextResponse.json({ success: false, message: 'Company ID is required' }, { status: 400 });
@@ -22,10 +28,12 @@ export async function POST(req) {
       const txData = { ...tx, companyId };
       
       // If the record has an _id, use it for matching.
+      // Scope the filter by companyId so an import can never overwrite
+      // another company's transaction by supplying its _id.
       if (txData._id) {
         return {
           updateOne: {
-            filter: { _id: txData._id },
+            filter: { _id: txData._id, companyId },
             update: { $set: txData },
             upsert: true
           }

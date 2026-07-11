@@ -6,12 +6,14 @@ import { getStats, getTransactions } from '@/lib/api';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [stats, setStats] = useState({ totalInvestment: 0, totalRevenue: 0, totalExpense: 0, netBalance: 0 });
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (authLoading) return; // Wait for auth to finish
+
     const fetchData = async () => {
       try {
         const params = { companyId: user.companyId };
@@ -30,8 +32,10 @@ export default function DashboardPage() {
 
     if (user?.companyId) {
       fetchData();
+    } else {
+      setLoading(false);
     }
-  }, [user]);
+  }, [user, authLoading]);
 
   if (loading) {
     return (

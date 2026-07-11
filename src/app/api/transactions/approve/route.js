@@ -3,21 +3,31 @@ import dbConnect from '@/lib/db';
 import Transaction from '@/models/Transaction';
 import User from '@/models/User';
 import { sendEmail } from '@/lib/mail';
+import { getAuthUser, unauthorized } from '@/lib/auth';
 
 export async function POST(req) {
   try {
     await dbConnect();
-    const { transactionId, status, userId } = await req.json();
 
-    const user = await User.findById(userId);
+    const user = await getAuthUser(req);
+    if (!user) return unauthorized();
+
+    const { transactionId, status } = await req.json();
+    const userId = user._id;
+
     const authorizedRoles = ['owner', 'admin', 'ceo', 'cfo'];
-    if (!user || !authorizedRoles.includes(user.role)) {
+    if (!authorizedRoles.includes(user.role)) {
       return NextResponse.json({ success: false, message: 'Unauthorized. Only Owner, Admin, CEO, or CFO can approve.' }, { status: 403 });
     }
 
     const transaction = await Transaction.findById(transactionId).populate('createdBy', 'name');
     if (!transaction) {
       return NextResponse.json({ success: false, message: 'Transaction not found' }, { status: 404 });
+    }
+
+    // Enforce tenant isolation: approvers can only act on their own company's transactions
+    if (String(transaction.companyId) !== String(user.companyId)) {
+      return NextResponse.json({ success: false, message: 'You can only review transactions for your own company.' }, { status: 403 });
     }
 
     transaction.status = status; // approved or rejected
@@ -27,7 +37,7 @@ export async function POST(req) {
     // Notify Admin and CEO upon approval
     if (status === 'approved') {
       try {
-        const notifiables = await User.find({ role: { $in: ['admin', 'ceo'] } });
+        const notifiables = await User.find({ role: { $in: ['admin', 'ceo'] }, companyId: transaction.companyId });
         for (const notifiable of notifiables) {
           await sendEmail({
             to: notifiable.email,

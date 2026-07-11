@@ -2,13 +2,19 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import bcrypt from 'bcryptjs';
+import { getAuthUser, unauthorized } from '@/lib/auth';
 
 export async function PUT(req) {
   try {
     await dbConnect();
-    const { userId, currentPassword, newPassword } = await req.json();
 
-    if (!userId || !currentPassword || !newPassword) {
+    const authUser = await getAuthUser(req);
+    if (!authUser) return unauthorized();
+
+    const { currentPassword, newPassword } = await req.json();
+    const userId = authUser._id;
+
+    if (!currentPassword || !newPassword) {
       return NextResponse.json({ success: false, message: 'All fields are required' }, { status: 400 });
     }
 

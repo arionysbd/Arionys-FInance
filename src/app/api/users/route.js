@@ -2,11 +2,22 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import { sendEmail } from '@/lib/mail';
+import { getAuthUser, unauthorized } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(req) {
   try {
     await dbConnect();
-    const users = await User.find().select('-password');
+
+    const authUser = await getAuthUser(req);
+    if (!authUser) return unauthorized();
+
+    const companyId = authUser.companyId;
+    if (!companyId) {
+      return NextResponse.json({ success: false, message: 'Company ID is required' }, { status: 400 });
+    }
+
+    // Scope to the requester's company so users of other tenants are never exposed
+    const users = await User.find({ companyId }).select('-password');
     return NextResponse.json({ success: true, data: users });
   } catch (error) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
@@ -16,16 +27,24 @@ export async function GET() {
 export async function PATCH(req) {
   try {
     await dbConnect();
-    const { userId, role, isActive, adminId } = await req.json();
 
-    const admin = await User.findById(adminId);
-    if (!admin || admin.role !== 'admin') {
+    const admin = await getAuthUser(req);
+    if (!admin) return unauthorized();
+
+    const { userId, role, isActive } = await req.json();
+
+    if (admin.role !== 'admin') {
       return NextResponse.json({ success: false, message: 'Only admins can change roles or statuses' }, { status: 403 });
     }
 
     const user = await User.findById(userId);
     if (!user) {
       return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+    }
+
+    // Enforce tenant isolation
+    if (String(user.companyId) !== String(admin.companyId)) {
+      return NextResponse.json({ success: false, message: 'You can only manage users of your own company.' }, { status: 403 });
     }
 
     // Protection for Admin accounts
@@ -91,15 +110,24 @@ export async function PATCH(req) {
 export async function DELETE(req) {
   try {
     await dbConnect();
-    const { userId, adminId } = await req.json();
 
-    const admin = await User.findById(adminId);
-    if (!admin || admin.role !== 'admin') {
+    const admin = await getAuthUser(req);
+    if (!admin) return unauthorized();
+
+    const { userId } = await req.json();
+
+    if (admin.role !== 'admin') {
       return NextResponse.json({ success: false, message: 'Only admins can delete accounts' }, { status: 403 });
     }
 
     const targetUser = await User.findById(userId);
-    if (targetUser && targetUser.role === 'admin') {
+    if (!targetUser) {
+      return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+    }
+    if (String(targetUser.companyId) !== String(admin.companyId)) {
+      return NextResponse.json({ success: false, message: 'You can only manage users of your own company.' }, { status: 403 });
+    }
+    if (targetUser.role === 'admin') {
       return NextResponse.json({ success: false, message: 'Administrator accounts cannot be deleted' }, { status: 400 });
     }
 

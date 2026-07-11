@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import axios from 'axios';
+import '@/lib/api'; // installs the axios auth-header interceptor app-wide
 
 const AuthContext = createContext();
 

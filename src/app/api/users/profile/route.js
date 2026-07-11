@@ -1,14 +1,20 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
+import { getAuthUser, unauthorized } from '@/lib/auth';
 
 export async function PUT(req) {
   try {
     await dbConnect();
-    const { userId, name, email, phone, position, password } = await req.json();
 
-    if (!userId || !password) {
-      return NextResponse.json({ success: false, message: 'User ID and password are required' }, { status: 400 });
+    const authUser = await getAuthUser(req);
+    if (!authUser) return unauthorized();
+
+    const { name, email, phone, position, password } = await req.json();
+    const userId = authUser._id; // only ever edit your own profile
+
+    if (!password) {
+      return NextResponse.json({ success: false, message: 'Password is required' }, { status: 400 });
     }
 
     const user = await User.findById(userId);

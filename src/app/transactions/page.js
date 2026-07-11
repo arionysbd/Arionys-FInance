@@ -8,7 +8,7 @@ import DashboardLayout from '@/components/Layout/DashboardLayout';
 import { Plus, Download, Upload, Loader2 } from 'lucide-react';
 
 export default function TransactionsPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [stats, setStats] = useState({ totalInvestment: 0, totalRevenue: 0, totalExpense: 0, netBalance: 0 });
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -67,11 +67,15 @@ export default function TransactionsPage() {
   };
 
   useEffect(() => {
+    if (authLoading) return; // Wait for auth to finish initializing
     if (user?.companyId) {
       setPage(1);
       loadData();
+    } else {
+      // Auth is done but no user/companyId — stop loading skeleton
+      setLoading(false);
     }
-  }, [user, filterType]);
+  }, [user, filterType, authLoading]);
 
   const loadMore = useCallback(async () => {
     if (!loadingMore && hasMore) {
@@ -205,7 +209,27 @@ export default function TransactionsPage() {
               {exporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
               Export
             </button>
-            <Link href="/transactions/create" className="btn-create-tx">
+            <Link 
+              href="/transactions/create" 
+              className="btn-create-tx"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                background: 'white',
+                color: '#0f172a',
+                padding: '0 1.25rem',
+                borderRadius: '6px',
+                border: '1px solid #cbd5e1',
+                fontWeight: 800,
+                fontSize: '0.8125rem',
+                textDecoration: 'none',
+                minHeight: '42px',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                transition: 'all 0.2s',
+                whiteSpace: 'nowrap',
+              }}
+            >
               <Plus size={16} />
               Create Transaction
             </Link>
@@ -275,27 +299,33 @@ export default function TransactionsPage() {
           display: inline-flex;
           align-items: center;
           gap: 0.5rem;
-          background: #0f172a;
-          color: white;
-          padding: 0.75rem 1.25rem;
+          background: white;
+          color: #0f172a;
+          padding: 0.625rem 1.25rem;
           border-radius: 6px;
-          font-weight: 700;
-          font-size: 0.875rem;
+          border: 1px solid #cbd5e1;
+          font-weight: 800;
+          font-size: 0.8125rem;
           text-decoration: none;
           transition: all 0.2s;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+          min-height: 42px;
         }
         .btn-create-tx:hover {
-          background: #1e293b;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+          background: #0f172a;
+          color: white;
+          border-color: #0f172a;
+          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
         }
         
         @media (max-width: 768px) {
           .tx-layout { padding-right: 0; }
-          .tx-quick-stats-bar { flex-direction: row; gap: 0; align-items: center; padding: 1rem 1.25rem; }
-          .tx-stat-divider { display: block; height: 30px; margin: 0 1rem; }
-          .tx-stat-value { font-size: 1.1rem; }
-          .btn-create-tx { padding: 0.5rem 1rem; font-size: 0.8rem; margin-left: 1rem; }
+          .tx-quick-stats-bar { flex-direction: column; gap: 1.25rem; align-items: flex-start; padding: 1.25rem; }
+          .tx-stat-divider { display: none; }
+          .tx-stat-value { font-size: 1.5rem; }
+          .tx-actions-wrapper { width: 100%; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem; }
+          .btn-action-outline { flex: 1; min-width: 45%; justify-content: center; }
+          .btn-create-tx { width: 100%; justify-content: center; margin-left: 0; margin-top: 0.25rem; }
         }
       `}</style>
     </DashboardLayout>
