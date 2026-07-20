@@ -1,16 +1,13 @@
 'use client';
-import { useRouter } from 'next/navigation';
 import TransactionForm from '@/components/Transactions/TransactionForm';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 export default function CreateTransactionPage() {
-  const router = useRouter();
-
   const handleTransactionAdded = () => {
-    // Redirect back to transactions list
-    router.push('/transactions');
+    // Stay on the create page after submitting (no redirect).
+    // The form resets itself and shows a confirmation alert.
   };
 
   return (

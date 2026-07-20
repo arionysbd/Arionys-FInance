@@ -1,13 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { 
+import {
   Home,
   ArrowRightLeft,
-  History,
-  Hourglass,
   SlidersHorizontal,
   ShieldCheck,
-  Landmark,
   Settings,
   Shield,
   LogOut,
@@ -110,13 +107,13 @@ export default function DashboardLayout({ children }) {
   }
 
   const navItems = [
-    { id: 'dashboard',    label: 'Dashboard',          icon: <Home size={20} />,  href: '/dashboard',           roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
-    { id: 'create-tx',   label: 'Create Transaction',  icon: <ArrowRightLeft size={20} />,       href: '/transactions/create', roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
-    { id: 'pending',     label: 'Pending Approvals',   icon: <Hourglass size={20} />,        href: '/pending',             roles: ['owner', 'admin', 'ceo', 'cfo'], showBadge: true },
-    { id: 'transactions',label: 'Transaction History',  icon: <History size={20} />,          href: '/transactions',        roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
-    { id: 'accounts',    label: 'Accounts',             icon: <Landmark size={20} />,         href: '/accounts',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
-    { id: 'business-administration', label: 'Business Administration', icon: <SlidersHorizontal size={20} />, href: '/business-administration', roles: ['admin', 'ceo'] },
-    { id: 'settings',    label: 'Settings',             icon: < Settings size={20} />,href: '/settings',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+    { id: 'dashboard',    label: 'Dashboard',          icon: <Home size={22} />,  href: '/dashboard',           roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+    { id: 'create-tx',   label: 'Create Transaction',  icon: <ArrowRightLeft size={22} />,       href: '/transactions/create', roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+    { id: 'pending',     label: 'Pending Approvals',   icon: <img src="/icons/nav-pending.png" alt="" className="nav-img-icon" />,   href: '/pending',             roles: ['owner', 'admin', 'ceo', 'cfo'], showBadge: true },
+    { id: 'transactions',label: 'Transaction History',  icon: <img src="/icons/nav-history.png" alt="" className="nav-img-icon" />,   href: '/transactions',        roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+    { id: 'accounts',    label: 'Accounts',             icon: <img src="/icons/nav-accounts.png" alt="" className="nav-img-icon" />,  href: '/accounts',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+    { id: 'business-administration', label: 'Business Administration', icon: <SlidersHorizontal size={22} />, href: '/business-administration', roles: ['admin', 'ceo'] },
+    { id: 'settings',    label: 'Settings',             icon: < Settings size={22} />,href: '/settings',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
   ];
 
   const getPageTitle = () => {
@@ -309,6 +306,7 @@ export default function DashboardLayout({ children }) {
         :global(.nav-item.active) { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: #ffffff; box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.39); }
 
         .nav-icon-wrapper { position: relative; display: flex; align-items: center; justify-content: center; }
+        :global(.nav-img-icon) { width: 22px; height: 22px; object-fit: contain; display: block; }
         .notification-badge {
           position: absolute;
           top: -6px;

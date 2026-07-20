@@ -223,6 +223,7 @@ export default function Dashboard({ stats, recentTransactions, user }) {
           display: flex;
           align-items: baseline;
           gap: 0.35rem;
+          font-variant-numeric: tabular-nums;
         }
         @media (max-width: 480px) {
           .stat-value { font-size: 1.25rem; }
@@ -258,7 +259,7 @@ export default function Dashboard({ stats, recentTransactions, user }) {
           text-transform: uppercase; margin-bottom: 0.15rem; 
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
-        .acc-bal { font-size: 1.1rem; font-weight: 800; color: #0f172a; }
+        .acc-bal { font-size: 1.1rem; font-weight: 800; color: #0f172a; font-variant-numeric: tabular-nums; }
 
         .grid-content {
           display: grid;
@@ -290,10 +291,21 @@ export default function Dashboard({ stats, recentTransactions, user }) {
           border-bottom: 1px solid #f1f5f9;
         }
         .transaction-item:last-child { border-bottom: none; }
-        .tx-info { display: flex; flex-direction: column; gap: 0.15rem; }
-        .tx-desc { font-weight: 600; font-size: 0.875rem; color: #334155; }
+        .tx-info { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; flex: 1; }
+        .tx-desc {
+          font-weight: 600; font-size: 0.875rem; color: #334155;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
         .tx-date { font-size: 0.75rem; color: #94a3b8; }
-        .tx-amount { font-weight: 700; font-size: 0.875rem; }
+        .tx-amount {
+          font-weight: 700;
+          font-size: 0.875rem;
+          flex-shrink: 0;
+          text-align: right;
+          white-space: nowrap;
+          font-variant-numeric: tabular-nums;
+          padding-left: 1rem;
+        }
         .tx-amount.revenue { color: #10b981; }
         .tx-amount.expense { color: #ef4444; }
         .tx-amount.investment { color: #2563eb; }
