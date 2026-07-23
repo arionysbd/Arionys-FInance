@@ -16,7 +16,6 @@ export default function TransactionForm({ onTransactionAdded }) {
     toAccount: ''
   });
   
-  
   const [isOther, setIsOther] = useState(false);
   const [loading, setLoading] = useState(false);
   const [accounts, setAccounts] = useState([]);
