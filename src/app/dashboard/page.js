@@ -30,8 +30,6 @@ export default function DashboardPage() {
       }
     };
 
-    
-
     if (user?.companyId) {
       fetchData();
     } else {
