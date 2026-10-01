@@ -514,43 +514,83 @@ export default function PendingApprovalsPage() {
           
           /* Table to Card View */
           .tx-table, .tx-table tbody, .tx-table tr, .tx-table td {
-            display: block;
-            width: 100%;
+            display: block; width: 100%;
           }
           .tx-table thead { display: none; }
+          
           .tx-row {
             background: #fff;
             border: 1px solid #e8edf3;
-            border-radius: 12px;
-            margin-bottom: 1rem;
-            padding: 1rem;
-            box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.05);
+            border-radius: 16px;
+            margin-bottom: 1.5rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            position: relative;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: auto 1fr;
+            row-gap: 1rem;
           }
-          .tx-table td {
-            padding: 0.5rem 0;
-            border: none;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+          /* Top border indicator based on type */
+          .tx-row::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
           }
-          .tx-table td::before {
-            content: attr(data-label);
-            font-weight: 700;
-            font-size: 0.75rem;
-            color: #64748b;
-            text-transform: uppercase;
-            padding-right: 1rem;
+          .tx-row:has(.type-expense)::before { background: #f87171; }
+          .tx-row:has(.type-revenue)::before { background: #10b981; }
+          .tx-row:has(.type-investment)::before { background: #60a5fa; }
+          .tx-row:has(.type-transfer)::before { background: #c084fc; }
+
+          .tx-table td { padding: 0; border: none; display: flex; align-items: center; justify-content: space-between; }
+          .tx-table td::before { display: none; }
+          
+          /* td 1: Type (Left), td 4: Amount (Right) -> Stack them in Row 1 */
+          .tx-table td:nth-child(1) { grid-column: 1 / 2; justify-content: flex-start; order: 1; }
+          .tx-table td:nth-child(4) { grid-column: 2 / 3; justify-content: flex-end; order: 2; }
+          .amount-cell { font-size: 1.25rem; font-weight: 900; display: flex; align-items: baseline; }
+          .amount-currency { font-size: 0.85rem; font-weight: 700; margin-right: 0.2rem; }
+          
+          /* td 2: Description (Full Width) */
+          .tx-table td:nth-child(2) { grid-column: 1 / 3; order: 3; justify-content: flex-start; margin-top: 0.5rem; }
+          .tx-main-desc { font-size: 1.125rem; font-weight: 800; color: #1e293b; text-align: left; max-width: 100%; white-space: normal; }
+          
+          /* td 3: Account Info (Full Width) */
+          .tx-table td:nth-child(3) { grid-column: 1 / 3; order: 4; justify-content: flex-start; padding-bottom: 1rem; border-bottom: 1px solid #f1f5f9; margin-top: -0.25rem; }
+          .tx-account { font-size: 0.875rem; color: #64748b; font-weight: 600; }
+          
+          /* td 5: Date & User */
+          .tx-table td:nth-child(5) { 
+            grid-column: 1 / 3; order: 5; 
+            padding: 0.5rem 0 1rem; 
+            border-bottom: 1px solid #f1f5f9;
+            align-items: stretch;
           }
-          .tx-main-desc { max-width: 150px; text-align: right; }
-          .meta-stack { align-items: flex-end; }
-          .action-cell { 
-            justify-content: stretch; 
-            margin-top: 0.5rem; 
-            padding-top: 1rem; 
-            border-top: 1px solid #f1f5f9; 
+          .meta-stack {
+            display: grid;
+            grid-template-columns: 1fr 1px 1fr;
             width: 100%;
           }
-          .action-cell .btn-action { flex: 1; }
+          .meta-value { grid-column: 1; display: flex; flex-direction: column; align-items: flex-start; font-size: 0.9375rem; font-weight: 800; color: #334155; }
+          .meta-value::before { content: 'DATE'; font-size: 0.75rem; color: #94a3b8; font-weight: 700; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; }
+          .meta-stack::after { content: ''; grid-column: 2; width: 1px; background: #e2e8f0; height: 100%; display: block; margin: 0 1rem; }
+          .creator-badge { grid-column: 3; display: flex; flex-direction: column; align-items: flex-start; font-size: 0.9375rem; font-weight: 800; color: #334155; }
+          .creator-badge::before { content: 'SUBMITTED BY'; font-size: 0.75rem; color: #94a3b8; font-weight: 700; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; }
+          
+          /* td 6: Actions */
+          .tx-table td:nth-child(6) { 
+            grid-column: 1 / 3; order: 6; 
+            padding-top: 1rem;
+          }
+          .action-cell { display: flex; width: 100%; gap: 1rem; justify-content: space-between; flex-direction: row !important; }
+          .action-cell .btn-action { flex: 1; padding: 0.875rem; font-size: 0.9375rem; border-radius: 8px; font-weight: 800; display: flex; justify-content: center; }
+          
+          /* Adjust Button styles to match image */
+          .btn-action.approve { background: #10b981; color: white; }
+          .btn-action.approve:hover:not(:disabled) { background: #059669; color: white; }
+          .btn-action.reject { background: transparent; color: #dc2626; border: 1.5px solid #fca5a5; }
+          .btn-action.reject:hover:not(:disabled) { background: #fef2f2; color: #b91c1c; border-color: #f87171; }
         }
       `}</style>
     </DashboardLayout>
