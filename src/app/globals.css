@@ -217,6 +217,12 @@ html, body {
 }
 
 /* Helper for horizontal tables if any left */
+.table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+}
+
 .mobile-scroll-x {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
