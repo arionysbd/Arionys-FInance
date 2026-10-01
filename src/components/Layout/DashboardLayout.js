@@ -399,7 +399,7 @@ export default function DashboardLayout({ children }) {
             z-index: 90;
           }
           .main-content { margin-left: 0; padding: 6rem 5vw 3rem; }
-          .mobile-header { position: fixed; top: 0; left: 0; right: 0; height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 0 5vw 0 4vw; z-index: 1000; border-bottom: 1px solid #f1f5f9; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
+          .mobile-header { position: fixed; top: 0; left: 0; right: 0; height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 0 5vw 0 4vw; z-index: 9999; border-bottom: 1px solid #e2e8f0; background: #ffffff; }
           .mobile-header .logo-area { padding: 0; border: none; margin: 0; display: flex; flex-direction: row; align-items: center; justify-content: flex-start; }
           .mobile-header .logo-icon { width: 110px; transform: translateY(-1px); display: flex; align-items: center; justify-content: flex-start; }
           .mobile-header-right { display: flex; align-items: center; gap: 0.75rem; }

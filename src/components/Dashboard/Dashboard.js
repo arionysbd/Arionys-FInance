@@ -293,6 +293,7 @@ export default function Dashboard({ stats, recentTransactions, user }) {
         .transaction-item:last-child { border-bottom: none; }
         .tx-info { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; flex: 1; }
         .tx-desc {
+          display: block;
           font-weight: 600; font-size: 0.875rem; color: #334155;
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }

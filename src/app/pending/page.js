@@ -136,35 +136,34 @@ export default function PendingApprovalsPage() {
                     const TypeIcon = meta.icon;
                     return (
                       <tr key={tx._id} className="tx-row">
-                        <td>
+                        <td data-label="Type">
                           <div className={`type-pill-minimal type-${tx.type}`}>
                             <TypeIcon size={13} />
                             <span>{meta.label}</span>
                           </div>
                         </td>
-                        <td>
+                        <td data-label="Description">
                           <span className="tx-main-desc">{tx.description}</span>
                         </td>
-                        <td>
+                        <td data-label="Account Info">
                           <span className="tx-account">
                             {tx.type === 'transfer'
                               ? `From: ${tx.account?.bankName || 'N/A'} → To: ${tx.toAccount?.bankName || 'N/A'}`
                               : tx.account?.bankName || 'N/A'}
                           </span>
                         </td>
-                        <td>
+                        <td data-label="Amount (BDT)">
                           <div className={`amount-cell amount-${tx.type}`}>
                             {tx.amount.toLocaleString()}
                           </div>
                         </td>
-                        <td>
+                        <td data-label="Date & User">
                           <div className="meta-stack">
                             <span className="meta-value">{new Date(tx.date).toLocaleDateString()}</span>
                             <span className="creator-badge">{tx.createdBy?.name || tx.performedBy || 'System'}</span>
                           </div>
                         </td>
-                        <td>
-                          <div className="action-cell">
+                        <td className="action-cell">
                             <button
                               className="btn-action approve"
                               disabled={processingId === tx._id}
@@ -183,7 +182,6 @@ export default function PendingApprovalsPage() {
                               {processingId === tx._id ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />}
                               Reject
                             </button>
-                          </div>
                         </td>
                       </tr>
                     );
@@ -493,13 +491,66 @@ export default function PendingApprovalsPage() {
         .btn-confirm.rejected { background: #f87171; }
         .btn-confirm.rejected:hover { background: #dc2626; }
 
-        @media (max-width: 640px) {
+        @media (max-width: 768px) {
           .pending-header {
             flex-direction: column;
-            align-items: flex-start;
-            gap: 1rem;
-            padding: 1.25rem;
+            align-items: center;
+            text-align: center;
+            gap: 1.5rem;
+            padding: 2rem 1.5rem;
+            border-radius: 20px;
           }
+          .header-left {
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+          }
+          .header-icon {
+            width: 64px;
+            height: 64px;
+          }
+          .title { font-size: 1.35rem; }
+          .subtitle { max-width: 280px; }
+          
+          /* Table to Card View */
+          .tx-table, .tx-table tbody, .tx-table tr, .tx-table td {
+            display: block;
+            width: 100%;
+          }
+          .tx-table thead { display: none; }
+          .tx-row {
+            background: #fff;
+            border: 1px solid #e8edf3;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.05);
+          }
+          .tx-table td {
+            padding: 0.5rem 0;
+            border: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+          .tx-table td::before {
+            content: attr(data-label);
+            font-weight: 700;
+            font-size: 0.75rem;
+            color: #64748b;
+            text-transform: uppercase;
+            padding-right: 1rem;
+          }
+          .tx-main-desc { max-width: 150px; text-align: right; }
+          .meta-stack { align-items: flex-end; }
+          .action-cell { 
+            justify-content: stretch; 
+            margin-top: 0.5rem; 
+            padding-top: 1rem; 
+            border-top: 1px solid #f1f5f9; 
+            width: 100%;
+          }
+          .action-cell .btn-action { flex: 1; }
         }
       `}</style>
     </DashboardLayout>
