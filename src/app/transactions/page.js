@@ -160,12 +160,12 @@ export default function TransactionsPage() {
           </div>
         </div>
         <style jsx>{`
-          .tx-skeleton { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; padding: 1rem 5vw 1rem 1rem; }
-          .skeleton-bar { height: 80px; border-radius: 6px; }
-          .skeleton-form { height: 350px; border-radius: 6px; }
+          .tx-skeleton { max-width: var(--page-max-width); margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; padding: 1rem 0; }
+          .skeleton-bar { height: 80px; border-radius: 4px; }
+          .skeleton-form { height: 350px; border-radius: 4px; }
           .skeleton-history { display: flex; flex-direction: column; gap: 0.75rem; }
-          .skeleton-h-header { height: 50px; border-radius: 6px; }
-          .skeleton-h-row { height: 70px; border-radius: 6px; }
+          .skeleton-h-header { height: 50px; border-radius: 4px; }
+          .skeleton-h-row { height: 70px; border-radius: 4px; }
           .shim {
             background: linear-gradient(90deg, #f1f5f9 25%, #f8fafc 50%, #f1f5f9 75%);
             background-size: 200% 100%;
@@ -219,7 +219,7 @@ export default function TransactionsPage() {
                 background: 'white',
                 color: '#0f172a',
                 padding: '0 1.25rem',
-                borderRadius: '6px',
+                borderRadius: '4px',
                 border: '1px solid #cbd5e1',
                 fontWeight: 800,
                 fontSize: '0.8125rem',
@@ -250,14 +250,14 @@ export default function TransactionsPage() {
       </div>
 
       <style jsx>{`
-        .tx-layout { max-width: 1200px; margin: 0 auto; padding-right: 5vw; }
+        .tx-layout { max-width: var(--page-max-width); margin: 0 auto; }
         .tx-quick-stats-bar { 
           display: flex; 
           width: 100%;
           align-items: center; 
           background: #ffffff; 
           padding: clamp(1rem, 4vw, 1.5rem) clamp(1.25rem, 5vw, 2rem); 
-          border-radius: 6px; 
+          border-radius: 4px; 
           border: 1px solid #e2e8f0;
           margin-bottom: clamp(1.5rem, 6vw, 2rem);
           box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
@@ -276,7 +276,7 @@ export default function TransactionsPage() {
           background: white;
           color: #0f172a;
           border: 1px solid #cbd5e1;
-          border-radius: 6px;
+          border-radius: 4px;
           font-size: 0.8125rem;
           font-weight: 800;
           cursor: pointer;
@@ -302,7 +302,7 @@ export default function TransactionsPage() {
           background: white;
           color: #0f172a;
           padding: 0.625rem 1.25rem;
-          border-radius: 6px;
+          border-radius: 4px;
           border: 1px solid #cbd5e1;
           font-weight: 800;
           font-size: 0.8125rem;

@@ -43,6 +43,7 @@ export async function GET(req) {
         salary: emp?.salary || 0,
         loanLimit: emp?.loanLimit || 0,
         joiningDate: emp?.joiningDate || null,
+        profilePhoto: emp?.profilePhoto || '',
       });
       handledEmails.add(u.email.toLowerCase());
     }
@@ -64,6 +65,7 @@ export async function GET(req) {
           salary: emp.salary || 0,
           loanLimit: emp.loanLimit || 0,
           joiningDate: emp.joiningDate || null,
+          profilePhoto: emp.profilePhoto || '',
           role: 'pending_invite',
           isActive: false,
         });

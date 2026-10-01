@@ -251,7 +251,7 @@ export default function AccountsPage() {
           ))}
         </div>
         <style jsx>{`
-          .skeleton-card { height: 260px; border-radius: 16px; }
+          .skeleton-card { height: 260px; border-radius: 8px; }
           .shim {
             background: linear-gradient(90deg, #f1f5f9 25%, #f8fafc 50%, #f1f5f9 75%);
             background-size: 200% 100%;
@@ -465,7 +465,7 @@ export default function AccountsPage() {
 
       <style jsx>{`
         /* ─── Root ─── */
-        .page-root { display: flex; flex-direction: column; gap: 2rem; max-width: 1200px; }
+        .page-root { display: flex; flex-direction: column; gap: 2rem; max-width: var(--page-max-width); margin: 0 auto; width: 100%; }
 
         /* ─── Summary Bar ─── */
         .summary-bar {
@@ -535,7 +535,7 @@ export default function AccountsPage() {
           padding: 1rem;
         }
         .modal {
-          background: var(--card); border-radius: 12px;
+          background: var(--card); border-radius: 6px;
           padding: 2rem; width: 100%; max-width: 620px;
           box-shadow: none;
           max-height: 90vh; overflow-y: auto; border: 1px solid var(--border);
@@ -574,7 +574,8 @@ export default function AccountsPage() {
         .modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.75rem; }
 
         /* ─── Cards Grid ─── */
-        .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
+        .cards-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; }
+        @media (max-width: 1200px) { .cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
         @media (max-width: 640px) { .cards-grid { grid-template-columns: 1fr; } }
 
         /* ─── Standardized Account Card ─── */
@@ -589,7 +590,7 @@ export default function AccountsPage() {
         }
         .ac-title-group { display: flex; align-items: center; gap: 0.875rem; }
         .ac-icon-wrap {
-          width: 42px; height: 42px; border-radius: 8px;
+          width: 42px; height: 42px; border-radius: 6px;
           background: var(--secondary); border: 1px solid var(--border);
           display: flex; align-items: center; justify-content: center;
           flex-shrink: 0;
@@ -610,21 +611,21 @@ export default function AccountsPage() {
           width: 30px; height: 30px;
           display: flex; align-items: center; justify-content: center;
           background: transparent; border: 1px solid var(--border);
-          border-radius: 6px; color: var(--muted-foreground);
+          border-radius: 4px; color: var(--muted-foreground);
           cursor: pointer; transition: all 0.2s; flex-shrink: 0;
         }
         .btn-three-dot:hover { background: var(--secondary); color: var(--foreground); border-color: var(--muted-foreground); }
         .card-dropdown {
           position: absolute; top: calc(100% + 6px); right: 0;
           background: var(--card); border: 1px solid var(--border);
-          border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06);
+          border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06);
           min-width: 180px; z-index: 500; padding: 0.35rem;
           overflow: hidden;
         }
         .dropdown-item {
           width: 100%; display: flex; align-items: center; gap: 0.65rem;
           padding: 0.6rem 0.875rem; background: transparent; border: none;
-          border-radius: 6px; font-size: 0.8125rem; font-weight: 600;
+          border-radius: 4px; font-size: 0.8125rem; font-weight: 600;
           color: var(--foreground); cursor: pointer; text-align: left;
           transition: background 0.15s;
         }

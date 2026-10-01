@@ -127,14 +127,20 @@ export default function LoginPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+          background-color: var(--background);
+          background-image:
+            radial-gradient(at 10% 0%, rgba(99, 102, 241, 0.12) 0, transparent 50%),
+            radial-gradient(at 90% 100%, rgba(139, 92, 246, 0.1) 0, transparent 50%),
+            radial-gradient(at 50% 50%, rgba(59, 130, 246, 0.08) 0, transparent 50%);
           padding: 1.5rem;
         }
         .auth-card {
           width: 100%;
           max-width: 420px;
           padding: 2.5rem;
-          border: 1px solid var(--border);
+          border: 1px solid rgba(255, 255, 255, 0.5);
+          box-shadow: var(--shadow-lg);
+          border-radius: 8px;
         }
         @media (max-width: 480px) {
           .auth-card { padding: 1.5rem; }
@@ -164,7 +170,7 @@ export default function LoginPage() {
           width: 100%;
           background: #ffffff;
           border: 1px solid #e2e8f0;
-          border-radius: 6px;
+          border-radius: 4px;
           height: 46px;
           transition: all 0.2s;
           position: relative;

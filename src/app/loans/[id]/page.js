@@ -35,6 +35,8 @@ export default function LoanDetailsPage() {
 
   const canManage = ['owner', 'admin', 'ceo', 'cfo', 'accountant'].includes(user?.role?.toLowerCase());
   const canApprove = ['owner', 'admin', 'ceo', 'cfo'].includes(user?.role?.toLowerCase());
+  // Requesters cannot review their own loan; the API enforces the same rule
+  const isOwnRequest = loan && String(loan.createdBy?._id || loan.createdBy) === String(user?._id);
 
   useEffect(() => {
     if (authLoading) return;
@@ -60,12 +62,12 @@ export default function LoanDetailsPage() {
     }
   };
 
-  const handleApprove = async () => {
-      if (!window.confirm("Approve this loan?")) return;
+  const handleApprove = async (status = 'approved') => {
+      if (!window.confirm(status === 'approved' ? "Approve this loan?" : "Reject this loan request?")) return;
       setIsApproving(true);
       setError('');
       try {
-          const res = await approveLoan(id);
+          const res = await approveLoan(id, status);
           if (res.success) fetchData();
           else setError(res.message);
       } catch(err) {
@@ -168,10 +170,15 @@ export default function LoanDetailsPage() {
             </Link>
             
             <div className="actions flex gap-2">
-                {loan.status === 'pending_approval' && canApprove && (
-                    <button onClick={handleApprove} disabled={isApproving} className="btn btn-primary">
-                        {isApproving ? <Loader2 size={16} className="spinner" /> : <><ShieldCheck size={16}/> Approve Loan</>}
-                    </button>
+                {loan.status === 'pending_approval' && canApprove && !isOwnRequest && (
+                    <>
+                        <button onClick={() => handleApprove('rejected')} disabled={isApproving} className="btn btn-secondary" style={{ color: '#dc2626' }}>
+                            Reject
+                        </button>
+                        <button onClick={() => handleApprove('approved')} disabled={isApproving} className="btn btn-primary">
+                            {isApproving ? <Loader2 size={16} className="spinner" /> : <><ShieldCheck size={16}/> Approve Loan</>}
+                        </button>
+                    </>
                 )}
                 {loan.status === 'approved' && canApprove && (
                     <div className="flex gap-2 items-center">
@@ -217,6 +224,7 @@ export default function LoanDetailsPage() {
                             {(loan.status === 'active' || loan.status === 'partially_repaid') && <span className="badge badge-approved">Active & Disbursed</span>}
                             {loan.status === 'overdue' && <span className="badge badge-expense">Overdue</span>}
                             {loan.status === 'completed' && <span className="badge" style={{background:'#f1f5f9',color:'#64748b'}}>Completed</span>}
+                            {loan.status === 'rejected' && <span className="badge badge-expense">Rejected</span>}
                         </div>
                     </div>
 
@@ -433,7 +441,7 @@ export default function LoanDetailsPage() {
             }
 
             .amounts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-            .amount-box { padding: 1.25rem; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 0.5rem; }
+            .amount-box { padding: 1.25rem; border-radius: 6px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 0.5rem; }
             .amount-box .label { font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
             .amount-box .value { font-size: 1.5rem; font-weight: 800; }
             @media (max-width: 640px) {
@@ -443,8 +451,8 @@ export default function LoanDetailsPage() {
             .text-danger { color: #e11d48 !important; }
             .text-success { color: #10b981 !important; }
 
-            .progress-bar-large { height: 12px; background: #e2e8f0; border-radius: 6px; overflow: hidden; }
-            .progress-fill-large { height: 100%; background: linear-gradient(90deg, #4f46e5, #6366f1); border-radius: 6px; transition: width 0.5s ease-out; }
+            .progress-bar-large { height: 12px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+            .progress-fill-large { height: 100%; background: linear-gradient(90deg, #4f46e5, #6366f1); border-radius: 4px; transition: width 0.5s ease-out; }
 
             .repayment-item { display: flex; align-items: flex-start; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid #f1f5f9; }
             .repayment-item:last-child { border-bottom: none; padding-bottom: 0; }
@@ -468,7 +476,7 @@ export default function LoanDetailsPage() {
             .timeline-item:not(.completed) .content { opacity: 0.5; }
 
             .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
-            .modal-content { background: white; border-radius: 12px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.2); }
+            .modal-content { background: white; border-radius: 6px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.2); }
             .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid #f1f5f9; }
             .modal-header h3 { font-size: 1.25rem; color: #0f172a; margin: 0; }
             .close-btn { background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; width: 32px; height: 32px; border-radius: 50%; transition: background 0.2s; }
@@ -482,7 +490,7 @@ export default function LoanDetailsPage() {
             
             .modal-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #f1f5f9; }
             
-            .alert { padding: 1rem; border-radius: 8px; margin: 1rem 1.5rem 0; font-size: 0.875rem; font-weight: 500; }
+            .alert { padding: 1rem; border-radius: 6px; margin: 1rem 1.5rem 0; font-size: 0.875rem; font-weight: 500; }
             .alert-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5; }
 
             :global(.spinner) { animation: spin 1s linear infinite; }
@@ -506,7 +514,7 @@ export default function LoanDetailsPage() {
             .bg-green-100 { background-color: #dcfce3; }
             .text-green-600 { color: #16a34a; }
             .rounded { border-radius: 0.25rem; }
-            .rounded-lg { border-radius: 0.5rem; }
+            .rounded-lg { border-radius: 6px; }
             .rounded-full { border-radius: 9999px; }
             .border { border: 1px solid #e2e8f0; }
             .border-b { border-bottom: 1px solid #e2e8f0; }

@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { Shield, User as UserIcon, Mail, ShieldCheck, Briefcase, Calculator, UserCog, ChevronDown, Check, CheckCircle, XCircle, Trash2, UserPlus, X, Building2, Hash, Calendar, Crown, Pencil, Phone, Globe, MapPin, Factory, Save, ArrowRight, AlertCircle } from 'lucide-react';
+import { Shield, User as UserIcon, Mail, ShieldCheck, Briefcase, Calculator, UserCog, ChevronDown, Check, CheckCircle, XCircle, Trash2, UserPlus, X, Building2, Hash, Calendar, Crown, Pencil, Phone, Globe, MapPin, Factory, Save, ArrowRight, AlertCircle, MoreVertical, Eye } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
@@ -13,6 +13,7 @@ export default function CompanyMembers() {
   const { user: currentUser } = useAuth();
   
   const [openUserSelect, setOpenUserSelect] = useState(null);
+  const [openActionMenu, setOpenActionMenu] = useState(null);
   const selectRef = useRef(null);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -20,18 +21,20 @@ export default function CompanyMembers() {
   const [companySettings, setCompanySettings] = useState({ departments: [], designations: [] });
   
   // Add Employee Form State
-  const [formData, setFormData] = useState({
+  const today = () => new Date().toISOString().split('T')[0];
+  const emptyEmployeeForm = () => ({
     fullName: '',
     email: '',
     phone: '',
     employeeId: '',
     department: '',
     designation: '',
-    joiningDate: '',
+    joiningDate: today(),
     salary: '',
     loanLimit: '',
     role: 'viewer',
   });
+  const [formData, setFormData] = useState(emptyEmployeeForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [employeeError, setEmployeeError] = useState('');
 
@@ -50,6 +53,15 @@ export default function CompanyMembers() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!openActionMenu) return;
+    const closeActionMenu = (event) => {
+      if (!event.target.closest('.action-menu')) setOpenActionMenu(null);
+    };
+    document.addEventListener('mousedown', closeActionMenu);
+    return () => document.removeEventListener('mousedown', closeActionMenu);
+  }, [openActionMenu]);
 
   const fetchUsers = async () => {
     try {
@@ -204,10 +216,7 @@ export default function CompanyMembers() {
       const res = await axios.post('/api/employees', formData);
       if (res.data.success) {
         setShowCreateModal(false);
-        setFormData({
-            fullName: '', email: '', phone: '', employeeId: '',
-            department: '', designation: '', joiningDate: '', salary: '', loanLimit: '', role: 'viewer'
-        });
+        setFormData(emptyEmployeeForm());
         fetchUsers();
       } else {
         setEmployeeError(res.data.message);
@@ -250,6 +259,7 @@ export default function CompanyMembers() {
               <p>Manage your company's workforce and user access</p>
             </div>
           </div>
+          <span className="m-count">{users.length} {users.length === 1 ? 'member' : 'members'}</span>
           {['owner', 'admin', 'ceo', 'cfo'].includes(currentUser?.role?.toLowerCase()) && (
             <div className="page-actions">
               <button className="btn-create-user" onClick={() => setShowCreateModal(true)}>
@@ -270,38 +280,26 @@ export default function CompanyMembers() {
                 <table className="users-table">
                   <thead>
                     <tr>
-                      <th>Employee Details</th>
-                      <th>Work Info</th>
-                      <th>Financials</th>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Phone No</th>
+                      <th>Department</th>
                       <th>Role</th>
+                      <th>Limit</th>
                       <th>Status</th>
-                      <th>Actions</th>
+                      <th className="th-actions">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {users.map((u) => (
                       <tr key={u._id} className="user-row">
                         <td>
-                          <div className="user-cell">
-                            <div className="user-info">
-                              <span className="user-name">{u.fullName || u.name}</span>
-                              <span className="user-email">{u.email}</span>
-                            </div>
-                          </div>
+                          <span className="user-name">{u.fullName || u.name}</span>
+                          {u.designation && <span className="cell-sub">{u.designation}</span>}
                         </td>
-                        <td>
-                          <div className="work-info-cell">
-                            {u.designation && <span className="designation">{u.designation}</span>}
-                            {u.department && <span className="department">{u.department}</span>}
-                            {u.empIdString && <span className="emp-id" style={{fontSize: '0.7rem', color: '#94a3b8', fontWeight: 'bold', marginTop: '4px'}}>ID: {u.empIdString}</span>}
-                          </div>
-                        </td>
-                        <td>
-                          <div className="financials-cell" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>Salary: <span style={{ color: '#0f172a', fontWeight: 700 }}>{u.salary > 0 ? u.salary.toLocaleString() : 'N/A'}</span></div>
-                            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>Limit: <span style={{ color: '#0f172a', fontWeight: 700 }}>{u.loanLimit > 0 ? u.loanLimit.toLocaleString() : 'N/A'}</span></div>
-                          </div>
-                        </td>
+                        <td><span className="cell-text">{u.email}</span></td>
+                        <td><span className="cell-text">{u.phone || '—'}</span></td>
+                        <td><span className="cell-text">{u.department || '—'}</span></td>
                         <td>
                           {u.isUser ? (
                             <div className="custom-select-wrapper">
@@ -341,6 +339,9 @@ export default function CompanyMembers() {
                           )}
                         </td>
                         <td>
+                          <span className="cell-text cell-strong">{u.loanLimit > 0 ? u.loanLimit.toLocaleString() : '—'}</span>
+                        </td>
+                        <td>
                           {u.isUser ? (
                             <div 
                               className={`status-toggle ${u.isActive ? 'active' : ''} ${!canManage(u.role) ? 'disabled' : ''}`}
@@ -354,18 +355,44 @@ export default function CompanyMembers() {
                           )}
                         </td>
                         <td>
-                          <div className="action-row" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'flex-end' }}>
-                            {u.employeeDocId && (
-                              <Link href={`/employees/${u.employeeDocId}`} className="btn-icon" title="View Profile" style={{ color: '#4f46e5', background: '#e0e7ff', padding: '0.375rem', borderRadius: '6px', display: 'flex', alignItems: 'center' }}>
-                                <User size={16} />
-                              </Link>
-                            )}
-                            {(canManage(u.role) || !u.isUser) && (
-                              <button className="icon-btn-delete" onClick={() => deleteUser(u.isUser ? u._id : null, u.employeeDocId, u.fullName || u.name)} title="Delete Account">
-                                <Trash2 size={16} />
+                          {(u.employeeDocId || canManage(u.role) || !u.isUser) && (
+                            <div className="action-menu">
+                              <button
+                                type="button"
+                                className={`action-menu-trigger ${openActionMenu === u._id ? 'open' : ''}`}
+                                onClick={() => setOpenActionMenu(openActionMenu === u._id ? null : u._id)}
+                                title="Actions"
+                                aria-haspopup="menu"
+                                aria-expanded={openActionMenu === u._id}
+                              >
+                                <MoreVertical size={16} />
                               </button>
-                            )}
-                          </div>
+                              {openActionMenu === u._id && (
+                                <div className="action-menu-list animate-pop-in" role="menu">
+                                  {u.employeeDocId && (
+                                    <Link href={`/employees/${u.employeeDocId}`} className="action-menu-item" role="menuitem">
+                                      <Eye size={14} />
+                                      <span>View Profile</span>
+                                    </Link>
+                                  )}
+                                  {(canManage(u.role) || !u.isUser) && (
+                                    <button
+                                      type="button"
+                                      className="action-menu-item danger"
+                                      role="menuitem"
+                                      onClick={() => {
+                                        setOpenActionMenu(null);
+                                        deleteUser(u.isUser ? u._id : null, u.employeeDocId, u.fullName || u.name);
+                                      }}
+                                    >
+                                      <Trash2 size={14} />
+                                      <span>Delete</span>
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -374,104 +401,152 @@ export default function CompanyMembers() {
               </div>
 
               <div className="mobile-only">
-                <div className="mobile-user-list">
-                  {users.map((u) => (
-                    <div key={u._id} className="mobile-user-card">
-                      <div className="m-card-header">
-                        <div className="m-info">
-                          <span className="m-name">{u.fullName || u.name} {u._id === currentUser._id && <span className="self-badge">YOU</span>}</span>
-                          <span className="m-email">{u.email}</span>
-                          {(u.designation || u.department || u.empIdString) && (
-                            <span className="m-work-info">
-                              {u.empIdString ? `[${u.empIdString}] ` : ''}
-                              {u.designation} {u.department ? ` • ${u.department}` : ''}
+                <div className="m-list">
+                  {users.map((u) => {
+                    const displayName = u.fullName || u.name;
+                    const isSelf = u._id === currentUser._id;
+                    const showMenu = u.employeeDocId || canManage(u.role) || !u.isUser;
+                    return (
+                      <article key={u._id} className="m-card">
+                        <header className="m-head">
+                          <div className="m-avatar">
+                            {u.profilePhoto
+                              ? <img src={u.profilePhoto} alt={displayName} />
+                              : <span>{displayName?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</span>}
+                          </div>
+                          <div className="m-identity">
+                            <span className="m-name">
+                              {displayName}
+                              {isSelf && <span className="self-badge">YOU</span>}
                             </span>
-                          )}
-                          <div className="m-financials" style={{ marginTop: '0.5rem', display: 'flex', gap: '1rem', fontSize: '0.7rem', fontWeight: 600, color: '#64748b' }}>
-                            <span>Salary: <strong style={{ color: '#0f172a' }}>{u.salary > 0 ? u.salary.toLocaleString() : 'N/A'}</strong></span>
-                            <span>Limit: <strong style={{ color: '#0f172a' }}>{u.loanLimit > 0 ? u.loanLimit.toLocaleString() : 'N/A'}</strong></span>
+                            <span className="m-email">{u.email}</span>
                           </div>
-                        </div>
-                      </div>
-                      <div className="m-role-section">
-                        {u.isUser ? (
-                          <div className="custom-select-wrapper">
-                            <div 
-                              className={`role-trigger ${openUserSelect === u._id ? 'active' : ''} ${!canManage(u.role) ? 'disabled' : ''}`}
-                              onClick={() => canManage(u.role) && setOpenUserSelect(openUserSelect === u._id ? null : u._id)}
-                            >
-                              <div className="role-current">
-                                {getRoleInfo(u.role).icon}
-                                <span>{getRoleInfo(u.role).label}</span>
-                              </div>
-                              {canManage(u.role) && <ChevronDown size={14} className={`arrow ${openUserSelect === u._id ? 'rotate' : ''}`} />}
-                            </div>
-                            {openUserSelect === u._id && (
-                              <div className="role-dropdown animate-pop-in">
-                                {assignableRoles(roleOptions).map((option) => (
-                                  <div 
-                                    key={option.value}
-                                    className={`role-option ${u.role === option.value ? 'selected' : ''}`}
-                                    onClick={() => {
-                                      setPendingRoleChange({ userId: u._id, role: option.value, userName: u.fullName || u.name });
-                                      setOpenUserSelect(null);
-                                    }}
-                                  >
-                                    <div className="option-icon">{option.icon}</div>
-                                    <div className="option-text">
-                                      <span className="option-label">{option.label}</span>
-                                    </div>
-                                    {u.role === option.value && <Check size={14} className="check-icon" />}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="pending-role-badge">Pending Invite</span>
-                        )}
-                      </div>
-                      <div className="m-actions-footer">
-                        {u.isUser ? (
-                          canManage(u.role) && !u.isActive ? (
-                            <div className="m-approval-grid">
-                              <button className="m-btn-approve" onClick={() => updateStatus(u._id, true)}>Approve Access</button>
-                              <button className="m-btn-reject" onClick={() => deleteUser(u._id, u.employeeDocId, u.fullName || u.name)}>Reject</button>
-                            </div>
-                          ) : (
-                            <div className="m-status-row">
-                              <div 
-                                className={`status-toggle ${u.isActive ? 'active' : ''} ${!canManage(u.role) ? 'disabled' : ''}`}
-                                onClick={() => canManage(u.role) && updateStatus(u._id, !u.isActive)}
+                          {showMenu && (
+                            <div className="action-menu">
+                              <button
+                                type="button"
+                                className={`action-menu-trigger ${openActionMenu === u._id ? 'open' : ''}`}
+                                onClick={() => setOpenActionMenu(openActionMenu === u._id ? null : u._id)}
+                                title="Actions"
+                                aria-haspopup="menu"
+                                aria-expanded={openActionMenu === u._id}
                               >
-                                <div className="toggle-knob"></div>
-                                <span className="status-label">{u.isActive ? 'Active' : 'Revoked'}</span>
-                              </div>
-                              <div style={{ display: 'flex' }}>
-                                {u.employeeDocId && (
-                                  <Link href={`/employees/${u.employeeDocId}`} className="m-delete-btn" style={{ color: '#4f46e5', background: '#e0e7ff', marginRight: '0.5rem' }}>
-                                    <User size={16} />
-                                  </Link>
-                                )}
-                                {canManage(u.role) && (
-                                  <button className="m-delete-btn" onClick={() => deleteUser(u._id, u.employeeDocId, u.fullName || u.name)}>
-                                    <Trash2 size={16} />
-                                  </button>
-                                )}
-                              </div>
+                                <MoreVertical size={16} />
+                              </button>
+                              {openActionMenu === u._id && (
+                                <div className="action-menu-list animate-pop-in" role="menu">
+                                  {u.employeeDocId && (
+                                    <Link href={`/employees/${u.employeeDocId}`} className="action-menu-item" role="menuitem">
+                                      <Eye size={14} />
+                                      <span>View Profile</span>
+                                    </Link>
+                                  )}
+                                  {(canManage(u.role) || !u.isUser) && (
+                                    <button
+                                      type="button"
+                                      className="action-menu-item danger"
+                                      role="menuitem"
+                                      onClick={() => {
+                                        setOpenActionMenu(null);
+                                        deleteUser(u.isUser ? u._id : null, u.employeeDocId, displayName);
+                                      }}
+                                    >
+                                      <Trash2 size={14} />
+                                      <span>Delete</span>
+                                    </button>
+                                  )}
+                                </div>
+                              )}
                             </div>
-                          )
-                        ) : (
-                          <div className="m-status-row">
-                             <span className="status-label pending-label">Invite Sent</span>
-                             <button className="m-delete-btn" onClick={() => deleteUser(null, u.employeeDocId, u.fullName || u.name)}>
-                               <Trash2 size={16} />
-                             </button>
+                          )}
+                        </header>
+
+                        <dl className="m-details">
+                          <div>
+                            <dt>Phone</dt>
+                            <dd>{u.phone || '—'}</dd>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                          <div>
+                            <dt>Department</dt>
+                            <dd>{u.department || '—'}</dd>
+                          </div>
+                          <div>
+                            <dt>Designation</dt>
+                            <dd>{u.designation || '—'}</dd>
+                          </div>
+                          <div>
+                            <dt>Loan Limit</dt>
+                            <dd>{u.loanLimit > 0 ? u.loanLimit.toLocaleString() : '—'}</dd>
+                          </div>
+                        </dl>
+
+                        <footer className="m-foot">
+                          {u.isUser ? (
+                            <>
+                              <div className="m-foot-row">
+                                <span className="m-foot-label">Role</span>
+                                <div className="custom-select-wrapper m-role-select">
+                                  <div
+                                    className={`role-trigger ${openUserSelect === u._id ? 'active' : ''} ${!canManage(u.role) ? 'disabled' : ''}`}
+                                    onClick={() => canManage(u.role) && setOpenUserSelect(openUserSelect === u._id ? null : u._id)}
+                                  >
+                                    <div className="role-current">
+                                      {getRoleInfo(u.role).icon}
+                                      <span>{getRoleInfo(u.role).label}</span>
+                                    </div>
+                                    {canManage(u.role) && <ChevronDown size={14} className={`arrow ${openUserSelect === u._id ? 'rotate' : ''}`} />}
+                                  </div>
+                                  {openUserSelect === u._id && (
+                                    <div className="role-dropdown animate-pop-in">
+                                      {assignableRoles(roleOptions).map((option) => (
+                                        <div
+                                          key={option.value}
+                                          className={`role-option ${u.role === option.value ? 'selected' : ''}`}
+                                          onClick={() => {
+                                            setPendingRoleChange({ userId: u._id, role: option.value, userName: displayName });
+                                            setOpenUserSelect(null);
+                                          }}
+                                        >
+                                          <div className="option-icon">{option.icon}</div>
+                                          <div className="option-text">
+                                            <span className="option-label">{option.label}</span>
+                                          </div>
+                                          {u.role === option.value && <Check size={14} className="check-icon" />}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {canManage(u.role) && !u.isActive ? (
+                                <div className="m-approval-grid">
+                                  <button className="m-btn-reject" onClick={() => deleteUser(u._id, u.employeeDocId, displayName)}>Reject</button>
+                                  <button className="m-btn-approve" onClick={() => updateStatus(u._id, true)}>Approve Access</button>
+                                </div>
+                              ) : (
+                                <div className="m-foot-row">
+                                  <span className="m-foot-label">Access</span>
+                                  <div
+                                    className={`status-toggle ${u.isActive ? 'active' : ''} ${!canManage(u.role) ? 'disabled' : ''}`}
+                                    onClick={() => canManage(u.role) && updateStatus(u._id, !u.isActive)}
+                                  >
+                                    <div className="toggle-knob"></div>
+                                    <span className="status-label">{u.isActive ? 'Active' : 'Revoked'}</span>
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <div className="m-foot-row">
+                              <span className="m-foot-label">Status</span>
+                              <span className="m-invite-badge">Invite pending</span>
+                            </div>
+                          )}
+                        </footer>
+                      </article>
+                    );
+                  })}
                 </div>
               </div>
             </>
@@ -578,10 +653,10 @@ export default function CompanyMembers() {
                   </div>
 
                   <div className="modal-field">
-                    <label>Phone</label>
+                    <label>Phone No *</label>
                     <div className="modal-input-wrap">
                       <Phone size={16} />
-                      <input type="text" name="phone" placeholder="+123456789" value={formData.phone} onChange={handleInputChange} />
+                      <input type="tel" name="phone" placeholder="+8801XXXXXXXXX" required value={formData.phone} onChange={handleInputChange} />
                     </div>
                   </div>
 
@@ -610,9 +685,9 @@ export default function CompanyMembers() {
                   </div>
 
                   <div className="modal-field">
-                    <label>Department</label>
+                    <label>Department *</label>
                     <div className="modal-input-wrap" style={{ padding: 0 }}>
-                      <select name="department" className="native-select" value={formData.department} onChange={handleInputChange} style={{ width: '100%', padding: '0.625rem 1rem', border: 'none', background: 'transparent', outline: 'none', fontWeight: 600, color: '#0f172a' }}>
+                      <select name="department" required className="native-select" value={formData.department} onChange={handleInputChange} style={{ width: '100%', padding: '0.625rem 1rem', border: 'none', background: 'transparent', outline: 'none', fontWeight: 600, color: '#0f172a' }}>
                         <option value="">Select Department</option>
                         {companySettings.departments.map(d => <option key={d} value={d}>{d}</option>)}
                       </select>
@@ -620,14 +695,28 @@ export default function CompanyMembers() {
                   </div>
 
                   <div className="modal-field">
-                    <label>Designation</label>
+                    <label>Designation *</label>
                     <div className="modal-input-wrap" style={{ padding: 0 }}>
-                      <select name="designation" className="native-select" value={formData.designation} onChange={handleInputChange} style={{ width: '100%', padding: '0.625rem 1rem', border: 'none', background: 'transparent', outline: 'none', fontWeight: 600, color: '#0f172a' }}>
+                      <select name="designation" required className="native-select" value={formData.designation} onChange={handleInputChange} style={{ width: '100%', padding: '0.625rem 1rem', border: 'none', background: 'transparent', outline: 'none', fontWeight: 600, color: '#0f172a' }}>
                         <option value="">Select Designation</option>
                         {companySettings.designations.map(d => <option key={d} value={d}>{d}</option>)}
                       </select>
                     </div>
                   </div>
+
+                  {(companySettings.departments.length === 0 || companySettings.designations.length === 0) && (
+                    <div className="form-hint ec-full">
+                      <AlertCircle size={14} />
+                      <span>
+                        No {companySettings.departments.length === 0 ? 'departments' : ''}
+                        {companySettings.departments.length === 0 && companySettings.designations.length === 0 ? ' or ' : ''}
+                        {companySettings.designations.length === 0 ? 'designations' : ''} configured yet.{' '}
+                        {['owner', 'admin'].includes(currentUser?.role?.toLowerCase())
+                          ? <><Link href="/business-administration">Add them in Business Administration</Link>.</>
+                          : 'Ask an administrator to add them in Business Administration.'}
+                      </span>
+                    </div>
+                  )}
 
                   <div className="modal-field ec-full">
                     <label>Joining Date</label>
@@ -651,14 +740,49 @@ export default function CompanyMembers() {
 
 
         <style jsx>{`
-          .users-container { max-width: 1200px; margin: 0 auto; }
+          .users-container { max-width: var(--page-max-width); margin: 0 auto; }
+          .form-hint { display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.625rem 0.875rem; border: 1px solid #fde68a; border-radius: 6px; background: #fffbeb; color: #92400e; font-size: 0.8125rem; font-weight: 600; }
+          .form-hint :global(a) { color: #4f46e5; text-decoration: underline; }
+          .cell-text { font-size: 0.8125rem; font-weight: 600; color: #334155; word-break: break-word; }
+          .cell-strong { color: #0f172a; font-weight: 700; }
+          .cell-sub { display: block; margin-top: 0.125rem; font-size: 0.75rem; font-weight: 600; color: #64748b; }
+          .th-actions { text-align: right; }
+          .action-menu { position: relative; display: flex; justify-content: flex-end; }
+          .action-menu-trigger { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid #e2e8f0; border-radius: 4px; background: #ffffff; color: #475569; cursor: pointer; transition: all 0.15s; }
+          .action-menu-trigger:hover, .action-menu-trigger.open { background: #f1f5f9; color: #0f172a; }
+          .action-menu-list { position: absolute; top: calc(100% + 4px); right: 0; z-index: 50; min-width: 160px; padding: 0.25rem; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.25); }
+          .action-menu-list :global(.action-menu-item) { display: flex; align-items: center; gap: 0.625rem; width: 100%; padding: 0.5rem 0.75rem; border: none; border-radius: 4px; background: transparent; font-size: 0.8125rem; font-weight: 600; color: #334155; text-decoration: none; text-align: left; cursor: pointer; }
+          .action-menu-list :global(.action-menu-item:hover) { background: #f1f5f9; color: #0f172a; }
+          .action-menu-list :global(.action-menu-item.danger) { color: #dc2626; }
+          .action-menu-list :global(.action-menu-item.danger:hover) { background: #fef2f2; color: #b91c1c; }
           .users-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.75rem; }
-          .btn-create-user { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1.25rem; background: #0f172a; color: #ffffff; border: none; border-radius: 6px; font-size: 0.8125rem; font-weight: 800; cursor: pointer; transition: all 0.2s; }
+          .btn-create-user { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1.25rem; background: #0f172a; color: #ffffff; border: none; border-radius: 4px; font-size: 0.8125rem; font-weight: 800; cursor: pointer; transition: all 0.2s; }
           .btn-create-user:hover { background: #1e293b; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15); }
+          .m-count { display: none; }
           @media (max-width: 768px) {
-            .btn-text { display: none; }
-            .btn-create-user { padding: 0.75rem; border-radius: 6px; }
-            .users-header { align-items: center; }
+            .users-header { align-items: center; margin-bottom: 1rem; }
+            .title-area { display: none; }
+            .m-count { display: block; font-size: 0.875rem; font-weight: 600; color: #64748b; }
+            .btn-create-user { padding: 0.625rem 1rem; }
+            .table-card { background: transparent; border: none; box-shadow: none; }
+
+            .m-list { display: flex; flex-direction: column; gap: 0.875rem; }
+            .m-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05); }
+            .m-head { display: flex; align-items: center; gap: 0.75rem; padding: 1rem 1rem 0.875rem; }
+            .m-avatar { flex-shrink: 0; width: 42px; height: 42px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: #e0e7ff; color: #4338ca; font-size: 0.8125rem; font-weight: 800; }
+            .m-avatar img { width: 100%; height: 100%; object-fit: cover; }
+            .m-identity { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.125rem; }
+            .m-identity .m-name { display: flex; align-items: center; gap: 0.375rem; font-size: 0.9375rem; font-weight: 700; color: #0f172a; }
+            .m-identity .m-email { font-size: 0.8125rem; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .m-details { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 1rem; margin: 0; padding: 0.875rem 1rem; background: #f8fafc; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; }
+            .m-details dt { margin-bottom: 0.125rem; font-size: 0.6875rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; }
+            .m-details dd { margin: 0; font-size: 0.8125rem; font-weight: 600; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .m-foot { display: flex; flex-direction: column; gap: 0.75rem; padding: 0.875rem 1rem 1rem; }
+            .m-foot-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+            .m-foot-label { font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; }
+            .m-role-select { width: auto; flex: 0 1 230px; min-width: 0; }
+            .m-invite-badge { padding: 0.25rem 0.625rem; border-radius: 4px; background: #fef3c7; color: #92400e; font-size: 0.75rem; font-weight: 700; }
+            .m-approval-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 0.5rem; }
           }
           .title-area { display: flex; align-items: flex-start; gap: 1rem; }
           .title-area h2 { font-size: 1.5rem; font-weight: 800; color: #0f172a; margin-bottom: 0.25rem; }
@@ -674,7 +798,7 @@ export default function CompanyMembers() {
             background: white;
             color: #0f172a;
             border: 1px solid #cbd5e1;
-            border-radius: 6px;
+            border-radius: 4px;
             font-size: 0.75rem;
             font-weight: 800;
             cursor: pointer;
@@ -696,15 +820,15 @@ export default function CompanyMembers() {
           @media (max-width: 720px) { .ec-grid { grid-template-columns: 1fr; } }
           .ec-full { grid-column: span 2; }
           @media (max-width: 720px) { .ec-full { grid-column: span 1; } }
-          .ec-error { margin: 0 0 1rem; padding: 0.75rem 1rem; background: #fef2f2; border: 1px solid #fee2e2; border-radius: 6px; font-size: 0.8125rem; font-weight: 700; color: #ef4444; }
-          .ec-success { margin: 0 0 1rem; padding: 0.75rem 1rem; background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 6px; font-size: 0.8125rem; font-weight: 700; color: #10b981; }
+          .ec-error { margin: 0 0 1rem; padding: 0.75rem 1rem; background: #fef2f2; border: 1px solid #fee2e2; border-radius: 4px; font-size: 0.8125rem; font-weight: 700; color: #ef4444; }
+          .ec-success { margin: 0 0 1rem; padding: 0.75rem 1rem; background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 4px; font-size: 0.8125rem; font-weight: 700; color: #10b981; }
           .meta-link { color: #4f46e5; text-decoration: underline; }
 
           /* Company Card */
           .company-card {
             background: #ffffff;
             border: 1px solid #e2e8f0;
-            border-radius: 8px;
+            border-radius: 6px;
             padding: 1.5rem 2rem;
             margin-bottom: 1.5rem;
             box-shadow: 0 2px 8px rgba(0,0,0,0.03);
@@ -721,7 +845,7 @@ export default function CompanyMembers() {
             width: 48px;
             height: 48px;
             background: #0f172a;
-            border-radius: 10px;
+            border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -743,7 +867,7 @@ export default function CompanyMembers() {
             gap: 0.625rem;
             padding: 0.875rem 1rem;
             background: #f8fafc;
-            border-radius: 6px;
+            border-radius: 4px;
             border: 1px solid #f1f5f9;
           }
           .meta-icon { color: #64748b; margin-top: 2px; flex-shrink: 0; }
@@ -751,7 +875,7 @@ export default function CompanyMembers() {
           .meta-value { display: block; font-size: 0.875rem; font-weight: 800; color: #0f172a; }
           .meta-value.mono { font-family: monospace; font-size: 0.875rem; letter-spacing: 0.05em; }
 
-          .table-card { background: #ffffff; border-radius: 6px; border: 1px solid #e2e8f0; overflow: visible; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
+          .table-card { background: #ffffff; border-radius: 4px; border: 1px solid #e2e8f0; overflow: visible; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
           .users-table { width: 100%; border-collapse: collapse; text-align: left; }
           .users-table th { padding: 1rem 1.5rem; background: #f8fafc; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0; }
           .users-table td { padding: 1.25rem 1.5rem; border-bottom: 1px solid #f8fafc; vertical-align: middle; }
@@ -763,15 +887,15 @@ export default function CompanyMembers() {
           .self-badge { background: #0f172a; color: white; font-size: 0.6rem; padding: 1px 4px; border-radius: 4px; margin-left: 4px; }
           
           .custom-select-wrapper { position: relative; width: 230px; }
-          .role-trigger { display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+          .role-trigger { display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; cursor: pointer; transition: all 0.2s; }
           .role-trigger:hover:not(.disabled) { border-color: #cbd5e1; }
           .role-trigger.active { border-color: #0f172a; background: white; box-shadow: 0 0 0 3px rgba(15,23,42,0.05); }
           .role-trigger.disabled { opacity: 0.6; cursor: not-allowed; }
           .role-current { display: flex; align-items: center; gap: 0.75rem; font-size: 0.85rem; font-weight: 700; color: #0f172a; white-space: nowrap; }
           .arrow { color: #94a3b8; transition: transform 0.2s; }
           .arrow.rotate { transform: rotate(180deg); }
-          .role-dropdown { position: absolute; top: calc(100% + 8px); left: 0; width: 250px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); z-index: 1000; padding: 0.5rem; }
-          .role-option { padding: 0.75rem 1rem; border-radius: 6px; display: flex; align-items: center; gap: 0.75rem; cursor: pointer; transition: all 0.15s; margin-bottom: 2px; }
+          .role-dropdown { position: absolute; top: calc(100% + 8px); left: 0; width: 250px; background: white; border: 1px solid #e2e8f0; border-radius: 6px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); z-index: 1000; padding: 0.5rem; }
+          .role-option { padding: 0.75rem 1rem; border-radius: 4px; display: flex; align-items: center; gap: 0.75rem; cursor: pointer; transition: all 0.15s; margin-bottom: 2px; }
           .role-option:hover { background: #f8fafc; }
           .role-option.selected { background: #f1f5f9; }
           .option-icon { color: #475569; display: flex; align-items: center; }
@@ -783,20 +907,20 @@ export default function CompanyMembers() {
           .modal-form { padding: 1.5rem 1.75rem 2rem; }
           .modal-field { margin-bottom: 1.25rem; }
           .modal-field label { display: block; font-size: 0.75rem; font-weight: 800; color: #334155; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
-          .modal-input-wrap { display: flex; align-items: center; gap: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem 1rem; background: #f8fafc; transition: all 0.2s; }
+          .modal-input-wrap { display: flex; align-items: center; gap: 0.75rem; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem 1rem; background: #f8fafc; transition: all 0.2s; }
           .modal-input-wrap:focus-within { border-color: #6366f1; background: #ffffff; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
           .modal-input-wrap svg { color: #94a3b8; flex-shrink: 0; }
           .modal-input-wrap input { border: none; outline: none; background: transparent; flex: 1; font-size: 0.9rem; color: #0f172a; font-weight: 500; }
           .modal-input-wrap input::placeholder { color: #cbd5e1; font-weight: 400; }
           .modal-custom-select-wrapper { position: relative; }
-          .modal-select-trigger { display: flex; align-items: center; justify-content: space-between; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.85rem 1rem; background: #f8fafc; cursor: pointer; transition: all 0.2s; }
+          .modal-select-trigger { display: flex; align-items: center; justify-content: space-between; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.85rem 1rem; background: #f8fafc; cursor: pointer; transition: all 0.2s; }
           .modal-select-trigger:hover, .modal-select-trigger.active { border-color: #6366f1; background: #ffffff; }
           .m-trigger-content { display: flex; align-items: center; gap: 0.75rem; font-size: 0.9rem; font-weight: 600; color: #0f172a; }
           .m-trigger-content svg { color: #6366f1; }
           .m-arrow { color: #94a3b8; transition: transform 0.2s; }
           .m-arrow.rotate { transform: rotate(180deg); }
-          .modal-role-dropdown { position: absolute; top: calc(100% + 8px); left: 0; width: 100%; background: white; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); z-index: 100; padding: 0.5rem; max-height: 250px; overflow-y: auto; }
-          .m-role-option { padding: 0.75rem 1rem; border-radius: 6px; display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer; transition: all 0.2s; margin-bottom: 2px; }
+          .modal-role-dropdown { position: absolute; top: calc(100% + 8px); left: 0; width: 100%; background: white; border: 1px solid #e2e8f0; border-radius: 6px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); z-index: 100; padding: 0.5rem; max-height: 250px; overflow-y: auto; }
+          .m-role-option { padding: 0.75rem 1rem; border-radius: 4px; display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer; transition: all 0.2s; margin-bottom: 2px; }
           .m-role-option:hover { background: #f8fafc; }
           .m-role-option.selected { background: #eef2ff; }
           .m-opt-icon { color: #6366f1; margin-top: 2px; }
@@ -804,7 +928,7 @@ export default function CompanyMembers() {
           .m-opt-label { font-size: 0.85rem; font-weight: 700; color: #0f172a; }
           .m-opt-desc { font-size: 0.75rem; color: #64748b; line-height: 1.4; }
           .m-check { color: #6366f1; }
-          .btn-send-invite { width: 100%; padding: 0.9rem; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; border: none; border-radius: 8px; font-weight: 800; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(15,23,42,0.15); margin-top: 1.5rem; }
+          .btn-send-invite { width: 100%; padding: 0.9rem; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; border: none; border-radius: 6px; font-weight: 800; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(15,23,42,0.15); margin-top: 1.5rem; }
           .btn-send-invite:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(15,23,42,0.25); }
           .btn-send-invite:disabled { opacity: 0.7; cursor: not-allowed; }
           .spinner-small { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
@@ -813,13 +937,13 @@ export default function CompanyMembers() {
           .success-icon-wrap { width: 64px; height: 64px; background: #ecfdf5; color: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; }
           .invite-success-state h4 { font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0 0 0.5rem; }
           .invite-success-state p { font-size: 0.9rem; color: #64748b; line-height: 1.5; }
-          .form-error { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; font-size: 0.8125rem; font-weight: 600; color: #ef4444; margin-bottom: 1.25rem; } 
+          .form-error { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 6px; font-size: 0.8125rem; font-weight: 600; color: #ef4444; margin-bottom: 1.25rem; } 
           
           .status-toggle { 
             width: 40px; 
             height: 20px; 
             background: #cbd5e1; 
-            border-radius: 10px; 
+            border-radius: 6px; 
             position: relative; 
             cursor: pointer; 
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
@@ -851,13 +975,13 @@ export default function CompanyMembers() {
           }
           .status-toggle.active .status-label { color: #059669; }
           .status-toggle.disabled { opacity: 0.5; cursor: not-allowed; }
-          .icon-btn-delete { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 1px solid #fee2e2; background: #fef2f2; color: #ef4444; cursor: pointer; transition: all 0.2s; }
+          .icon-btn-delete { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 4px; border: 1px solid #fee2e2; background: #fef2f2; color: #ef4444; cursor: pointer; transition: all 0.2s; }
           .icon-btn-delete:hover { background: #ef4444; color: white; border-color: #ef4444; }
           .m-approval-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 0.5rem; width: 100%; }
-          .m-btn-approve { padding: 0.75rem; background: #0f172a; color: white; border: none; border-radius: 6px; font-weight: 800; font-size: 0.8125rem; }
-          .m-btn-reject { padding: 0.75rem; background: #fef2f2; color: #ef4444; border: 1.5px solid #fee2e2; border-radius: 6px; font-weight: 800; font-size: 0.8125rem; }
+          .m-btn-approve { padding: 0.75rem; background: #0f172a; color: white; border: none; border-radius: 4px; font-weight: 800; font-size: 0.8125rem; }
+          .m-btn-reject { padding: 0.75rem; background: #fef2f2; color: #ef4444; border: 1.5px solid #fee2e2; border-radius: 4px; font-weight: 800; font-size: 0.8125rem; }
           .m-status-row { display: flex; justify-content: space-between; width: 100%; align-items: center; }
-          .m-delete-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 6px; background: #fef2f2; color: #ef4444; border: none; }
+          .m-delete-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 4px; background: #fef2f2; color: #ef4444; border: none; }
           .animate-fade-in { animation: fadeIn 0.4s ease-out; }
           @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
           .shim { background: linear-gradient(90deg, #f1f5f9 25%, #f8fafc 50%, #f1f5f9 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
@@ -870,7 +994,7 @@ export default function CompanyMembers() {
           .m-role-section { margin-bottom: 1.25rem; }
           .m-actions-footer { display: flex; justify-content: space-between; align-items: center; }
           .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 20px; }
-          .modal-card { background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; width: 100%; max-width: 440px; box-shadow: 0 30px 100px -20px rgba(0, 0, 0, 0.25), 0 10px 40px -10px rgba(0, 0, 0, 0.1); }
+          .modal-card { background: #ffffff; border-radius: 6px; border: 1px solid #e2e8f0; width: 100%; max-width: 440px; box-shadow: 0 30px 100px -20px rgba(0, 0, 0, 0.25), 0 10px 40px -10px rgba(0, 0, 0, 0.1); }
           .modal-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 1.5rem 1.75rem; border-bottom: 1px solid #f1f5f9; }
           .modal-header h3 { font-size: 1.125rem; font-weight: 800; color: #0f172a; margin: 0 0 0.25rem; }
           .modal-header p { font-size: 0.8125rem; color: #64748b; margin: 0; }
@@ -885,7 +1009,7 @@ export default function CompanyMembers() {
             background: #f8fafc; 
             border: 1px solid #e2e8f0; 
             border-left: 4px solid #0f172a;
-            border-radius: 6px; 
+            border-radius: 4px; 
             padding: 1.5rem; 
             margin-bottom: 1.5rem; 
             display: flex; 
@@ -902,20 +1026,20 @@ export default function CompanyMembers() {
             background: #0f172a; 
             color: white; 
             padding: 0.5rem 1rem; 
-            border-radius: 6px; 
+            border-radius: 4px; 
             font-size: 0.8125rem; 
             font-weight: 800; 
             box-shadow: 0 4px 10px rgba(15, 23, 42, 0.2);
           }
-          .access-list-container { margin: 1.5rem 0 0.5rem; background: #f8fafc; padding: 1.25rem; border-radius: 8px; border: 1px solid #e2e8f0; }
+          .access-list-container { margin: 1.5rem 0 0.5rem; background: #f8fafc; padding: 1.25rem; border-radius: 6px; border: 1px solid #e2e8f0; }
           .access-title { font-size: 0.65rem; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 1rem; text-align: left; }
           .access-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; }
           .access-list li { display: flex; align-items: flex-start; gap: 0.625rem; font-size: 0.85rem; color: #334155; line-height: 1.4; font-weight: 600; }
           .access-check { color: #10b981; flex-shrink: 0; margin-top: 1px; }
-          .modal-footer { padding: 1.5rem 1.75rem; background: #f8fafc; border-top: 1px solid #f1f5f9; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
-          .btn-cancel { padding: 0.875rem; border: 1.5px solid #e2e8f0; background: white; border-radius: 6px; font-weight: 800; font-size: 0.875rem; color: #64748b; cursor: pointer; transition: all 0.2s; }
+          .modal-footer { padding: 1.5rem 1.75rem; background: #f8fafc; border-top: 1px solid #f1f5f9; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
+          .btn-cancel { padding: 0.875rem; border: 1.5px solid #e2e8f0; background: white; border-radius: 4px; font-weight: 800; font-size: 0.875rem; color: #64748b; cursor: pointer; transition: all 0.2s; }
           .btn-cancel:hover { background: #f1f5f9; color: #0f172a; border-color: #cbd5e1; }
-          .btn-confirm { padding: 0.875rem; background: #0f172a; color: white; border: none; border-radius: 6px; font-weight: 800; font-size: 0.875rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1); }
+          .btn-confirm { padding: 0.875rem; background: #0f172a; color: white; border: none; border-radius: 4px; font-weight: 800; font-size: 0.875rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1); }
           .btn-confirm:hover { background: #1e293b; transform: translateY(-1px); box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2); }
           .btn-confirm:active { transform: translateY(0); }
           .modal-custom-select-wrapper { position: relative; width: 100%; }
@@ -926,7 +1050,7 @@ export default function CompanyMembers() {
             padding: 0.75rem 1rem;
             background: #f8fafc;
             border: 1px solid #e2e8f0;
-            border-radius: 6px;
+            border-radius: 4px;
             cursor: pointer;
             transition: all 0.2s;
             min-height: 44px;
@@ -945,7 +1069,7 @@ export default function CompanyMembers() {
             right: 0;
             background: white;
             border: 1px solid #e2e8f0;
-            border-radius: 8px;
+            border-radius: 6px;
             padding: 0.5rem;
             z-index: 3000;
             box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
@@ -955,7 +1079,7 @@ export default function CompanyMembers() {
             align-items: center;
             gap: 0.75rem;
             padding: 0.75rem 1rem;
-            border-radius: 6px;
+            border-radius: 4px;
             cursor: pointer;
             transition: all 0.15s;
           }

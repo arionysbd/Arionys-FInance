@@ -1,5 +1,6 @@
 'use client';
-import { TrendingUp, TrendingDown, Wallet, PlusCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, PlusCircle, ArrowRight, CircleDot } from 'lucide-react';
+import Link from 'next/link';
 import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -29,7 +30,7 @@ export default function Dashboard({ stats, recentTransactions, user }) {
         label: 'Amount (BDT)',
         data: [stats.totalRevenue, stats.totalExpense, stats.totalInvestment],
         backgroundColor: ['#10b981', '#ef4444', '#2563eb'],
-        borderRadius: 6,
+        borderRadius: 4,
         maxBarThickness: 60,
       },
     ],
@@ -162,22 +163,35 @@ export default function Dashboard({ stats, recentTransactions, user }) {
         </div>
 
         <div className="card recent-transactions" style={{ overflow: 'hidden', minWidth: 0 }}>
-          <div className="card-header">
-            <h3>Recent Activity</h3>
-            <p>Latest approved transactions</p>
+          <div className="card-header flex-header">
+            <div>
+              <h3>Recent Activity</h3>
+              <p>Latest approved transactions</p>
+            </div>
+            <Link href="/transactions" className="view-all-link">
+              View All <ArrowRight size={14} />
+            </Link>
           </div>
           <div className="transaction-list">
-            {recentTransactions.slice(0, 6).map((tx) => (
-              <div key={tx._id} className="transaction-item">
-                <div className="tx-info">
-                  <span className="tx-desc">{tx.description}</span>
-                  <span className="tx-date">{new Date(tx.date).toLocaleDateString()}</span>
+            {recentTransactions.slice(0, 6).map((tx) => {
+              const isExpense = tx.type === 'expense';
+              const dotColor = isExpense ? '#ef4444' : (tx.type === 'revenue' ? '#10b981' : '#2563eb');
+              
+              return (
+                <div key={tx._id} className="transaction-item">
+                  <div className="tx-info-wrapper">
+                    <CircleDot size={14} color={dotColor} className="tx-dot" />
+                    <div className="tx-info">
+                      <span className="tx-desc">{tx.description}</span>
+                      <span className="tx-date">{new Date(tx.date).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                  <div className={`tx-amount ${tx.type}`}>
+                    {isExpense ? '-' : '+'} <small>BDT</small> {tx.amount.toLocaleString()}
+                  </div>
                 </div>
-                <div className={`tx-amount ${tx.type}`}>
-                  {tx.type === 'expense' ? '-' : '+'} <small>BDT</small> {tx.amount.toLocaleString()}
-                </div>
-              </div>
-            ))}
+              );
+            })}
             {recentTransactions.length === 0 && <p className="muted">No recent transactions</p>}
           </div>
         </div>
@@ -198,7 +212,20 @@ export default function Dashboard({ stats, recentTransactions, user }) {
           align-items: center;
           gap: 1.25rem;
           padding: 1.5rem;
+          position: relative;
+          overflow: hidden;
+          transition: all 0.3s ease;
         }
+        .stat-card::before {
+          content: '';
+          position: absolute;
+          top: 0; left: 0; right: 0; height: 3px;
+          background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.2), transparent);
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+        .stat-card:hover::before { opacity: 1; }
+        
         .stat-icon-bg {
           width: 48px;
           height: 48px;
@@ -206,28 +233,30 @@ export default function Dashboard({ stats, recentTransactions, user }) {
           display: flex;
           align-items: center;
           justify-content: center;
+          box-shadow: inset 0 2px 4px rgba(255,255,255,0.5);
         }
         .stat-content { display: flex; flex-direction: column; }
         .stat-label {
           color: #64748b;
-          font-size: 0.8125rem;
-          font-weight: 600;
+          font-size: 0.75rem;
+          font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.025em;
+          letter-spacing: 0.05em;
           margin-bottom: 0.25rem;
         }
         .stat-value {
-          font-size: 1.5rem;
+          font-size: 1.625rem;
           font-weight: 800;
-          color: #1e293b;
+          color: #0f172a;
           display: flex;
           align-items: baseline;
           gap: 0.35rem;
           font-variant-numeric: tabular-nums;
+          letter-spacing: -0.02em;
         }
         @media (max-width: 480px) {
-          .stat-value { font-size: 1.25rem; }
-          .stat-card { padding: 1rem; }
+          .stat-value { font-size: 1.35rem; }
+          .stat-card { padding: 1.25rem; }
         }
         .currency-label { font-size: 0.875rem; font-weight: 600; color: var(--muted-foreground); }
         
@@ -242,16 +271,22 @@ export default function Dashboard({ stats, recentTransactions, user }) {
           display: flex;
           align-items: center;
           gap: 1rem;
-          padding: 1rem 1.25rem;
+          padding: 1.25rem;
           background: white;
-          border-radius: 6px;
+          border-radius: var(--radius);
           border: 1px solid var(--border);
-          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+          box-shadow: var(--shadow-sm);
           overflow: hidden;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .acc-card:hover {
+          transform: translateY(-2px);
+          box-shadow: var(--shadow-md);
         }
         .acc-icon-bg {
-          width: 36px; height: 36px; border-radius: 6px; background: #e0f2fe; display: flex; align-items: center; justify-content: center;
+          width: 40px; height: 40px; border-radius: 6px; background: #e0f2fe; display: flex; align-items: center; justify-content: center;
           flex-shrink: 0;
+          box-shadow: inset 0 2px 4px rgba(255,255,255,0.4);
         }
         .acc-info { display: flex; flex-direction: column; overflow: hidden; width: 100%; }
         .acc-name { 
@@ -273,7 +308,15 @@ export default function Dashboard({ stats, recentTransactions, user }) {
           .grid-content { grid-template-columns: 1fr; }
         }
         
-        .card-header p { font-size: 0.8125rem; color: #94a3b8; }
+        .card-header p { font-size: 0.8125rem; color: #94a3b8; margin-top: 0.2rem; }
+        .flex-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .view-all-link { 
+          display: flex; align-items: center; gap: 0.35rem; 
+          font-size: 0.8125rem; font-weight: 600; color: var(--primary); 
+          background: var(--accent); padding: 0.4rem 0.75rem; border-radius: 8px;
+          transition: all 0.2s;
+        }
+        .view-all-link:hover { background: #e0e7ff; color: #3730a3; }
         
         .chart-container { overflow: hidden; }
         .chart-wrapper { height: 300px; margin-top: 1rem; position: relative; width: 100%; }
@@ -291,12 +334,17 @@ export default function Dashboard({ stats, recentTransactions, user }) {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 0.875rem 0;
+          padding: 1rem 0.5rem;
           border-bottom: 1px solid #f1f5f9;
           min-width: 0;
           gap: 0.5rem;
+          transition: background 0.2s ease;
+          border-radius: 6px;
         }
+        .transaction-item:hover { background: #f8fafc; padding-left: 0.75rem; padding-right: 0.75rem; margin: 0 -0.25rem; }
         .transaction-item:last-child { border-bottom: none; }
+        .tx-info-wrapper { display: flex; align-items: center; gap: 0.875rem; flex: 1; min-width: 0; }
+        .tx-dot { flex-shrink: 0; opacity: 0.8; }
         .tx-info { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; flex: 1; overflow: hidden; }
         .tx-desc {
           display: block;

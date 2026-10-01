@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
-import { PieChart, Loader2, Calendar, TrendingUp, TrendingDown, DollarSign, Wallet, ArrowRight } from 'lucide-react';
+import { PieChart, Loader2, Calendar, TrendingUp, TrendingDown, Scale, Wallet, ArrowRight } from 'lucide-react';
 import axios from 'axios';
 import {
   Chart as ChartJS,
@@ -94,7 +94,19 @@ export default function ReportsPage() {
       intersect: false,
     },
     plugins: {
-      legend: { position: 'top', align: 'end', labels: { usePointStyle: true, boxWidth: 6 } },
+      legend: {
+        position: 'top',
+        align: 'end',
+        labels: {
+          usePointStyle: true,
+          pointStyle: 'circle',
+          pointStyleWidth: 10,
+          boxHeight: 10,
+          padding: 24,
+          font: { size: 13, family: 'Inter' },
+          color: '#475569',
+        },
+      },
       tooltip: {
         backgroundColor: '#0f172a',
         padding: 12,
@@ -129,6 +141,15 @@ export default function ReportsPage() {
         borderWidth: 2,
         tension: 0.4,
         fill: true
+      },
+      {
+        label: 'Investment',
+        data: data?.chartData.map(d => d.investment) || [],
+        borderColor: '#6366f1',
+        backgroundColor: 'rgba(99, 102, 241, 0.05)',
+        borderWidth: 2,
+        tension: 0.4,
+        fill: true
       }
     ]
   };
@@ -136,35 +157,30 @@ export default function ReportsPage() {
   return (
     <DashboardLayout>
       <div className="reports-layout animate-fade-in">
-        <div className="page-header">
-            <div>
-                <h2>Financial Reports</h2>
-                <p className="text-muted">Analyze your company's financial performance</p>
-            </div>
-        </div>
-
         <div className="card filter-card">
             <form onSubmit={handleFilterSubmit} className="filter-form">
+                <div className="toolbar-title">
+                    <h2>Financial Reports</h2>
+                    <p className="text-muted">Analyze your company&apos;s financial performance</p>
+                </div>
                 <div className="filter-group">
-                    <label>Start Date</label>
+                    <label htmlFor="report-start">From</label>
                     <div className="input-with-icon">
                         <Calendar size={16} />
-                        <input type="date" className="input-field" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
+                        <input id="report-start" type="date" className="input-field" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
                     </div>
                 </div>
                 <div className="filter-arrow"><ArrowRight size={16} className="text-slate-400" /></div>
                 <div className="filter-group">
-                    <label>End Date</label>
+                    <label htmlFor="report-end">To</label>
                     <div className="input-with-icon">
                         <Calendar size={16} />
-                        <input type="date" className="input-field" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
+                        <input id="report-end" type="date" className="input-field" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
                     </div>
                 </div>
-                <div className="filter-actions">
-                    <button type="submit" className="btn btn-primary" disabled={loading}>
-                        {loading ? <Loader2 size={16} className="spinner" /> : 'Generate Report'}
-                    </button>
-                </div>
+                <button type="submit" className="btn btn-primary filter-btn" disabled={loading}>
+                    {loading ? <Loader2 size={16} className="spinner" /> : 'Generate Report'}
+                </button>
             </form>
         </div>
 
@@ -191,7 +207,7 @@ export default function ReportsPage() {
                         </div>
                     </div>
                     <div className="metric-card">
-                        <div className="m-icon-box bg-blue-100 text-blue-600"><DollarSign size={24} /></div>
+                        <div className="m-icon-box bg-blue-100 text-blue-600"><Scale size={24} /></div>
                         <div className="m-content">
                             <span className="m-label">Net Profit</span>
                             <span className={`m-value ${data.metrics.netProfit < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
@@ -210,7 +226,7 @@ export default function ReportsPage() {
 
                 <div className="card chart-card">
                     <div className="chart-header">
-                        <h3>Revenue vs Expenses</h3>
+                        <h3>Revenue, Expenses &amp; Investments</h3>
                         <p className="text-muted">Cash flow overview for the selected period</p>
                     </div>
                     <div className="chart-container">
@@ -227,40 +243,46 @@ export default function ReportsPage() {
         ) : null}
 
         <style jsx>{`
-            .reports-layout { max-width: 1200px; margin: 0 auto; }
-            .page-header { margin-bottom: 2rem; }
-            .page-header h2 { font-size: 1.5rem; color: #0f172a; margin-bottom: 0.25rem; font-weight: 800; }
-            
-            .filter-card { padding: 1.5rem; background: white; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 2rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
-            .filter-form { display: flex; align-items: flex-end; gap: 1.5rem; }
-            .filter-group { flex: 1; display: flex; flex-direction: column; gap: 0.5rem; }
-            .filter-group label { font-size: 0.75rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
+            .reports-layout { max-width: var(--page-max-width); margin: 0 auto; }
+            .filter-card { padding: 1rem 1.25rem; background: white; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 2rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
+            .filter-form { display: flex; align-items: center; gap: 0.75rem; }
+            .toolbar-title { flex: 1; min-width: 0; margin-right: 0.5rem; }
+            .toolbar-title h2 { font-size: 1.25rem; color: #0f172a; margin: 0 0 0.125rem; font-weight: 800; white-space: nowrap; }
+            .toolbar-title p { margin: 0; font-size: 0.8125rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .filter-group { flex: 0 0 200px; display: flex; align-items: center; gap: 0.5rem; }
+            .filter-group label { font-size: 0.75rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; flex-shrink: 0; }
+            .filter-group .input-with-icon { flex: 1; min-width: 0; }
+            .filter-btn { flex-shrink: 0; white-space: nowrap; }
             .input-with-icon { position: relative; display: flex; align-items: center; }
             .input-with-icon :global(svg) { position: absolute; left: 12px; color: #94a3b8; pointer-events: none; }
-            .input-field { width: 100%; padding: 0.75rem 1rem 0.75rem 2.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.875rem; font-weight: 600; color: #0f172a; transition: all 0.2s; outline: none; }
+            .input-field { width: 100%; padding: 0.625rem 0.75rem 0.625rem 2.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 0.875rem; font-weight: 600; color: #0f172a; transition: all 0.2s; outline: none; }
             .input-field:focus { border-color: #6366f1; background: white; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
-            .filter-arrow { padding-bottom: 0.75rem; display: flex; align-items: center; justify-content: center; }
-            .filter-actions { padding-bottom: 1px; }
+            .filter-arrow { display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
             
             .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2rem; }
-            .metric-card { display: flex; align-items: center; gap: 1.25rem; padding: 1.5rem; background: white; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
-            .m-icon-box { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+            .metric-card { display: flex; align-items: center; gap: 1.25rem; padding: 1.5rem; background: white; border-radius: 6px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
+            .m-icon-box { width: 48px; height: 48px; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
             .m-content { display: flex; flex-direction: column; gap: 0.25rem; }
             .m-label { font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
             .m-value { font-size: 1.25rem; font-weight: 900; color: #0f172a; }
             
-            .chart-card { padding: 2rem; background: white; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
+            .chart-card { padding: 2rem; background: white; border-radius: 6px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
             .chart-header { margin-bottom: 2rem; }
             .chart-header h3 { font-size: 1.125rem; font-weight: 800; color: #0f172a; margin-bottom: 0.25rem; }
             .chart-container { height: 400px; width: 100%; position: relative; }
-            .empty-chart { height: 100%; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-weight: 600; border: 2px dashed #e2e8f0; border-radius: 8px; background: #f8fafc; }
+            .empty-chart { height: 100%; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-weight: 600; border: 2px dashed #e2e8f0; border-radius: 6px; background: #f8fafc; }
             
             @media (max-width: 1024px) {
                 .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+                .filter-form { flex-wrap: wrap; }
+                .toolbar-title { flex: 1 1 100%; }
+                .filter-group { flex: 1 1 200px; }
             }
             @media (max-width: 640px) {
-                .filter-form { flex-direction: column; align-items: stretch; gap: 1rem; }
+                .filter-group { flex: 1 1 100%; }
+                .filter-group label { width: 2.5rem; }
                 .filter-arrow { display: none; }
+                .filter-btn { width: 100%; justify-content: center; }
                 .metrics-grid { grid-template-columns: 1fr; }
                 .chart-container { height: 300px; }
             }

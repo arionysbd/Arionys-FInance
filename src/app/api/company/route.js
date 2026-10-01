@@ -34,7 +34,7 @@ export async function PATCH(req) {
     if (!authUser) return unauthorized();
 
     // Only admin or owner can update company details
-    if (!['admin', 'owner', 'ceo', 'cfo'].includes(authUser.role?.toLowerCase())) {
+    if (!['admin', 'owner'].includes(authUser.role?.toLowerCase())) {
       return NextResponse.json(
         { success: false, message: 'Only administrators can update company details.' },
         { status: 403 }

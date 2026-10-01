@@ -115,8 +115,8 @@ export const createLoan = async (loanData) => {
   return data;
 };
 
-export const approveLoan = async (id) => {
-  const { data } = await api.patch(`/loans/${id}/approve`);
+export const approveLoan = async (id, status = 'approved') => {
+  const { data } = await api.patch(`/loans/${id}/approve`, { status });
   return data;
 };
 

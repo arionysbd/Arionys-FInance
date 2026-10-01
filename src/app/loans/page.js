@@ -2,8 +2,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
+import CustomSelect from '@/components/UI/CustomSelect';
 import { getLoans, createLoan, getEmployees, getAccounts } from '@/lib/api';
-import { Banknote, Plus, Search, Filter, Loader2, ArrowRight } from 'lucide-react';
+import { Banknote, Plus, Search, Filter, Loader2, ArrowRight, HandCoins } from 'lucide-react';
 import Link from 'next/link';
 
 export default function LoansPage() {
@@ -13,23 +14,42 @@ export default function LoansPage() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   
-  const [showModal, setShowModal] = useState(false);
+  // null | 'request' (any member, for themselves) | 'create' (CEO/CFO/Admin, for an employee)
+  const [modalMode, setModalMode] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   
   const [employees, setEmployees] = useState([]);
   const [accounts, setAccounts] = useState([]);
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => ({
     employeeId: '',
     paidFromAccount: '',
     amount: '',
     startDate: new Date().toISOString().split('T')[0],
-    periodMonths: '',
+    endDate: '',
+    notes: '',
+  }));
+
+  const canCreateLoan = ['owner', 'admin', 'ceo', 'cfo'].includes(user?.role?.toLowerCase());
+  const isCreateMode = modalMode === 'create';
+
+  const emptyLoanForm = () => ({
+    employeeId: '',
+    paidFromAccount: '',
+    amount: '',
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: '',
     notes: '',
   });
 
-  const isAdmin = ['owner', 'admin', 'ceo', 'cfo'].includes(user?.role?.toLowerCase());
+  const openModal = (mode) => {
+    setFormData(emptyLoanForm());
+    setError('');
+    setModalMode(mode);
+  };
+
+  const closeModal = () => setModalMode(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -37,10 +57,10 @@ export default function LoansPage() {
   }, [user, authLoading, search, filterStatus]);
 
   useEffect(() => {
-    if (showModal) {
+    if (modalMode === 'create') {
         fetchFormData();
     }
-  }, [showModal]);
+  }, [modalMode]);
 
   const fetchLoans = async () => {
     try {
@@ -57,6 +77,7 @@ export default function LoansPage() {
   };
 
   const fetchFormData = async () => {
+      if (!canCreateLoan) return;
       try {
           const [empRes, accRes] = await Promise.all([
               getEmployees({ status: 'active' }),
@@ -79,18 +100,14 @@ export default function LoansPage() {
     setError('');
     setIsSubmitting(true);
     try {
-      // Calculate End Date
-      let endDate = null;
-      if (formData.startDate && formData.periodMonths) {
-          const start = new Date(formData.startDate);
-          start.setMonth(start.getMonth() + parseInt(formData.periodMonths));
-          endDate = start.toISOString().split('T')[0];
-      }
-
-      const res = await createLoan({ ...formData, endDate });
+      // Empty employeeId = request for myself
+      const payload = isCreateMode
+        ? { ...formData, type: 'create' }
+        : { amount: formData.amount, startDate: formData.startDate, endDate: formData.endDate, notes: formData.notes, type: 'request' };
+      const res = await createLoan(payload);
       if (res.success) {
-        setShowModal(false);
-        setFormData({ employeeId: '', paidFromAccount: '', amount: '', startDate: new Date().toISOString().split('T')[0], periodMonths: '', notes: '' });
+        closeModal();
+        setFormData(emptyLoanForm());
         fetchLoans();
       } else {
         setError(res.message);
@@ -109,17 +126,11 @@ export default function LoansPage() {
   return (
     <DashboardLayout>
       <div className="animate-fade-in">
-        <div className="page-header">
-            <div>
+        <div className="card loans-toolbar">
+            <div className="toolbar-title">
                 <h2>Employee Loans</h2>
                 <p className="text-muted">Manage advances and loans for your staff</p>
             </div>
-            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-                <Plus size={18} /> {isAdmin ? 'New Loan' : 'Request Loan'}
-            </button>
-        </div>
-
-        <div className="card controls-card">
             <div className="search-box">
                 <Search size={18} className="search-icon" />
                 <input 
@@ -130,8 +141,8 @@ export default function LoansPage() {
                     onChange={(e) => setSearch(e.target.value)}
                 />
             </div>
-            <div className="filter-box flex items-center gap-2">
-                <Filter size={18} className="text-muted-foreground" />
+            <div className="filter-box">
+                <Filter size={16} className="filter-icon" />
                 <select className="input-field" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                     <option value="">All Statuses</option>
                     <option value="pending_approval">Pending Approval</option>
@@ -139,7 +150,18 @@ export default function LoansPage() {
                     <option value="active,partially_repaid">Active & Disbursed</option>
                     <option value="overdue">Overdue</option>
                     <option value="completed">Completed</option>
+                    <option value="rejected">Rejected</option>
                 </select>
+            </div>
+            <div className="toolbar-actions">
+                <button className={`btn ${canCreateLoan ? 'btn-secondary' : 'btn-primary'} toolbar-btn`} onClick={() => openModal('request')}>
+                    <HandCoins size={18} /> Request Loan
+                </button>
+                {canCreateLoan && (
+                    <button className="btn btn-primary toolbar-btn" onClick={() => openModal('create')}>
+                        <Plus size={18} /> Create Loan
+                    </button>
+                )}
             </div>
         </div>
 
@@ -154,7 +176,12 @@ export default function LoansPage() {
                     <Link href={`/loans/${loan._id}`} key={loan._id} className="card loan-card">
                         <div className="loan-header">
                             <div>
-                                <h3 className="emp-name">{loan.employeeName}</h3>
+                                <h3 className="emp-name">
+                                    {loan.employeeName}
+                                    <span className={`origin-tag ${loan.origin === 'request' ? 'is-request' : 'is-issued'}`}>
+                                        {loan.origin === 'request' ? 'Request' : 'Issued'}
+                                    </span>
+                                </h3>
                                 <p className="loan-date">Created {new Date(loan.createdAt).toLocaleDateString()}</p>
                             </div>
                             <div className="loan-status">
@@ -163,6 +190,7 @@ export default function LoansPage() {
                                 {(loan.status === 'active' || loan.status === 'partially_repaid') && <span className="badge badge-approved">Active</span>}
                                 {loan.status === 'overdue' && <span className="badge badge-expense">Overdue</span>}
                                 {loan.status === 'completed' && <span className="badge" style={{background:'#f1f5f9',color:'#64748b'}}>Completed</span>}
+                                {loan.status === 'rejected' && <span className="badge badge-expense">Rejected</span>}
                             </div>
                         </div>
                         
@@ -198,100 +226,153 @@ export default function LoansPage() {
                     <div className="empty-state">
                         <Banknote size={48} className="empty-icon" />
                         <h3>No loans found</h3>
-                        <p className="text-muted">You haven't issued any employee loans yet.</p>
-                        <button className="btn btn-primary" style={{marginTop: '1rem'}} onClick={() => setShowModal(true)}>
-                            <Plus size={18} /> {isAdmin ? 'Create First Loan' : 'Request First Loan'}
+                        <p className="text-muted">{canCreateLoan ? "No employee loans or requests yet." : "You haven't requested any loans yet."}</p>
+                        <button className="btn btn-primary" style={{marginTop: '1rem'}} onClick={() => openModal(canCreateLoan ? 'create' : 'request')}>
+                            <Plus size={18} /> {canCreateLoan ? 'Create First Loan' : 'Request a Loan'}
                         </button>
                     </div>
                 )}
             </div>
         )}
+      </div>
 
-        {showModal && (
-            <div className="modal-overlay">
-                <div className="modal-content">
-                    <div className="modal-header">
-                        <h3>Create Employee Loan</h3>
-                        <button className="close-btn" onClick={() => setShowModal(false)}>&times;</button>
-                    </div>
-                    {error && <div className="alert alert-danger">{error}</div>}
+      {modalMode && (
+          <div className="modal-overlay animate-fade-in">
+              <div className="modal-content animate-slide-up">
+                  <div className="modal-header">
+                      <div>
+                          <h3>{isCreateMode ? 'Create Employee Loan' : 'Request a Loan'}</h3>
+                          <p className="modal-sub">
+                              {isCreateMode
+                                  ? 'Issue a loan to an employee. It will be sent for approval.'
+                                  : 'Ask for a loan for yourself. An approver will review it.'}
+                          </p>
+                      </div>
+                      <button className="close-btn" onClick={closeModal}>&times;</button>
+                  </div>
+                  {error && <div className="alert alert-danger">{error}</div>}
                     <form onSubmit={handleSubmit} className="modal-form">
-                        {isAdmin && (
-                            <div className="form-group">
-                                <label>Employee *</label>
-                                <select name="employeeId" className="input-field" required value={formData.employeeId} onChange={handleInputChange}>
-                                    <option value="">Select Employee...</option>
-                                    {employees.map(emp => (
-                                        <option key={emp._id} value={emp._id}>{emp.fullName} {emp.designation ? `(${emp.designation})` : ''}</option>
-                                    ))}
-                                </select>
-                                {formData.employeeId && (
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        Limit: {formatCurrency(employees.find(e => e._id === formData.employeeId)?.loanLimit || 0)} 
-                                        (Salary: {formatCurrency(employees.find(e => e._id === formData.employeeId)?.salary || 0)})
-                                    </p>
-                                )}
-                            </div>
-                        )}
-                        {isAdmin && (
-                            <div className="form-group">
-                                <label>Source Account (For Disbursement) *</label>
-                                <select name="paidFromAccount" className="input-field" required value={formData.paidFromAccount} onChange={handleInputChange}>
-                                    <option value="">Select Account...</option>
-                                    {accounts.map(acc => (
-                                        <option key={acc._id} value={acc._id}>{acc.bankName} - {acc.acName || 'Cash'} (Bal: {formatCurrency(acc.balance)})</option>
-                                    ))}
-                                </select>
-                                <p className="text-xs text-muted-foreground mt-1">Funds will be deducted from this account when the loan is disbursed.</p>
-                            </div>
-                        )}
-                        <div className="form-group">
-                            <label>Loan Amount *</label>
-                            <input type="number" step="0.01" min="1" name="amount" className="input-field" required value={formData.amount} onChange={handleInputChange} />
-                        </div>
-                        <div className="form-row">
-                            <div className="form-group">
-                                <label>Start Date *</label>
-                                <input type="date" name="startDate" className="input-field" required value={formData.startDate} onChange={handleInputChange} />
-                            </div>
-                            <div className="form-group">
-                                <label>Period (Months) *</label>
-                                <select name="periodMonths" className="input-field" required value={formData.periodMonths} onChange={handleInputChange}>
-                                    <option value="">Select duration...</option>
-                                    {[3, 6, 9, 12, 18, 24, 36].map(m => (
-                                        <option key={m} value={m}>{m} Months</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-                        <div className="form-group">
-                            <label>Notes</label>
-                            <textarea name="notes" className="input-field" rows="3" value={formData.notes} onChange={handleInputChange} placeholder="Reason for loan, terms, etc."></textarea>
-                        </div>
-                        <div className="modal-actions">
-                            <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                            <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                                {isSubmitting ? <Loader2 size={18} className="spinner" /> : (isAdmin ? 'Create Loan' : 'Submit Request')}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        )}
+                      {!isCreateMode && (
+                          <div className="requester-box">
+                              <span className="requester-label">Requesting as</span>
+                              <span className="requester-name">{user?.name}</span>
+                              <span className="requester-email">{user?.email}</span>
+                          </div>
+                      )}
+                      {isCreateMode && (
+                          <div className="form-group">
+                              <label>Employee *</label>
+                              <CustomSelect 
+                                  required
+                                  value={formData.employeeId} 
+                                  onChange={(val) => handleInputChange({ target: { name: 'employeeId', value: val } })}
+                                  placeholder="Select Employee..."
+                                  options={employees.map(emp => ({
+                                      value: emp._id,
+                                      label: `${emp.fullName} ${emp.designation ? `(${emp.designation})` : ''}`,
+                                      subtext: emp.email
+                                  }))}
+                              />
+                              {formData.employeeId && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                      Limit: {formatCurrency(employees.find(e => e._id === formData.employeeId)?.loanLimit || 0)} 
+                                      (Salary: {formatCurrency(employees.find(e => e._id === formData.employeeId)?.salary || 0)})
+                                  </p>
+                              )}
+                          </div>
+                      )}
+                      {isCreateMode && (
+                          <div className="form-group">
+                              <label>Source Account (For Disbursement)</label>
+                              <CustomSelect 
+                                  value={formData.paidFromAccount} 
+                                  onChange={(val) => handleInputChange({ target: { name: 'paidFromAccount', value: val } })}
+                                  placeholder="Select Account..."
+                                  options={accounts.map(acc => ({
+                                      value: acc._id,
+                                      label: `${acc.bankName} - ${acc.acName || 'Cash'}`,
+                                      subtext: `Balance: ${formatCurrency(acc.balance)}`
+                                  }))}
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">Optional. Can also be chosen at disbursement. Funds are deducted only when the loan is disbursed.</p>
+                          </div>
+                      )}
+                      <div className="form-group">
+                          <label>Loan Amount *</label>
+                          <input type="number" step="0.01" min="1" name="amount" className="input-field" required value={formData.amount} onChange={handleInputChange} />
+                      </div>
+                      <div className="form-row">
+                          <div className="form-group">
+                              <label>Start Date *</label>
+                              <input type="date" name="startDate" className="input-field" required value={formData.startDate} onChange={handleInputChange} />
+                          </div>
+                          <div className="form-group">
+                              <label>End Date *</label>
+                              <input 
+                                  type="date" 
+                                  name="endDate" 
+                                  className="input-field" 
+                                  required 
+                                  value={formData.endDate} 
+                                  onChange={handleInputChange} 
+                              />
+                          </div>
+                      </div>
+                      <div className="form-group">
+                          <label>{isCreateMode ? 'Notes' : 'Reason *'}</label>
+                          <textarea
+                              name="notes"
+                              className="input-field"
+                              rows="3"
+                              required={!isCreateMode}
+                              value={formData.notes}
+                              onChange={handleInputChange}
+                              placeholder={isCreateMode ? 'Terms, repayment plan, etc.' : 'Why do you need this loan?'}
+                          ></textarea>
+                      </div>
+                      <div className="modal-actions">
+                          <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
+                          <button type="submit" className="btn btn-primary" disabled={isSubmitting || (isCreateMode && !formData.employeeId)}>
+                              {isSubmitting ? <Loader2 size={18} className="spinner" /> : (isCreateMode ? 'Create Loan' : 'Submit Request')}
+                          </button>
+                      </div>
+                  </form>
+              </div>
+          </div>
+      )}
 
         <style jsx>{`
-            .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-            .page-header h2 { font-size: 1.5rem; color: #0f172a; margin-bottom: 0.25rem; }
-            
-            .controls-card { padding: 1rem; margin-bottom: 2rem; display: flex; gap: 1rem; align-items: center; }
-            .search-box { position: relative; flex: 1; max-width: 400px; }
+            .loans-toolbar { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; margin-bottom: 2rem; }
+            .toolbar-title { flex: 1; min-width: 0; }
+            .toolbar-title h2 { font-size: 1.25rem; color: #0f172a; margin: 0 0 0.125rem; white-space: nowrap; }
+            .toolbar-title p { margin: 0; font-size: 0.8125rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .search-box { position: relative; flex: 0 1 340px; min-width: 200px; }
             :global(.search-icon) { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
             .search-box .input-field { padding-left: 2.5rem; width: 100%; }
-            .filter-box { width: 250px; }
+            .filter-box { position: relative; flex: 0 0 210px; }
+            .filter-box :global(.filter-icon) { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
+            .filter-box .input-field { padding-left: 2.25rem; width: 100%; }
+            .toolbar-btn { flex-shrink: 0; white-space: nowrap; }
+            .toolbar-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+            .modal-sub { margin: 0.25rem 0 0; font-size: 0.8125rem; color: #64748b; }
+            .requester-box { display: flex; flex-direction: column; gap: 0.125rem; margin-bottom: 1.25rem; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; }
+            .requester-label { font-size: 0.6875rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; }
+            .requester-name { font-size: 0.9375rem; font-weight: 700; color: #0f172a; }
+            .requester-email { font-size: 0.8125rem; color: #64748b; }
+            .emp-name { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+            .origin-tag { padding: 0.0625rem 0.4375rem; border-radius: 4px; font-size: 0.625rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
+            .origin-tag.is-request { background: #fef3c7; color: #92400e; }
+            .origin-tag.is-issued { background: #e0e7ff; color: #3730a3; }
+            @media (max-width: 960px) {
+                .loans-toolbar { flex-wrap: wrap; }
+                .toolbar-title { flex: 1 1 100%; }
+                .search-box { flex: 1 1 200px; }
+                .filter-box { flex: 1 1 180px; }
+            }
             @media (max-width: 640px) {
-                .controls-card { flex-direction: column; align-items: stretch; }
-                .search-box { max-width: 100%; }
-                .filter-box { width: 100%; }
+                .search-box, .filter-box { flex: 1 1 100%; }
+                .toolbar-actions { width: 100%; }
+                .toolbar-btn { flex: 1; justify-content: center; }
                 .form-row { flex-direction: column; }
             }
 
@@ -303,7 +384,7 @@ export default function LoansPage() {
             .emp-name { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 0.25rem; }
             .loan-date { font-size: 0.8rem; color: #64748b; }
             
-            .loan-amounts { display: flex; justify-content: space-between; padding: 1rem; background: #f8fafc; border-radius: 8px; margin-bottom: 1.5rem; }
+            .loan-amounts { display: flex; justify-content: space-between; padding: 1rem; background: #f8fafc; border-radius: 6px; margin-bottom: 1.5rem; }
             .amount-block { display: flex; flex-direction: column; gap: 0.25rem; }
             .amount-block .label { font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; }
             .amount-block .value { font-size: 1.1rem; font-weight: 700; color: #0f172a; }
@@ -322,7 +403,7 @@ export default function LoansPage() {
             .empty-state h3 { font-size: 1.25rem; color: #1e293b; margin-bottom: 0.5rem; }
 
             .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
-            .modal-content { background: white; border-radius: 12px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.2); }
+            .modal-content { background: white; border-radius: 6px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.2); }
             .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid #f1f5f9; }
             .modal-header h3 { font-size: 1.25rem; color: #0f172a; margin: 0; }
             .close-btn { background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; width: 32px; height: 32px; border-radius: 50%; transition: background 0.2s; }
@@ -336,7 +417,7 @@ export default function LoansPage() {
             
             .modal-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #f1f5f9; }
             
-            .alert { padding: 1rem; border-radius: 8px; margin: 1rem 1.5rem 0; font-size: 0.875rem; font-weight: 500; }
+            .alert { padding: 1rem; border-radius: 6px; margin: 1rem 1.5rem 0; font-size: 0.875rem; font-weight: 500; }
             .alert-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5; }
 
             :global(.spinner) { animation: spin 1s linear infinite; }
@@ -349,7 +430,6 @@ export default function LoansPage() {
             .text-sm { font-size: 0.875rem; }
             .text-xs { font-size: 0.75rem; }
         `}</style>
-      </div>
     </DashboardLayout>
   );
 }

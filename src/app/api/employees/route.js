@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Employee from '@/models/Employee';
+import User from '@/models/User';
 import AuditLog from '@/models/AuditLog';
 import { getAuthUser, unauthorized } from '@/lib/auth';
 
@@ -14,6 +15,28 @@ export async function GET(req) {
     const companyId = authUser.companyId;
     if (!companyId) {
       return NextResponse.json({ success: false, message: 'Company association required.' }, { status: 400 });
+    }
+
+    // Auto-sync users to employees if they don't have an employee record yet.
+    // This allows any user (like CEOs or CFOs) to also receive loans.
+    const users = await User.find({ companyId });
+    const allEmployees = await Employee.find({ companyId });
+    
+    for (const u of users) {
+      if (['owner', 'admin'].includes(u.role?.toLowerCase())) {
+        continue;
+      }
+      if (!allEmployees.some(e => e.email.toLowerCase() === u.email.toLowerCase())) {
+         await Employee.create({
+            fullName: u.name || 'Unknown',
+            email: u.email.toLowerCase(),
+            phone: u.phone || '',
+            companyId: companyId,
+            createdBy: authUser._id,
+            status: u.isActive ? 'active' : 'inactive',
+            userId: u._id
+         });
+      }
     }
 
     const { searchParams } = new URL(req.url);
@@ -68,8 +91,8 @@ export async function POST(req) {
       salary, loanLimit
     } = body;
 
-    if (!fullName || !email) {
-      return NextResponse.json({ success: false, message: 'Full name and email are required.' }, { status: 400 });
+    if (!fullName?.trim() || !email?.trim() || !phone?.trim() || !department?.trim() || !designation?.trim()) {
+      return NextResponse.json({ success: false, message: 'Full name, email, phone number, department and designation are required.' }, { status: 400 });
     }
 
     // Power check if adding role
@@ -109,11 +132,17 @@ export async function POST(req) {
     });
 
     if (!existingUser) {
-      // Create invite
-      await Invite.deleteMany({ email: email.toLowerCase(), companyId });
-      const token = crypto.randomBytes(32).toString('hex');
-      const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000); // 72 hours
-      await Invite.create({ token, email: email.toLowerCase(), role, companyId, invitedBy: authUser._id, expiresAt });
+      // Create invite; roll back the employee if it fails so a retry does not hit "already exists"
+      let token;
+      try {
+        await Invite.deleteMany({ email: email.toLowerCase(), companyId });
+        token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000); // 72 hours
+        await Invite.create({ token, email: email.toLowerCase(), role, companyId, invitedBy: authUser._id, expiresAt });
+      } catch (inviteError) {
+        await Employee.deleteOne({ _id: employee._id });
+        throw inviteError;
+      }
       
       const company = await Company.findById(companyId).lean();
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl?.origin || 'http://localhost:3000';

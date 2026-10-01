@@ -46,6 +46,7 @@ const loanSchema = new mongoose.Schema({
       'overdue',
       'completed',
       'cancelled',
+      'rejected',
     ],
     default: 'pending_approval',
     index: true,
@@ -70,8 +71,22 @@ const loanSchema = new mongoose.Schema({
   disbursedAt: { type: Date, default: null },
   completedAt: { type: Date, default: null },
   cancelledAt: { type: Date, default: null },
+  rejectedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+  },
+  rejectedAt: { type: Date, default: null },
 
   notes: { type: String, default: '' },
+
+  // 'request' = employee asked for a loan for themselves; 'issued' = created by CEO/CFO/Admin for an employee
+  origin: {
+    type: String,
+    enum: ['request', 'issued'],
+    default: 'issued',
+    index: true,
+  },
 
   // Track if initial disbursement transaction was created
   disbursementTransactionId: {

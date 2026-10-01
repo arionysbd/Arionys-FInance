@@ -174,17 +174,17 @@ export default function AuditLogPage() {
         </div>
 
         <style jsx>{`
-            .audit-layout { max-width: 1000px; margin: 0 auto; }
+            .audit-layout { max-width: var(--page-max-width); margin: 0 auto; }
             .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
             .page-header h2 { font-size: 1.5rem; color: #0f172a; margin-bottom: 0.25rem; font-weight: 800; }
-            .header-icon-box { background: #f8fafc; padding: 1rem; border-radius: 12px; border: 1px solid #e2e8f0; color: #0f172a; }
+            .header-icon-box { background: #f8fafc; padding: 1rem; border-radius: 6px; border: 1px solid #e2e8f0; color: #0f172a; }
             
-            .controls-card { padding: 1.25rem; margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: center; background: white; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
+            .controls-card { padding: 1.25rem; margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: center; background: white; border-radius: 6px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
             .filter-box { display: flex; align-items: center; gap: 0.75rem; flex: 1; }
-            .filter-box .input-field { width: 100%; padding: 0.625rem 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; color: #0f172a; font-size: 0.875rem; font-weight: 600; outline: none; transition: all 0.2s; }
+            .filter-box .input-field { width: 100%; padding: 0.625rem 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; color: #0f172a; font-size: 0.875rem; font-weight: 600; outline: none; transition: all 0.2s; }
             .filter-box .input-field:focus { border-color: #64748b; background: white; }
             
-            .list-card { padding: 2rem; background: white; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
+            .list-card { padding: 2rem; background: white; border-radius: 6px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
             
             .log-timeline { display: flex; flex-direction: column; gap: 1.5rem; }
             .log-item { display: flex; gap: 1.25rem; align-items: flex-start; }

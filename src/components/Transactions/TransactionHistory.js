@@ -431,7 +431,7 @@ export default function TransactionHistory({ transactions, onUpdate, filterType,
           padding: 0 1rem;
           background: white;
           border: 1px solid #e2e8f0;
-          border-radius: 6px;
+          border-radius: 4px;
           cursor: pointer;
           transition: all 0.2s;
           min-height: 42px;
@@ -454,7 +454,7 @@ export default function TransactionHistory({ transactions, onUpdate, filterType,
           right: 0;
           background: white;
           border: 1px solid #e2e8f0;
-          border-radius: 6px;
+          border-radius: 4px;
           padding: 0.5rem;
           z-index: 1000;
           box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
@@ -465,7 +465,7 @@ export default function TransactionHistory({ transactions, onUpdate, filterType,
           align-items: center;
           justify-content: space-between;
           padding: 0.625rem 0.875rem;
-          border-radius: 6px;
+          border-radius: 4px;
           cursor: pointer;
           transition: all 0.15s;
         }
@@ -478,7 +478,7 @@ export default function TransactionHistory({ transactions, onUpdate, filterType,
         /* Table & Data Styling */
         .table-container { 
           background: white;
-          border-radius: 6px;
+          border-radius: 4px;
           border: 1px solid #e2e8f0;
           overflow: hidden;
         }
@@ -515,7 +515,7 @@ export default function TransactionHistory({ transactions, onUpdate, filterType,
           color: #64748b; 
           background: #f1f5f9;
           padding: 0.125rem 0.5rem;
-          border-radius: 6px;
+          border-radius: 4px;
           width: fit-content;
         }
 
@@ -538,7 +538,7 @@ export default function TransactionHistory({ transactions, onUpdate, filterType,
           align-items: center;
           gap: 0.4rem;
           padding: 0.25rem 0.6rem;
-          border-radius: 6px;
+          border-radius: 4px;
           font-size: 0.7rem;
           font-weight: 800;
           text-transform: uppercase;
@@ -562,7 +562,7 @@ export default function TransactionHistory({ transactions, onUpdate, filterType,
           width: 24px; 
           height: 24px; 
           background: #0f172a; 
-          border-radius: 6px; 
+          border-radius: 4px; 
           display: flex; 
           align-items: center; 
           justify-content: center; 
@@ -577,7 +577,7 @@ export default function TransactionHistory({ transactions, onUpdate, filterType,
           align-items: center;
           gap: 0.4rem;
           padding: 0.25rem 0.625rem;
-          border-radius: 6px;
+          border-radius: 4px;
           font-size: 0.75rem;
           font-weight: 800;
           background: #f8fafc;
@@ -601,7 +601,7 @@ export default function TransactionHistory({ transactions, onUpdate, filterType,
         .tx-card-list { display: flex; flex-direction: column; gap: 1rem; }
         .tx-premium-mobile-card { 
           background: white; 
-          border-radius: 6px; 
+          border-radius: 4px; 
           padding: clamp(1rem, 4vw, 1.25rem); 
           border: 1px solid #e2e8f0;
           box-shadow: 0 1px 3px rgba(0,0,0,0.02);
@@ -627,7 +627,7 @@ export default function TransactionHistory({ transactions, onUpdate, filterType,
           font-size: 0.8125rem; 
           font-weight: 700; 
           min-height: 42px !important; 
-          border-radius: 6px;
+          border-radius: 4px;
           background: #f8fafc;
           color: #0f172a;
           border: 1px solid #e2e8f0;
@@ -643,7 +643,7 @@ export default function TransactionHistory({ transactions, onUpdate, filterType,
           right: 0;
           width: 220px;
           background: white;
-          border-radius: 6px;
+          border-radius: 4px;
           border: 1px solid #e2e8f0;
           box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
           display: flex;
@@ -664,7 +664,7 @@ export default function TransactionHistory({ transactions, onUpdate, filterType,
           color: #0f172a;
           cursor: pointer;
           transition: all 0.2s;
-          border-radius: 6px;
+          border-radius: 4px;
         }
         .download-menu button:hover { background: #f8fafc; padding-left: 1.25rem; }
         .download-menu .menu-divider { height: 1px; background: #f1f5f9; margin: 4px 0; }
@@ -675,14 +675,14 @@ export default function TransactionHistory({ transactions, onUpdate, filterType,
           text-align: center; 
           padding: 5rem 2rem; 
           background: #ffffff; 
-          border-radius: 6px; 
+          border-radius: 4px; 
           border: 1px dashed #e2e8f0;
         }
         .empty-icon-container { 
           width: 56px; 
           height: 56px; 
           background: #f8fafc; 
-          border-radius: 6px; 
+          border-radius: 4px; 
           display: flex; 
           align-items: center; 
           justify-content: center; 

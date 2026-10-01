@@ -353,12 +353,12 @@ export default function SettingsPage() {
       </div>
 
       <style jsx>{`
-        .settings-page { max-width: 850px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
+        .settings-page { max-width: var(--form-max-width); margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
         .mt-2 { margin-top: 2rem; }
         
         .settings-content { width: 100%; }
         
-        .settings-card { background: white; border: 1px solid #e2e8f0; border-radius: 6px; padding: 2.5rem; }
+        .settings-card { background: white; border: 1px solid #e2e8f0; border-radius: 4px; padding: 2.5rem; }
         .card-header { margin-bottom: 2.5rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 1.5rem; }
         .flex-header { display: flex; justify-content: space-between; align-items: flex-start; }
         .card-header h3 { font-size: 1.25rem; font-weight: 800; color: #0f172a; margin-bottom: 0.5rem; }
@@ -372,7 +372,7 @@ export default function SettingsPage() {
           color: #0f172a;
           border: none;
           padding: 0.6rem 1rem;
-          border-radius: 6px;
+          border-radius: 4px;
           font-size: 0.75rem;
           font-weight: 800;
           cursor: pointer;
@@ -393,7 +393,7 @@ export default function SettingsPage() {
           padding: 1rem 1.25rem;
           background: #f8fafc;
           border: 1px solid #e2e8f0;
-          border-radius: 6px;
+          border-radius: 4px;
           font-size: 0.9375rem;
           font-weight: 600;
           color: #0f172a;
@@ -401,7 +401,7 @@ export default function SettingsPage() {
         }
         .input-control input:focus { background: white; border-color: #0f172a; box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.05); outline: none; }
 
-        .notification-bar { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem; border-radius: 6px; font-weight: 700; font-size: 0.875rem; }
+        .notification-bar { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem; border-radius: 4px; font-weight: 700; font-size: 0.875rem; }
         .notification-bar.success { background: #f0fdf4; color: #16a34a; border: 1px solid #dcfce7; }
         .notification-bar.error { background: #fef2f2; color: #ef4444; border: 1px solid #fee2e2; }
 
@@ -411,7 +411,7 @@ export default function SettingsPage() {
           color: white;
           border: none;
           padding: 1rem 2.5rem;
-          border-radius: 6px;
+          border-radius: 4px;
           font-weight: 800;
           font-size: 1rem;
           display: flex;

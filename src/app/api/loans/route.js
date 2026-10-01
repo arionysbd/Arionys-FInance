@@ -3,7 +3,6 @@ import dbConnect from '@/lib/db';
 import EmployeeLoan from '@/models/EmployeeLoan';
 import Employee from '@/models/Employee';
 import Company from '@/models/Company';
-import Transaction from '@/models/Transaction';
 import Account from '@/models/Account';
 import AuditLog from '@/models/AuditLog';
 import Notification from '@/models/Notification';
@@ -83,28 +82,54 @@ export async function POST(req) {
     const companyId = authUser.companyId;
     if (!companyId) return NextResponse.json({ success: false, message: 'Company required.' }, { status: 400 });
 
-    const allowedRoles = ['owner', 'admin', 'ceo', 'cfo', 'accountant', 'viewer', 'employee']; // basically anyone authenticated
-    if (!allowedRoles.includes(authUser.role?.toLowerCase())) {
-      return NextResponse.json({ success: false, message: 'Insufficient permissions.' }, { status: 403 });
-    }
-
     let body = await req.json();
-    let { employeeId, paidFromAccount, amount, startDate, endDate, notes } = body;
+    let { employeeId, paidFromAccount, amount, startDate, endDate, notes, type = 'request' } = body;
 
-    const ROLE_POWER = { owner: 6, admin: 5, ceo: 4, cfo: 3, csuit: 2, accountant: 1, viewer: 0 };
-    const power = ROLE_POWER[authUser.role?.toLowerCase()] ?? 0;
-    
-    // If the user is an employee (viewer/low power), force the employeeId to be their own
-    if (power === 0) {
-      const empRecord = await Employee.findOne({ userId: authUser._id }).lean();
-      if (!empRecord) {
-        return NextResponse.json({ success: false, message: 'Employee record not found for your account.' }, { status: 403 });
-      }
-      employeeId = empRecord._id;
+    if (!['request', 'create'].includes(type)) {
+      return NextResponse.json({ success: false, message: 'Invalid loan type.' }, { status: 400 });
     }
 
-    if (!employeeId || !amount || !startDate || !endDate) {
-      return NextResponse.json({ success: false, message: 'Employee, amount, start date, and end date are required.' }, { status: 400 });
+    // Loan request: any member, always for themselves.
+    // Create loan: only CEO, CFO and Admin (and the Owner above them), for a chosen employee.
+    const isSelfRequest = type === 'request';
+    const LOAN_CREATOR_ROLES = ['owner', 'admin', 'ceo', 'cfo'];
+
+    if (!isSelfRequest && !LOAN_CREATOR_ROLES.includes(authUser.role?.toLowerCase())) {
+      return NextResponse.json({ success: false, message: 'Only CEO, CFO or Admin can create loans. Please submit a loan request instead.' }, { status: 403 });
+    }
+
+    if (isSelfRequest) {
+      // Requesters never choose the source account; approvers pick it at disbursement
+      paidFromAccount = undefined;
+      if (!notes?.trim()) {
+        return NextResponse.json({ success: false, message: 'Please provide a reason for the loan request.' }, { status: 400 });
+      }
+
+      let ownRecord = await Employee.findOne({
+        companyId,
+        $or: [{ userId: authUser._id }, { email: authUser.email?.toLowerCase() }],
+      });
+      // Owners/admins are not auto-synced into the directory, so create their record on first request
+      if (!ownRecord) {
+        ownRecord = await Employee.create({
+          fullName: authUser.name || authUser.email,
+          email: authUser.email.toLowerCase(),
+          phone: authUser.phone || '',
+          companyId,
+          userId: authUser._id,
+          createdBy: authUser._id,
+          status: 'active',
+        });
+      }
+      employeeId = ownRecord._id;
+    }
+
+    if (!employeeId) {
+      return NextResponse.json({ success: false, message: 'Please select an employee.' }, { status: 400 });
+    }
+
+    if (!amount || !startDate || !endDate) {
+      return NextResponse.json({ success: false, message: 'Amount, start date, and end date are required.' }, { status: 400 });
     }
 
     if (Number(amount) <= 0) {
@@ -136,6 +161,10 @@ export async function POST(req) {
     const diffMs = end - start;
     const diffMonths = diffMs / (1000 * 60 * 60 * 24 * 30.44);
 
+    if (end <= start) {
+      return NextResponse.json({ success: false, message: 'End date must be after start date.' }, { status: 400 });
+    }
+
     if (diffMonths > maxMonths) {
       return NextResponse.json({
         success: false,
@@ -143,18 +172,18 @@ export async function POST(req) {
       }, { status: 400 });
     }
 
-    if (end <= start) {
-      return NextResponse.json({ success: false, message: 'End date must be after start date.' }, { status: 400 });
+    // Source account is optional at request time; it can be chosen when the loan is disbursed
+    if (paidFromAccount) {
+      const account = await Account.findOne({ _id: paidFromAccount, companyId });
+      if (!account) {
+        return NextResponse.json({ success: false, message: 'Account not found.' }, { status: 404 });
+      }
+    } else {
+      paidFromAccount = undefined;
     }
 
-    // Validate account belongs to this company
-    const account = await Account.findOne({ _id: paidFromAccount, companyId });
-    if (!account) {
-      return NextResponse.json({ success: false, message: 'Account not found.' }, { status: 404 });
-    }
-
-    const requireApproval = policy.requireApproval !== false;
-    const initialStatus = requireApproval ? 'pending_approval' : 'approved';
+    // Every loan waits in Pending Approvals, same as transactions
+    const initialStatus = 'pending_approval';
 
     const loan = await EmployeeLoan.create([{
       companyId,
@@ -170,36 +199,9 @@ export async function POST(req) {
       outstandingAmount: Number(amount),
       totalRepaid: 0,
       notes,
+      origin: isSelfRequest ? 'request' : 'issued',
       createdBy: authUser._id,
     }], { session });
-
-    // If no approval required, immediately disburse
-    let disbursementTx = null;
-    if (!requireApproval) {
-      disbursementTx = await Transaction.create([{
-        type: 'loan_disbursement',
-        account: paidFromAccount,
-        amount: Number(amount),
-        currency: company?.currency || 'BDT',
-        description: `Employee loan disbursement — ${employee.fullName}`,
-        performedBy: authUser.name,
-        createdBy: authUser._id,
-        companyId,
-        status: 'approved',
-        approvedBy: authUser._id,
-        date: new Date(startDate),
-        loanId: loan[0]._id,
-        category: 'employee_loan',
-      }], { session });
-
-      await EmployeeLoan.findByIdAndUpdate(loan[0]._id, {
-        status: 'active',
-        disbursedAt: new Date(),
-        approvedBy: authUser._id,
-        approvedAt: new Date(),
-        disbursementTransactionId: disbursementTx[0]._id,
-      }, { session });
-    }
 
     await session.commitTransaction();
     session.endSession();
@@ -209,7 +211,7 @@ export async function POST(req) {
       companyId,
       userId: authUser._id,
       actorName: authUser.name,
-      action: 'created_loan',
+      action: isSelfRequest ? 'requested_loan' : 'created_loan',
       entity: 'loan',
       entityId: loan[0]._id,
       entityLabel: `${employee.fullName} — ${company?.currency || 'BDT'} ${Number(amount).toLocaleString()}`,
@@ -220,8 +222,10 @@ export async function POST(req) {
     await Notification.create({
       companyId,
       type: 'loan_created',
-      title: 'New Employee Loan Created',
-      message: `A loan of ${company?.currency || 'BDT'} ${Number(amount).toLocaleString()} was created for ${employee.fullName}.`,
+      title: isSelfRequest ? 'New Loan Request' : 'New Employee Loan Created',
+      message: isSelfRequest
+        ? `${employee.fullName} requested a loan of ${company?.currency || 'BDT'} ${Number(amount).toLocaleString()}. Awaiting approval.`
+        : `A loan of ${company?.currency || 'BDT'} ${Number(amount).toLocaleString()} was created for ${employee.fullName}. Awaiting approval.`,
       relatedEntity: 'loan',
       relatedId: loan[0]._id,
     });

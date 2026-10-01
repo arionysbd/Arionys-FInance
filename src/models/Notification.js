@@ -21,6 +21,7 @@ const notificationSchema = new mongoose.Schema({
       'loan_overdue',
       'loan_created',
       'loan_approved',
+      'loan_rejected',
       'loan_repayment',
       'loan_completed',
       'large_transaction',
