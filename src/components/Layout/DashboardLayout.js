@@ -15,7 +15,10 @@ import {
   Banknote,
   Menu,
   X,
-  Bell
+  Bell,
+  Clock,
+  History,
+  Landmark
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
@@ -116,9 +119,9 @@ export default function DashboardLayout({ children }) {
   const navItems = [
     { id: 'dashboard',    label: 'Dashboard',          icon: <Home size={22} />,  href: '/dashboard',           roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
     { id: 'create-tx',   label: 'Create Transaction',  icon: <ArrowRightLeft size={22} />,       href: '/transactions/create', roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
-    { id: 'pending',     label: 'Pending Approvals',   icon: <img src="/icons/nav-pending.png" alt="" className="nav-img-icon" />,   href: '/pending',             roles: ['owner', 'admin', 'ceo', 'cfo'], showBadge: true },
-    { id: 'transactions',label: 'Transaction History',  icon: <img src="/icons/nav-history.png" alt="" className="nav-img-icon" />,   href: '/transactions',        roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
-    { id: 'accounts',    label: 'Accounts',             icon: <img src="/icons/nav-accounts.png" alt="" className="nav-img-icon" />,  href: '/accounts',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+    { id: 'pending',     label: 'Pending Approvals',   icon: <Clock size={22} />,   href: '/pending',             roles: ['owner', 'admin', 'ceo', 'cfo'], showBadge: true },
+    { id: 'transactions',label: 'Transaction History',  icon: <History size={22} />,   href: '/transactions',        roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+    { id: 'accounts',    label: 'Accounts',             icon: <Landmark size={22} />,  href: '/accounts',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
     { id: 'loans',       label: 'Loans',                icon: <Banknote size={22} />, href: '/loans',     roles: ['owner', 'admin', 'ceo', 'cfo', 'accountant'] },
     { id: 'reports',     label: 'Financial Reports',    icon: <PieChart size={22} />, href: '/reports',   roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit'] },
     { id: 'business-administration', label: 'Business Settings', icon: <SlidersHorizontal size={22} />, href: '/business-administration', roles: ['owner', 'admin'] },
