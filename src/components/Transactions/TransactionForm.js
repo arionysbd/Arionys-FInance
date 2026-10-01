@@ -59,6 +59,12 @@ export default function TransactionForm({ onTransactionAdded }) {
   };
 
   const handleSelectOption = (name, value) => {
+    if (name === 'type' && value === 'loan_disbursal') {
+      // Redirect to the dedicated loans page to handle employee loan requests
+      window.location.href = '/loans';
+      return;
+    }
+
     if (name === 'performedBy') {
       if (value === 'other') {
         setIsOther(true);
@@ -119,10 +125,11 @@ export default function TransactionForm({ onTransactionAdded }) {
   };
 
   const typeOptions = [
-    { value: 'revenue', label: 'Revenue/Income', icon: <ArrowUpRight size={16} className="text-tx-revenue" /> },
-    { value: 'expense', label: 'Expense', icon: <TrendingDown size={16} className="text-tx-expense" /> },
+    { value: 'revenue', label: 'Inflow', icon: <ArrowUpRight size={16} className="text-tx-revenue" /> },
+    { value: 'expense', label: 'Outflow', icon: <TrendingDown size={16} className="text-tx-expense" /> },
     { value: 'investment', label: 'Investment', icon: <Wallet size={16} className="text-tx-investment" /> },
-    { value: 'transfer', label: 'Transfer', icon: <ArrowRightLeft size={16} style={{ color: '#8b5cf6' }} /> }
+    { value: 'transfer', label: 'Transfer', icon: <ArrowRightLeft size={16} style={{ color: '#8b5cf6' }} /> },
+    { value: 'loan_disbursal', label: 'Loan Disbursal', icon: <CreditCard size={16} style={{ color: '#eab308' }} /> }
   ];
 
   const attributionOptions = [

@@ -24,6 +24,8 @@ export async function PATCH(req, { params }) {
     }
 
     const { id } = await params;
+    const { paidFromAccount } = await req.json().catch(() => ({}));
+
     const loan = await EmployeeLoan.findOne({ _id: id, companyId: authUser.companyId }).session(session);
     
     if (!loan) {
@@ -35,9 +37,17 @@ export async function PATCH(req, { params }) {
     }
 
     // Verify account exists
-    const account = await Account.findOne({ _id: loan.paidFromAccount, companyId: authUser.companyId });
+    const accountId = paidFromAccount || loan.paidFromAccount;
+    if (!accountId) {
+      return NextResponse.json({ success: false, message: 'Source account not provided and not set on loan.' }, { status: 400 });
+    }
+    const account = await Account.findOne({ _id: accountId, companyId: authUser.companyId });
     if (!account) {
         return NextResponse.json({ success: false, message: 'Source account not found.' }, { status: 404 });
+    }
+
+    if (paidFromAccount && !loan.paidFromAccount) {
+      loan.paidFromAccount = paidFromAccount;
     }
 
     // Create the disbursement transaction

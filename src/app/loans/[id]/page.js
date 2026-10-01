@@ -19,6 +19,7 @@ export default function LoanDetailsPage() {
   
   const [isApproving, setIsApproving] = useState(false);
   const [isDisbursing, setIsDisbursing] = useState(false);
+  const [disburseAccount, setDisburseAccount] = useState('');
   
   const [showRepayModal, setShowRepayModal] = useState(false);
   const [isSubmittingRepayment, setIsSubmittingRepayment] = useState(false);
@@ -43,12 +44,14 @@ export default function LoanDetailsPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [loanRes, repRes] = await Promise.all([
+      const [loanRes, repRes, accRes] = await Promise.all([
           getLoan(id),
-          getLoanRepayments(id)
+          getLoanRepayments(id),
+          getAccounts()
       ]);
       if (loanRes.success) setLoan(loanRes.data);
       if (repRes.success) setRepayments(repRes.data);
+      if (accRes.success) setAccounts(accRes.data);
     } catch (err) {
       setError('Failed to load loan details.');
       console.error(err);
@@ -73,11 +76,15 @@ export default function LoanDetailsPage() {
   }
 
   const handleDisburse = async () => {
+      if (!loan.paidFromAccount && !disburseAccount) {
+          alert('Please select a source account to disburse from.');
+          return;
+      }
       if (!window.confirm("Disburse this loan? This will deduct the amount from the selected source account.")) return;
       setIsDisbursing(true);
       setError('');
       try {
-          const res = await disburseLoan(id);
+          const res = await disburseLoan(id, { paidFromAccount: disburseAccount });
           if (res.success) fetchData();
           else setError(res.message);
       } catch(err) {
@@ -167,9 +174,24 @@ export default function LoanDetailsPage() {
                     </button>
                 )}
                 {loan.status === 'approved' && canApprove && (
-                    <button onClick={handleDisburse} disabled={isDisbursing} className="btn btn-primary">
-                        {isDisbursing ? <Loader2 size={16} className="spinner" /> : <><ArrowRightLeft size={16}/> Disburse Loan</>}
-                    </button>
+                    <div className="flex gap-2 items-center">
+                        {!loan.paidFromAccount && (
+                            <select 
+                                className="input-field" 
+                                style={{ padding: '0.4rem', height: 'auto', minWidth: '150px' }} 
+                                value={disburseAccount} 
+                                onChange={(e) => setDisburseAccount(e.target.value)}
+                            >
+                                <option value="">Select Account...</option>
+                                {accounts.map(acc => (
+                                    <option key={acc._id} value={acc._id}>{acc.bankName} - {acc.acName || 'Cash'}</option>
+                                ))}
+                            </select>
+                        )}
+                        <button onClick={handleDisburse} disabled={isDisbursing} className="btn btn-primary">
+                            {isDisbursing ? <Loader2 size={16} className="spinner" /> : <><ArrowRightLeft size={16}/> Disburse Loan</>}
+                        </button>
+                    </div>
                 )}
                 {isActive && canManage && (
                     <button onClick={openRepayModal} className="btn btn-primary">

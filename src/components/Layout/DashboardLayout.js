@@ -122,7 +122,7 @@ export default function DashboardLayout({ children }) {
     { id: 'pending',     label: 'Pending Approvals',   icon: <Clock size={22} />,   href: '/pending',             roles: ['owner', 'admin', 'ceo', 'cfo'], showBadge: true },
     { id: 'transactions',label: 'Transaction History',  icon: <History size={22} />,   href: '/transactions',        roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
     { id: 'accounts',    label: 'Accounts',             icon: <Landmark size={22} />,  href: '/accounts',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
-    { id: 'loans',       label: 'Loans',                icon: <Banknote size={22} />, href: '/loans',     roles: ['owner', 'admin', 'ceo', 'cfo', 'accountant'] },
+    { id: 'loans',       label: 'Loans',                icon: <Banknote size={22} />, href: '/loans',     roles: ['owner', 'admin', 'ceo', 'cfo', 'accountant', 'viewer'] },
     { id: 'reports',     label: 'Financial Reports',    icon: <PieChart size={22} />, href: '/reports',   roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit'] },
     { id: 'business-administration', label: 'Business Administration', icon: <SlidersHorizontal size={22} />, href: '/business-administration', roles: ['owner', 'admin', 'ceo', 'cfo'] },
     { id: 'employees',   label: 'Employees Directory',  icon: <UserIcon size={22} />, href: '/employees', roles: ['owner', 'admin', 'ceo', 'cfo'] },

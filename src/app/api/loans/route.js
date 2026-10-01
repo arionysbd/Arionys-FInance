@@ -83,16 +83,28 @@ export async function POST(req) {
     const companyId = authUser.companyId;
     if (!companyId) return NextResponse.json({ success: false, message: 'Company required.' }, { status: 400 });
 
-    const allowedRoles = ['owner', 'admin', 'ceo', 'cfo'];
+    const allowedRoles = ['owner', 'admin', 'ceo', 'cfo', 'accountant', 'viewer', 'employee']; // basically anyone authenticated
     if (!allowedRoles.includes(authUser.role?.toLowerCase())) {
-      return NextResponse.json({ success: false, message: 'Insufficient permissions to create loans.' }, { status: 403 });
+      return NextResponse.json({ success: false, message: 'Insufficient permissions.' }, { status: 403 });
     }
 
-    const body = await req.json();
-    const { employeeId, paidFromAccount, amount, startDate, endDate, notes } = body;
+    let body = await req.json();
+    let { employeeId, paidFromAccount, amount, startDate, endDate, notes } = body;
 
-    if (!employeeId || !paidFromAccount || !amount || !startDate || !endDate) {
-      return NextResponse.json({ success: false, message: 'Employee, account, amount, start date, and end date are required.' }, { status: 400 });
+    const ROLE_POWER = { owner: 6, admin: 5, ceo: 4, cfo: 3, csuit: 2, accountant: 1, viewer: 0 };
+    const power = ROLE_POWER[authUser.role?.toLowerCase()] ?? 0;
+    
+    // If the user is an employee (viewer/low power), force the employeeId to be their own
+    if (power === 0) {
+      const empRecord = await Employee.findOne({ userId: authUser._id }).lean();
+      if (!empRecord) {
+        return NextResponse.json({ success: false, message: 'Employee record not found for your account.' }, { status: 403 });
+      }
+      employeeId = empRecord._id;
+    }
+
+    if (!employeeId || !amount || !startDate || !endDate) {
+      return NextResponse.json({ success: false, message: 'Employee, amount, start date, and end date are required.' }, { status: 400 });
     }
 
     if (Number(amount) <= 0) {

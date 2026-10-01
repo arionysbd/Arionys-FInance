@@ -28,7 +28,7 @@ const loanSchema = new mongoose.Schema({
   paidFromAccount: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Account',
-    required: true,
+    required: false,
   },
 
   startDate: { type: Date, required: true },

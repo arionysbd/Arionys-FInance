@@ -120,8 +120,8 @@ export const approveLoan = async (id) => {
   return data;
 };
 
-export const disburseLoan = async (id) => {
-  const { data } = await api.patch(`/loans/${id}/disburse`);
+export const disburseLoan = async (id, payload = {}) => {
+  const { data } = await api.patch(`/loans/${id}/disburse`, payload);
   return data;
 };
 

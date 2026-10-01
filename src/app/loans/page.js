@@ -29,7 +29,7 @@ export default function LoansPage() {
     notes: '',
   });
 
-  const canCreate = ['owner', 'admin', 'ceo', 'cfo'].includes(user?.role?.toLowerCase());
+  const isAdmin = ['owner', 'admin', 'ceo', 'cfo'].includes(user?.role?.toLowerCase());
 
   useEffect(() => {
     if (authLoading) return;
@@ -114,11 +114,9 @@ export default function LoansPage() {
                 <h2>Employee Loans</h2>
                 <p className="text-muted">Manage advances and loans for your staff</p>
             </div>
-            {canCreate && (
-                <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-                    <Plus size={18} /> New Loan
-                </button>
-            )}
+            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+                <Plus size={18} /> {isAdmin ? 'New Loan' : 'Request Loan'}
+            </button>
         </div>
 
         <div className="card controls-card">
@@ -201,11 +199,9 @@ export default function LoansPage() {
                         <Banknote size={48} className="empty-icon" />
                         <h3>No loans found</h3>
                         <p className="text-muted">You haven't issued any employee loans yet.</p>
-                        {canCreate && (
-                             <button className="btn btn-primary" style={{marginTop: '1rem'}} onClick={() => setShowModal(true)}>
-                                <Plus size={18} /> Create First Loan
-                            </button>
-                        )}
+                        <button className="btn btn-primary" style={{marginTop: '1rem'}} onClick={() => setShowModal(true)}>
+                            <Plus size={18} /> {isAdmin ? 'Create First Loan' : 'Request First Loan'}
+                        </button>
                     </div>
                 )}
             </div>
@@ -220,31 +216,35 @@ export default function LoansPage() {
                     </div>
                     {error && <div className="alert alert-danger">{error}</div>}
                     <form onSubmit={handleSubmit} className="modal-form">
-                        <div className="form-group">
-                            <label>Employee *</label>
-                            <select name="employeeId" className="input-field" required value={formData.employeeId} onChange={handleInputChange}>
-                                <option value="">Select Employee...</option>
-                                {employees.map(emp => (
-                                    <option key={emp._id} value={emp._id}>{emp.fullName} {emp.designation ? `(${emp.designation})` : ''}</option>
-                                ))}
-                            </select>
-                            {formData.employeeId && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    Limit: {formatCurrency(employees.find(e => e._id === formData.employeeId)?.loanLimit || 0)} 
-                                    (Salary: {formatCurrency(employees.find(e => e._id === formData.employeeId)?.salary || 0)})
-                                </p>
-                            )}
-                        </div>
-                        <div className="form-group">
-                            <label>Source Account (For Disbursement) *</label>
-                            <select name="paidFromAccount" className="input-field" required value={formData.paidFromAccount} onChange={handleInputChange}>
-                                <option value="">Select Account...</option>
-                                {accounts.map(acc => (
-                                    <option key={acc._id} value={acc._id}>{acc.bankName} - {acc.acName || 'Cash'} (Bal: {formatCurrency(acc.balance)})</option>
-                                ))}
-                            </select>
-                            <p className="text-xs text-muted-foreground mt-1">Funds will be deducted from this account when the loan is disbursed.</p>
-                        </div>
+                        {isAdmin && (
+                            <div className="form-group">
+                                <label>Employee *</label>
+                                <select name="employeeId" className="input-field" required value={formData.employeeId} onChange={handleInputChange}>
+                                    <option value="">Select Employee...</option>
+                                    {employees.map(emp => (
+                                        <option key={emp._id} value={emp._id}>{emp.fullName} {emp.designation ? `(${emp.designation})` : ''}</option>
+                                    ))}
+                                </select>
+                                {formData.employeeId && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Limit: {formatCurrency(employees.find(e => e._id === formData.employeeId)?.loanLimit || 0)} 
+                                        (Salary: {formatCurrency(employees.find(e => e._id === formData.employeeId)?.salary || 0)})
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                        {isAdmin && (
+                            <div className="form-group">
+                                <label>Source Account (For Disbursement) *</label>
+                                <select name="paidFromAccount" className="input-field" required value={formData.paidFromAccount} onChange={handleInputChange}>
+                                    <option value="">Select Account...</option>
+                                    {accounts.map(acc => (
+                                        <option key={acc._id} value={acc._id}>{acc.bankName} - {acc.acName || 'Cash'} (Bal: {formatCurrency(acc.balance)})</option>
+                                    ))}
+                                </select>
+                                <p className="text-xs text-muted-foreground mt-1">Funds will be deducted from this account when the loan is disbursed.</p>
+                            </div>
+                        )}
                         <div className="form-group">
                             <label>Loan Amount *</label>
                             <input type="number" step="0.01" min="1" name="amount" className="input-field" required value={formData.amount} onChange={handleInputChange} />
@@ -271,7 +271,7 @@ export default function LoansPage() {
                         <div className="modal-actions">
                             <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
                             <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                                {isSubmitting ? <Loader2 size={18} className="spinner" /> : 'Create Loan'}
+                                {isSubmitting ? <Loader2 size={18} className="spinner" /> : (isAdmin ? 'Create Loan' : 'Submit Request')}
                             </button>
                         </div>
                     </form>
