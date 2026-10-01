@@ -26,6 +26,8 @@ export default function CompanyMembers() {
     department: '',
     designation: '',
     joiningDate: '',
+    salary: '',
+    loanLimit: '',
     role: 'viewer',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -196,7 +198,7 @@ export default function CompanyMembers() {
         setShowCreateModal(false);
         setFormData({
             fullName: '', email: '', phone: '', employeeId: '',
-            department: '', designation: '', joiningDate: '', role: 'viewer'
+            department: '', designation: '', joiningDate: '', salary: '', loanLimit: '', role: 'viewer'
         });
         fetchUsers();
       } else {
@@ -222,6 +224,7 @@ export default function CompanyMembers() {
           </div>
           <div className="skeleton-col"><div className="skeleton-pill shim"></div></div>
           <div className="skeleton-col"><div className="skeleton-line shim w-40"></div></div>
+          <div className="skeleton-col"><div className="skeleton-line shim w-40"></div></div>
           <div className="skeleton-col"><div className="skeleton-actions shim"></div></div>
         </div>
       ))}
@@ -239,7 +242,7 @@ export default function CompanyMembers() {
               <p>Company profile and business access management</p>
             </div>
           </div>
-          {['owner', 'admin'].includes(currentUser?.role) && (
+          {['owner', 'admin', 'ceo', 'cfo'].includes(currentUser?.role?.toLowerCase()) && (
             <div className="page-actions">
               <button className="btn-create-user" onClick={() => setShowCreateModal(true)}>
                 <UserPlus size={16} />
@@ -350,6 +353,7 @@ export default function CompanyMembers() {
                     <tr>
                       <th>Employee Details</th>
                       <th>Work Info</th>
+                      <th>Financials</th>
                       <th>Role</th>
                       <th>Status</th>
                       <th>Actions</th>
@@ -370,6 +374,13 @@ export default function CompanyMembers() {
                           <div className="work-info-cell">
                             {u.designation && <span className="designation">{u.designation}</span>}
                             {u.department && <span className="department">{u.department}</span>}
+                            {u.empIdString && <span className="emp-id" style={{fontSize: '0.7rem', color: '#94a3b8', fontWeight: 'bold', marginTop: '4px'}}>ID: {u.empIdString}</span>}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="financials-cell" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>Salary: <span style={{ color: '#0f172a', fontWeight: 700 }}>{u.salary > 0 ? u.salary.toLocaleString() : 'N/A'}</span></div>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>Limit: <span style={{ color: '#0f172a', fontWeight: 700 }}>{u.loanLimit > 0 ? u.loanLimit.toLocaleString() : 'N/A'}</span></div>
                           </div>
                         </td>
                         <td>
@@ -446,9 +457,16 @@ export default function CompanyMembers() {
                         <div className="m-info">
                           <span className="m-name">{u.fullName || u.name} {u._id === currentUser._id && <span className="self-badge">YOU</span>}</span>
                           <span className="m-email">{u.email}</span>
-                          {(u.designation || u.department) && (
-                            <span className="m-work-info">{u.designation} {u.department ? ` • ${u.department}` : ''}</span>
+                          {(u.designation || u.department || u.empIdString) && (
+                            <span className="m-work-info">
+                              {u.empIdString ? `[${u.empIdString}] ` : ''}
+                              {u.designation} {u.department ? ` • ${u.department}` : ''}
+                            </span>
                           )}
+                          <div className="m-financials" style={{ marginTop: '0.5rem', display: 'flex', gap: '1rem', fontSize: '0.7rem', fontWeight: 600, color: '#64748b' }}>
+                            <span>Salary: <strong style={{ color: '#0f172a' }}>{u.salary > 0 ? u.salary.toLocaleString() : 'N/A'}</strong></span>
+                            <span>Limit: <strong style={{ color: '#0f172a' }}>{u.loanLimit > 0 ? u.loanLimit.toLocaleString() : 'N/A'}</strong></span>
+                          </div>
                         </div>
                       </div>
                       <div className="m-role-section">
@@ -641,6 +659,22 @@ export default function CompanyMembers() {
                     <div className="modal-input-wrap">
                       <Hash size={16} />
                       <input type="text" name="employeeId" placeholder="EMP-001" value={formData.employeeId} onChange={handleInputChange} />
+                    </div>
+                  </div>
+
+                  <div className="modal-field">
+                    <label>Monthly Salary</label>
+                    <div className="modal-input-wrap">
+                      <Calculator size={16} />
+                      <input type="number" min="0" name="salary" placeholder="50000" value={formData.salary} onChange={handleInputChange} />
+                    </div>
+                  </div>
+
+                  <div className="modal-field">
+                    <label>Max Loan Limit</label>
+                    <div className="modal-input-wrap">
+                      <Calculator size={16} />
+                      <input type="number" min="0" name="loanLimit" placeholder="100000" value={formData.loanLimit} onChange={handleInputChange} />
                     </div>
                   </div>
 

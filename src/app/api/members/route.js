@@ -37,6 +37,9 @@ export async function GET(req) {
         empIdString: emp?.employeeId || '',
         phone: emp?.phone || u.phone || '',
         empStatus: emp?.status || (u.isActive ? 'active' : 'inactive'),
+        salary: emp?.salary || 0,
+        loanLimit: emp?.loanLimit || 0,
+        joiningDate: emp?.joiningDate || null,
       });
       handledEmails.add(u.email.toLowerCase());
     }
@@ -55,6 +58,9 @@ export async function GET(req) {
           empIdString: emp.employeeId,
           phone: emp.phone,
           empStatus: emp.status,
+          salary: emp.salary || 0,
+          loanLimit: emp.loanLimit || 0,
+          joiningDate: emp.joiningDate || null,
           role: 'pending_invite',
           isActive: false,
         });

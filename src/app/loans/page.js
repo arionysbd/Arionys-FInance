@@ -24,8 +24,8 @@ export default function LoansPage() {
     employeeId: '',
     paidFromAccount: '',
     amount: '',
-    startDate: '',
-    endDate: '',
+    startDate: new Date().toISOString().split('T')[0],
+    periodMonths: '',
     notes: '',
   });
 
@@ -79,10 +79,18 @@ export default function LoansPage() {
     setError('');
     setIsSubmitting(true);
     try {
-      const res = await createLoan(formData);
+      // Calculate End Date
+      let endDate = null;
+      if (formData.startDate && formData.periodMonths) {
+          const start = new Date(formData.startDate);
+          start.setMonth(start.getMonth() + parseInt(formData.periodMonths));
+          endDate = start.toISOString().split('T')[0];
+      }
+
+      const res = await createLoan({ ...formData, endDate });
       if (res.success) {
         setShowModal(false);
-        setFormData({ employeeId: '', paidFromAccount: '', amount: '', startDate: '', endDate: '', notes: '' });
+        setFormData({ employeeId: '', paidFromAccount: '', amount: '', startDate: new Date().toISOString().split('T')[0], periodMonths: '', notes: '' });
         fetchLoans();
       } else {
         setError(res.message);
@@ -220,6 +228,12 @@ export default function LoansPage() {
                                     <option key={emp._id} value={emp._id}>{emp.fullName} {emp.designation ? `(${emp.designation})` : ''}</option>
                                 ))}
                             </select>
+                            {formData.employeeId && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Limit: {formatCurrency(employees.find(e => e._id === formData.employeeId)?.loanLimit || 0)} 
+                                    (Salary: {formatCurrency(employees.find(e => e._id === formData.employeeId)?.salary || 0)})
+                                </p>
+                            )}
                         </div>
                         <div className="form-group">
                             <label>Source Account (For Disbursement) *</label>
@@ -241,8 +255,13 @@ export default function LoansPage() {
                                 <input type="date" name="startDate" className="input-field" required value={formData.startDate} onChange={handleInputChange} />
                             </div>
                             <div className="form-group">
-                                <label>End Date *</label>
-                                <input type="date" name="endDate" className="input-field" required value={formData.endDate} onChange={handleInputChange} />
+                                <label>Period (Months) *</label>
+                                <select name="periodMonths" className="input-field" required value={formData.periodMonths} onChange={handleInputChange}>
+                                    <option value="">Select duration...</option>
+                                    {[3, 6, 9, 12, 18, 24, 36].map(m => (
+                                        <option key={m} value={m}>{m} Months</option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
                         <div className="form-group">

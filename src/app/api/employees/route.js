@@ -64,7 +64,8 @@ export async function POST(req) {
     const body = await req.json();
     const {
       fullName, email, phone, employeeId, department,
-      designation, joiningDate, notes, role = 'viewer'
+      designation, joiningDate, notes, role = 'viewer',
+      salary, loanLimit
     } = body;
 
     if (!fullName || !email) {
@@ -98,6 +99,8 @@ export async function POST(req) {
       department,
       designation,
       joiningDate: joiningDate ? new Date(joiningDate) : null,
+      salary: Number(salary) || 0,
+      loanLimit: Number(loanLimit) || 0,
       notes,
       companyId,
       createdBy: authUser._id,
