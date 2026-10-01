@@ -201,7 +201,7 @@ export default function CompanyMembers() {
   const canEditAccess = isOwner(currentUser);
 
   const accessSummary = (keys = []) =>
-    PERMISSIONS.filter(p => keys.includes(p.key)).map(p => p.label).join(', ') || 'No pages';
+    PERMISSIONS.filter(p => keys.includes(p.key)).map(p => p.label).join(', ') || 'No access';
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -308,7 +308,7 @@ export default function CompanyMembers() {
                                                         title={accessSummary(u.permissions)}
                           >
                             <span className="access-count">{u.permissions?.length || 0}</span>
-                            <span>{(u.permissions?.length || 0) === 1 ? 'page' : 'pages'}</span>
+                            <span>access</span>
                             {canEditAccess && canManage(u) && <Pencil size={12} className="access-edit" />}
                             </button>
                         </td>
@@ -472,7 +472,7 @@ export default function CompanyMembers() {
                             <>
                               {showAccess && (
                               <div className="m-foot-row">
-                                <span className="m-foot-label">Pages</span>
+                                <span className="m-foot-label">Access</span>
                                 <button
                                   type="button"
                                   className="access-cell"
@@ -480,7 +480,7 @@ export default function CompanyMembers() {
                                                                     title={accessSummary(u.permissions)}
                                 >
                                   <span className="access-count">{u.permissions?.length || 0}</span>
-                                  <span>{(u.permissions?.length || 0) === 1 ? 'page' : 'pages'}</span>
+                                  <span>access</span>
                                   {canEditAccess && canManage(u) && <Pencil size={12} className="access-edit" />}
                             </button>
                               </div>
@@ -508,7 +508,7 @@ export default function CompanyMembers() {
                             <>
                               {showAccess && (
                               <div className="m-foot-row">
-                                <span className="m-foot-label">Pages</span>
+                                <span className="m-foot-label">Access</span>
                                 <button
                                   type="button"
                                   className="access-cell"
@@ -516,7 +516,7 @@ export default function CompanyMembers() {
                                                                     title={accessSummary(u.permissions)}
                                 >
                                   <span className="access-count">{u.permissions?.length || 0}</span>
-                                  <span>{(u.permissions?.length || 0) === 1 ? 'page' : 'pages'}</span>
+                                  <span>access</span>
                                   {canEditAccess && canManage(u) && <Pencil size={12} className="access-edit" />}
                             </button>
                               </div>
@@ -542,7 +542,7 @@ export default function CompanyMembers() {
             <div className="modal-card access-modal" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
                 <div>
-                  <h3>Page Access</h3>
+                  <h3>Access</h3>
                   <p>
                     {canEditAccess && canManage(accessEditor.member)
                       ? <>Choose which pages <strong>{accessEditor.member.fullName || accessEditor.member.name}</strong> can open. Everything else is hidden.</>

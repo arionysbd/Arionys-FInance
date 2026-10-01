@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import axios from 'axios';
-import { useAuth } from '@/context/AuthContext';
 import {
   Building2, User, Mail, Lock, Phone, Briefcase,
   Eye, EyeOff, CheckCircle, AlertCircle, Shield,
@@ -12,7 +11,6 @@ import {
 export default function InvitePage() {
   const { token } = useParams();
   const router = useRouter();
-  const { login } = useAuth();
 
   const [invite, setInvite] = useState(null);
   const [status, setStatus] = useState('loading'); // loading | valid | invalid | expired | used | success
@@ -62,7 +60,9 @@ export default function InvitePage() {
       if (data.success) {
         // The API returns { token, user }; the session expects a flat user object with its token
         setStatus('success');
-        setTimeout(() => login({ ...data.data.user, token: data.data.token }), 1200);
+        // Save the session, then do a full page load so every part of the app starts fresh with it
+        localStorage.setItem('arionys_user', JSON.stringify({ ...data.data.user, token: data.data.token }));
+        setTimeout(() => window.location.replace('/'), 1200);
       }
     } catch (err) {
       setFormError(err.response?.data?.message || 'Failed to create account. Please try again.');

@@ -347,11 +347,11 @@ export default function EmployeeDetailsPage() {
                             <div className="info-list">
                                 {showAccess && (
                                 <div className="info-row">
-                                    <div className="info-label"><ShieldCheck size={16}/> Pages</div>
+                                    <div className="info-label"><ShieldCheck size={16}/> Access</div>
                                     {!employee.account ? (
                                         <div className="info-value muted">No login account yet</div>
                                     ) : employee.account.isOwner ? (
-                                        <div className="info-value">Company Owner · all pages</div>
+                                        <div className="info-value">Company Owner · full access</div>
                                     ) : employee.account.permissions?.length ? (
                                         <div className="access-chips">
                                             {PERMISSIONS.filter(p => employee.account.permissions.includes(p.key)).map(p => (
@@ -359,7 +359,7 @@ export default function EmployeeDetailsPage() {
                                             ))}
                                         </div>
                                     ) : (
-                                        <div className="info-value muted">No pages</div>
+                                        <div className="info-value muted">No access</div>
                                     )}
                                 </div>
                                 )}

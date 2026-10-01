@@ -478,16 +478,16 @@ select.input-field {
 }
 
 @media (max-width: 640px) {
+  /* Phones: a centred card with space around it and all four corners rounded */
   .modal-overlay,
-  .overlay { align-items: flex-end; padding: 0; }
+  .overlay { align-items: center; padding: 1rem; }
 
   .modal-content,
   .modal-card,
   .overlay > .modal {
     max-width: none !important;
     width: 100% !important;
-    max-height: 92vh;
-    border-radius: 12px 12px 0 0;
-    border-bottom: none;
+    max-height: calc(100dvh - 2rem);
+    border-radius: 12px;
   }
 }

@@ -80,6 +80,10 @@ export default function RequestLoanPage() {
   };
 
   const pendingCount = requests.filter(r => r.status === 'pending_approval').length;
+  // Money currently owed on loans that have been paid out
+  const outstanding = requests
+    .filter(r => ['active', 'partially_repaid', 'overdue'].includes(r.status))
+    .reduce((sum, r) => sum + (r.outstandingAmount || 0), 0);
 
   return (
     <DashboardLayout>
@@ -101,9 +105,22 @@ export default function RequestLoanPage() {
               <span className="requester-label">Requesting as</span>
               <span className="requester-name">{profile?.fullName || user?.name}</span>
               <span className="requester-email">{profile?.email || user?.email}</span>
-              {profile?.loanLimit > 0 && (
-                <span className="requester-limit">Max loan limit: {formatMoney(profile.loanLimit)}</span>
-              )}
+              <div className="limit-strip">
+                <div>
+                  <span className="limit-label">Loan limit</span>
+                  <span className="limit-value">{profile?.loanLimit > 0 ? formatMoney(profile.loanLimit) : 'Not set'}</span>
+                </div>
+                <div>
+                  <span className="limit-label">Outstanding</span>
+                  <span className="limit-value">{formatMoney(outstanding)}</span>
+                </div>
+                <div>
+                  <span className="limit-label">Available</span>
+                  <span className={`limit-value ${profile?.loanLimit > 0 ? 'accent' : ''}`}>
+                    {profile?.loanLimit > 0 ? formatMoney(Math.max(profile.loanLimit - outstanding, 0)) : '—'}
+                  </span>
+                </div>
+              </div>
             </div>
 
             {error && <div className="notice notice-error"><AlertCircle size={16} /> <span>{error}</span></div>}
@@ -195,7 +212,11 @@ export default function RequestLoanPage() {
         .requester-label { font-size: 0.6875rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; }
         .requester-name { font-size: 0.9375rem; font-weight: 700; color: #0f172a; }
         .requester-email { font-size: 0.8125rem; color: #64748b; }
-        .requester-limit { margin-top: 0.375rem; font-size: 0.8125rem; font-weight: 600; color: #4338ca; }
+        .limit-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e2e8f0; }
+        .limit-strip > div { display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; }
+        .limit-label { font-size: 0.6875rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; }
+        .limit-value { font-size: 0.9375rem; font-weight: 800; color: #0f172a; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .limit-value.accent { color: #4338ca; }
 
         .notice { display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 1.25rem; padding: 0.75rem 1rem; border-radius: 6px; font-size: 0.8125rem; font-weight: 600; }
         .notice-error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }

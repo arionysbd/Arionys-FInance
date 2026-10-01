@@ -2,11 +2,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import axios from 'axios';
-import { hasPermission } from '@/lib/permissions';
+import { hasPermission, canPickTransactionAccount } from '@/lib/permissions';
 import { FileText, Tag, Send, User, Wallet, ArrowUpRight, TrendingDown, DollarSign, ChevronDown, Check, ArrowRightLeft, CreditCard } from 'lucide-react';
 
 export default function TransactionForm({ onTransactionAdded }) {
   const { user } = useAuth();
+  // General employees only record Inflow/Outflow; the approver picks the bank account
+  const canPickAccount = canPickTransactionAccount(user);
   const [formData, setFormData] = useState({
     type: 'revenue',
     amount: '',
@@ -86,7 +88,7 @@ export default function TransactionForm({ onTransactionAdded }) {
     try {
       const finalPerformedBy = isOther ? formData.otherName : formData.performedBy;
       
-      if (!formData.account) {
+      if (canPickAccount && !formData.account) {
         alert('Please select an account');
         setLoading(false);
         return;
@@ -128,12 +130,14 @@ export default function TransactionForm({ onTransactionAdded }) {
   const typeOptions = [
     { value: 'revenue', label: 'Inflow', icon: <ArrowUpRight size={16} className="text-tx-revenue" /> },
     { value: 'expense', label: 'Outflow', icon: <TrendingDown size={16} className="text-tx-expense" /> },
+  ];
+  if (canPickAccount) typeOptions.push(
     { value: 'investment', label: 'Investment', icon: <Wallet size={16} className="text-tx-investment" /> },
     { value: 'transfer', label: 'Transfer', icon: <ArrowRightLeft size={16} style={{ color: '#8b5cf6' }} /> },
-    ...(hasPermission(user, 'loans', 'loan_request')
-      ? [{ value: 'loan_disbursal', label: hasPermission(user, 'loans') ? 'Loan Disbursal' : 'Request a Loan', icon: <CreditCard size={16} style={{ color: '#eab308' }} /> }]
+    ...(hasPermission(user, 'loans')
+      ? [{ value: 'loan_disbursal', label: 'Loan Disbursal', icon: <CreditCard size={16} style={{ color: '#eab308' }} /> }]
       : []),
-  ];
+  );
 
   const attributionOptions = [
     { value: user?.name, label: `${user?.name} (Self)`, icon: <User size={16} /> },
@@ -210,8 +214,8 @@ export default function TransactionForm({ onTransactionAdded }) {
             </div>
           </div>
 
-          {/* Account Selection */}
-          {formData.type !== 'transfer' ? (
+          {/* Account Selection (not shown to general employees; the approver chooses it) */}
+          {!canPickAccount ? null : formData.type !== 'transfer' ? (
             <div className="form-group">
               <label>Account <span style={{ color: '#ef4444' }}>*</span></label>
               <div className="custom-select-container">

@@ -192,7 +192,7 @@ export default function LoanDetailsPage() {
                                     placeholder="Select account..."
                                     value={disburseAccount}
                                     onChange={setDisburseAccount}
-                                    options={accounts.map(acc => ({ value: acc._id, label: `${acc.bankName} - ${acc.acName || 'Cash'}` }))}
+                                    options={accounts.map(acc => ({ value: acc._id, label: `${acc.bankName} (BDT ${Math.round(acc.balance || 0).toLocaleString()})`, subtext: acc.acName || undefined }))}
                                 />
                             </div>
                         )}

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { typeLabel } from '@/lib/transactionTypes';
 import dbConnect from '@/lib/db';
 import Transaction from '@/models/Transaction';
 import User from '@/models/User';
@@ -14,7 +15,7 @@ export async function POST(req) {
     const user = await getAuthUser(req);
     if (!user) return unauthorized();
 
-    const { transactionId, status } = await req.json();
+    const { transactionId, status, account } = await req.json();
     const userId = user._id;
 
     if (!['approved', 'rejected'].includes(status)) {
@@ -38,6 +39,20 @@ export async function POST(req) {
     // Only pending transactions can be reviewed; decisions are final
     if (transaction.status !== 'pending') {
       return NextResponse.json({ success: false, message: `This transaction was already ${transaction.status}.` }, { status: 409 });
+    }
+
+    // The approver chooses (or confirms) the bank account when approving a non-transfer transaction
+    if (status === 'approved' && transaction.type !== 'transfer') {
+      const accountId = account || transaction.account;
+      if (!accountId) {
+        return NextResponse.json({ success: false, message: 'Please choose the account for this transaction.' }, { status: 400 });
+      }
+      const Account = (await import('@/models/Account')).default;
+      const owned = await Account.exists({ _id: accountId, companyId: user.companyId });
+      if (!owned) {
+        return NextResponse.json({ success: false, message: 'Account not found.' }, { status: 404 });
+      }
+      transaction.account = accountId;
     }
 
     transaction.status = status; // approved or rejected
@@ -68,13 +83,13 @@ export async function POST(req) {
           await sendEmail({
             to: notifiable.email,
             subject: 'Transaction Approved Notification',
-            text: `A transaction of BDT ${transaction.amount} (${transaction.type}) has been approved by ${user.name}.`,
+            text: `A transaction of BDT ${transaction.amount} (${typeLabel(transaction.type)}) has been approved by ${user.name}.`,
             html: `
               <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 6px;">
                 <h2 style="color: #10b981;">Transaction Approved</h2>
                 <p>A transaction has been reviewed and approved:</p>
                 <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-                  <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Type:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${transaction.type.toUpperCase()}</td></tr>
+                  <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Type:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${typeLabel(transaction.type)}</td></tr>
                   <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Amount:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">BDT ${transaction.amount.toLocaleString()}</td></tr>
                   <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Performed By:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${transaction.performedBy || 'N/A'}</td></tr>
                   <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Description:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${transaction.description}</td></tr>

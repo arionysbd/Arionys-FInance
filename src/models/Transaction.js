@@ -14,10 +14,11 @@ const transactionSchema = new mongoose.Schema({
       'loan_disbursement', 'loan_repayment', 'adjustment',
     ],
   },
+  // Can be empty while pending: general employees don't pick a bank, the approver chooses it
   account: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Account',
-    required: true,
+    required: function () { return this.status === 'approved'; },
   },
   toAccount: {
     type: mongoose.Schema.Types.ObjectId,

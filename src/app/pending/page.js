@@ -1,14 +1,15 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { getTransactions, approveTransaction, getLoans, approveLoan } from '@/lib/api';
+import { getTransactions, approveTransaction, getLoans, approveLoan, getAccounts } from '@/lib/api';
+import CustomSelect from '@/components/UI/CustomSelect';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import { CheckCircle, XCircle, Loader2, ArrowUpRight, TrendingDown, Wallet, ArrowRightLeft, Banknote } from 'lucide-react';
 import Link from 'next/link';
 
 const TYPE_META = {
-  revenue: { icon: ArrowUpRight, label: 'Revenue' },
-  expense: { icon: TrendingDown, label: 'Expense' },
+  revenue: { icon: ArrowUpRight, label: 'Inflow' },
+  expense: { icon: TrendingDown, label: 'Outflow' },
   investment: { icon: Wallet, label: 'Investment' },
   transfer: { icon: ArrowRightLeft, label: 'Transfer' },
   loan: { icon: Banknote, label: 'Loan Request' },
@@ -21,15 +22,20 @@ export default function PendingApprovalsPage() {
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, transactionId: null, status: null, kind: 'transaction' });
+  const [accounts, setAccounts] = useState([]);
+  // Account chosen in the Approve popup (pre-filled with the one on the transaction, if any)
+  const [approveAccount, setApproveAccount] = useState('');
 
   const fetchPending = async () => {
     try {
-      const [txRes, loanRes] = await Promise.all([
+      const [txRes, loanRes, accRes] = await Promise.all([
         getTransactions({ status: 'pending', companyId: user.companyId }),
         getLoans({ status: 'pending_approval' }),
+        getAccounts().catch(() => null),
       ]);
       setTransactions(txRes.data);
       setLoans(loanRes.success ? loanRes.data : []);
+      if (accRes?.success) setAccounts(accRes.data);
     } catch (err) {
       console.error('Error fetching pending transactions:', err);
     } finally {
@@ -44,8 +50,14 @@ export default function PendingApprovalsPage() {
   }, [user]);
 
   const initiateAction = (transactionId, status, kind = 'transaction') => {
-    setConfirmDialog({ isOpen: true, transactionId, status, kind });
+    const tx = kind === 'transaction' ? transactions.find(t => t._id === transactionId) : null;
+    setApproveAccount(tx?.account?._id || '');
+    setConfirmDialog({ isOpen: true, transactionId, status, kind, txType: tx?.type });
   };
+
+  // Approving a (non-transfer) transaction requires choosing the bank account
+  const needsAccount = confirmDialog.isOpen && confirmDialog.kind === 'transaction'
+    && confirmDialog.status === 'approved' && confirmDialog.txType !== 'transfer';
 
   const handleAction = async () => {
     const { transactionId, status, kind } = confirmDialog;
@@ -59,7 +71,7 @@ export default function PendingApprovalsPage() {
         await approveTransaction({
           transactionId,
           status,
-          userId: user._id
+          ...(status === 'approved' && approveAccount ? { account: approveAccount } : {}),
         });
       }
       await fetchPending();
@@ -107,7 +119,7 @@ export default function PendingApprovalsPage() {
       id: tx._id,
       type: tx.type,
       description: tx.description,
-      account: tx.type === 'transfer'
+      account: !tx.account && tx.type !== 'transfer' ? 'Account chosen at approval' : tx.type === 'transfer'
         ? `From: ${tx.account?.bankName || 'N/A'} → To: ${tx.toAccount?.bankName || 'N/A'}`
         : tx.account?.bankName || 'N/A',
       amount: tx.amount,
@@ -302,10 +314,27 @@ export default function PendingApprovalsPage() {
       {confirmDialog.isOpen && (
         <div className="modal-overlay">
           <div className="modal-content animate-scale">
-            <h3 className="modal-title">Confirm Action</h3>
+            <h3 className="modal-title">{needsAccount ? 'Approve Transaction' : 'Confirm Action'}</h3>
             <p className="modal-message">
-              Are you sure you want to <strong>{confirmDialog.status === 'approved' ? 'approve' : 'reject'}</strong> this {confirmDialog.kind === 'loan' ? 'loan request' : 'transaction'}?
+              {needsAccount
+                ? 'Choose the bank account this transaction belongs to, then approve it.'
+                : <>Are you sure you want to <strong>{confirmDialog.status === 'approved' ? 'approve' : 'reject'}</strong> this {confirmDialog.kind === 'loan' ? 'loan request' : 'transaction'}?</>}
             </p>
+            {needsAccount && (
+              <div className="approve-account">
+                <label>Account</label>
+                <CustomSelect
+                  placeholder="Select account..."
+                  value={approveAccount}
+                  onChange={setApproveAccount}
+                  options={accounts.map(acc => ({
+                    value: acc._id,
+                    label: `${acc.bankName} (BDT ${Math.round(acc.balance || 0).toLocaleString()})`,
+                    subtext: acc.acName || undefined,
+                  }))}
+                />
+              </div>
+            )}
             <div className="modal-actions">
               <button 
                 className="btn-cancel" 
@@ -316,6 +345,7 @@ export default function PendingApprovalsPage() {
               <button 
                 className={`btn-confirm ${confirmDialog.status}`} 
                 onClick={handleAction}
+                disabled={needsAccount && !approveAccount}
               >
                 Yes, {confirmDialog.status === 'approved' ? 'Approve' : 'Reject'}
               </button>
@@ -567,7 +597,7 @@ export default function PendingApprovalsPage() {
         .premium-empty-state h4 { font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0 0 0.5rem 0; }
         .premium-empty-state p { font-size: 0.9375rem; color: #64748b; margin: 0; max-width: 400px; }
 
-        .modal-content { max-width: 400px; padding: 2rem; }
+        .modal-content { max-width: 460px; padding: 1.75rem; overflow: visible; }
         .animate-scale {
           animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
@@ -575,6 +605,9 @@ export default function PendingApprovalsPage() {
           from { opacity: 0; transform: scale(0.95); }
           to { opacity: 1; transform: scale(1); }
         }
+        .approve-account { display: flex; flex-direction: column; gap: 0.375rem; margin: 0 0 1.25rem; }
+        .approve-account label { font-size: 0.8125rem; font-weight: 600; color: #334155; }
+        .btn-confirm:disabled { opacity: 0.5; cursor: not-allowed; }
         .modal-message {
           color: #475569;
           font-size: 0.9375rem;

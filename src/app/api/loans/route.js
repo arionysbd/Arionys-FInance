@@ -43,9 +43,11 @@ export async function GET(req) {
       }
     }
     if (search) {
+      // Treat the search box as plain text, not a regular expression
+      const safeSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       query.$or = [
-        { employeeName: { $regex: search, $options: 'i' } },
-        { employeeEmail: { $regex: search, $options: 'i' } },
+        { employeeName: { $regex: safeSearch, $options: 'i' } },
+        { employeeEmail: { $regex: safeSearch, $options: 'i' } },
       ];
     }
 

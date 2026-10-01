@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Filter, CheckCircle, XCircle, Download, ChevronDown, Check, ArrowUpRight, TrendingDown, Wallet, ArrowRightLeft, Loader2 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { typeLabel } from '@/lib/transactionTypes';
 
 export default function TransactionHistory({ transactions, onUpdate, filterType, setFilterType, hasMore, loadingMore, onLoadMore }) {
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
@@ -60,7 +61,7 @@ export default function TransactionHistory({ transactions, onUpdate, filterType,
       return [
         new Date(tx.date).toLocaleDateString(),
         tx.description,
-        tx.type.toUpperCase(),
+        typeLabel(tx.type),
         `BDT ${tx.amount.toLocaleString()}\n${accountInfo}`,
         tx.performedBy || 'N/A',
         tx.createdBy?.name || 'System',
@@ -146,10 +147,10 @@ export default function TransactionHistory({ transactions, onUpdate, filterType,
     doc.text(`Total Investment:`, 15, finalY + 22);
     doc.text(`BDT ${totalInvestment.toLocaleString()}`, 60, finalY + 22, { align: 'right' });
 
-    doc.text(`Total Revenue:`, 15, finalY + 27);
+    doc.text(`Total Inflow:`, 15, finalY + 27);
     doc.text(`BDT ${totalRevenue.toLocaleString()}`, 60, finalY + 27, { align: 'right' });
 
-    doc.text(`Total Expense:`, 15, finalY + 32);
+    doc.text(`Total Outflow:`, 15, finalY + 32);
     doc.text(`BDT ${totalExpense.toLocaleString()}`, 60, finalY + 32, { align: 'right' });
 
     doc.setLineWidth(0.2);
@@ -164,8 +165,8 @@ export default function TransactionHistory({ transactions, onUpdate, filterType,
 
   const filterOptions = [
     { value: '', label: 'All Records', icon: <Filter size={14} /> },
-    { value: 'revenue', label: 'Revenue', icon: <ArrowUpRight size={14} className="text-tx-revenue" /> },
-    { value: 'expense', label: 'Expense', icon: <TrendingDown size={14} className="text-tx-expense" /> },
+    { value: 'revenue', label: 'Inflow', icon: <ArrowUpRight size={14} className="text-tx-revenue" /> },
+    { value: 'expense', label: 'Outflow', icon: <TrendingDown size={14} className="text-tx-expense" /> },
     { value: 'investment', label: 'Investment', icon: <Wallet size={14} className="text-tx-investment" /> },
     { value: 'transfer', label: 'Transfer', icon: <ArrowRightLeft size={14} style={{ color: '#8b5cf6' }} /> },
     { value: 'rejected', label: 'Rejected Items', icon: <XCircle size={14} className="text-danger" /> }
@@ -250,9 +251,9 @@ export default function TransactionHistory({ transactions, onUpdate, filterType,
             {showDownloadMenu && (
               <div className="download-menu animate-pop-in">
                 <button onClick={() => generatePDF('all')}>General Statement</button>
-                <button onClick={() => generatePDF('revenue')}>Revenue Statement</button>
+                <button onClick={() => generatePDF('revenue')}>Inflow Statement</button>
                 <button onClick={() => generatePDF('investment')}>Investment Statement</button>
-                <button onClick={() => generatePDF('expense')}>Expenses Statement</button>
+                <button onClick={() => generatePDF('expense')}>Outflow Statement</button>
                 <div className="menu-divider" />
                 <button onClick={() => generatePDF('rejected')} className="text-danger">Rejected Items</button>
               </div>
@@ -288,7 +289,7 @@ export default function TransactionHistory({ transactions, onUpdate, filterType,
                     {tx.type === 'expense' && <TrendingDown size={12} />}
                     {tx.type === 'investment' && <Wallet size={12} />}
                     {tx.type === 'transfer' && <ArrowRightLeft size={12} />}
-                    <span>{tx.type}</span>
+                    <span>{typeLabel(tx.type)}</span>
                   </div>
                 </td>
                 <td className="amount-cell-premium">
@@ -347,7 +348,7 @@ export default function TransactionHistory({ transactions, onUpdate, filterType,
           <article key={tx._id} className={`txm-card txm-${tx.type}`}>
             <header className="txm-top">
               <div className={`type-pill-minimal type-${tx.type}`}>
-                <span>{tx.type}</span>
+                <span>{typeLabel(tx.type)}</span>
               </div>
               <div className="txm-amount">
                 <span className="txm-cur">BDT</span>

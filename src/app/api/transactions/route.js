@@ -6,7 +6,8 @@ import Account from '@/models/Account';
 import AuditLog from '@/models/AuditLog';
 import { sendEmail } from '@/lib/mail';
 import { getAuthUser, unauthorized, forbidden } from '@/lib/auth';
-import { hasPermission } from '@/lib/permissions';
+import { hasPermission, canPickTransactionAccount } from '@/lib/permissions';
+import { typeLabel } from '@/lib/transactionTypes';
 
 export async function GET(req) {
   try {
@@ -65,7 +66,11 @@ export async function POST(req) {
     if (!hasPermission(authUser, 'create_transaction')) return forbidden('You do not have access to create transactions.');
 
     const body = await req.json();
-    const { type, amount, description, performedBy, account, toAccount } = body;
+    const { type, amount, description, performedBy } = body;
+    // General employees only record Inflow/Outflow and never choose the bank account
+    const isGeneral = !canPickTransactionAccount(authUser);
+    const account = isGeneral ? undefined : body.account;
+    const toAccount = isGeneral ? undefined : body.toAccount;
     // Identity and company come from the verified token, not the request body
     const userId = authUser._id;
     const companyId = authUser.companyId;
@@ -75,8 +80,9 @@ export async function POST(req) {
     }
 
     // Manually recorded transactions; loan disbursements/repayments are created by the loan flow
-    if (!['revenue', 'expense', 'investment', 'transfer'].includes(type)) {
-      return NextResponse.json({ success: false, message: 'Invalid transaction type.' }, { status: 400 });
+    const allowedTypes = isGeneral ? ['revenue', 'expense'] : ['revenue', 'expense', 'investment', 'transfer'];
+    if (!allowedTypes.includes(type)) {
+      return NextResponse.json({ success: false, message: isGeneral ? 'You can only record Inflow or Outflow.' : 'Invalid transaction type.' }, { status: 400 });
     }
 
     if (!(Number(amount) > 0)) {
@@ -87,7 +93,7 @@ export async function POST(req) {
       return NextResponse.json({ success: false, message: 'Description is required.' }, { status: 400 });
     }
 
-    if (!account) {
+    if (!isGeneral && !account) {
       return NextResponse.json({ success: false, message: 'Account selection is mandatory' }, { status: 400 });
     }
 
@@ -100,10 +106,12 @@ export async function POST(req) {
     }
 
     // Accounts must belong to the caller's company
-    const accountIds = type === 'transfer' ? [account, toAccount] : [account];
-    const ownedAccounts = await Account.countDocuments({ _id: { $in: accountIds }, companyId });
-    if (ownedAccounts !== accountIds.length) {
-      return NextResponse.json({ success: false, message: 'Account not found.' }, { status: 404 });
+    const accountIds = isGeneral ? [] : type === 'transfer' ? [account, toAccount] : [account];
+    if (accountIds.length) {
+      const ownedAccounts = await Account.countDocuments({ _id: { $in: accountIds }, companyId });
+      if (ownedAccounts !== accountIds.length) {
+        return NextResponse.json({ success: false, message: 'Account not found.' }, { status: 404 });
+      }
     }
 
     const transaction = await Transaction.create({
@@ -125,7 +133,7 @@ export async function POST(req) {
       action: 'created_transaction',
       entity: 'transaction',
       entityId: transaction._id,
-      entityLabel: `${type.toUpperCase()} transaction of ${amount} created`,
+      entityLabel: `${typeLabel(type)} transaction of ${amount} created`,
       newValue: { type, amount, status: 'pending' },
       ipAddress: req.headers.get('x-forwarded-for') || req.ip || '',
       userAgent: req.headers.get('user-agent') || ''
@@ -142,13 +150,13 @@ export async function POST(req) {
         await sendEmail({
           to: cfo.email,
           subject: 'Action Required: New Transaction Pending Approval',
-          text: `A new ${type} of BDT ${amount} was recorded by ${creator.name}. Description: ${description}`,
+          text: `A new ${typeLabel(type)} of BDT ${amount} was recorded by ${creator.name}. Description: ${description}`,
           html: `
             <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 6px;">
               <h2 style="color: #2563eb;">New Transaction Recorded</h2>
               <p>A new transaction requires your approval:</p>
               <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-                <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Type:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${type.toUpperCase()}</td></tr>
+                <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Type:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${typeLabel(type)}</td></tr>
                 <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Amount:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">BDT ${amount.toLocaleString()}</td></tr>
                 <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Performed By:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${performedBy}</td></tr>
                 <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Description:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${description}</td></tr>

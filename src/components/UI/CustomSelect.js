@@ -24,6 +24,8 @@ export default function CustomSelect({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  // Where the list opens: below by default, above when there isn't enough room (e.g. bottom sheets on phones)
+  const [placement, setPlacement] = useState({ up: false, maxHeight: 280 });
   const containerRef = useRef(null);
   const listRef = useRef(null);
   const autoId = useId();
@@ -51,6 +53,15 @@ export default function CustomSelect({
 
   const open = () => {
     if (disabled) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (rect) {
+      const margin = 12;
+      const spaceBelow = window.innerHeight - rect.bottom - margin;
+      const spaceAbove = rect.top - margin;
+      const wanted = Math.min(280, Math.max(options.length, 1) * 44 + 8);
+      const up = spaceBelow < wanted && spaceAbove > spaceBelow;
+      setPlacement({ up, maxHeight: Math.max(120, Math.min(280, up ? spaceAbove : spaceBelow)) });
+    }
     setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
     setIsOpen(true);
   };
@@ -121,7 +132,13 @@ export default function CustomSelect({
       />
 
       {isOpen && (
-        <ul className="cs-dropdown" role="listbox" id={listId} ref={listRef}>
+        <ul
+          className={`cs-dropdown ${placement.up ? 'up' : ''}`}
+          role="listbox"
+          id={listId}
+          ref={listRef}
+          style={{ maxHeight: placement.maxHeight }}
+        >
           {options.length === 0 ? (
             <li className="cs-empty">No options available</li>
           ) : (
@@ -204,7 +221,9 @@ export default function CustomSelect({
           box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.18), 0 2px 6px rgba(15, 23, 42, 0.05);
           animation: cs-in 0.12s ease-out;
         }
+        .cs-dropdown.up { top: auto; bottom: calc(100% + 4px); animation-name: cs-in-up; }
         @keyframes cs-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes cs-in-up { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
         .cs-empty { padding: 0.75rem; text-align: center; font-size: 0.8125rem; color: #94a3b8; }
 

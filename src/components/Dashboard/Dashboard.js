@@ -25,12 +25,15 @@ ChartJS.register(
 // (Total Transactions instead of Net Balance, Pending Approval instead of Investments, no account balances).
 export default function Dashboard({ stats, recentTransactions, user, variant = 'office' }) {
   const isPersonal = variant === 'personal';
+  // Personal dashboards only show Inflow and Outflow; the office dashboard also shows Investments
   const chartData = {
-    labels: ['Revenue', 'Expenses', 'Investments'],
+    labels: isPersonal ? ['Inflow', 'Outflow'] : ['Inflow', 'Outflow', 'Investments'],
     datasets: [
       {
         label: 'Amount (BDT)',
-        data: [stats.totalRevenue, stats.totalExpense, stats.totalInvestment],
+        data: isPersonal
+          ? [stats.totalRevenue, stats.totalExpense]
+          : [stats.totalRevenue, stats.totalExpense, stats.totalInvestment],
         backgroundColor: ['#10b981', '#ef4444', '#2563eb'],
         borderRadius: 4,
         maxBarThickness: 60,
@@ -77,80 +80,34 @@ export default function Dashboard({ stats, recentTransactions, user, variant = '
   return (
     <div className="animate-fade-in">
       <div className="grid-stats">
-        {isPersonal ? (
-          <div className="card stat-card">
-            <div className="stat-icon-bg" style={{ backgroundColor: '#eff6ff' }}>
-              <Receipt style={{ color: '#2563eb' }} size={20} />
-            </div>
-            <div className="stat-content">
-              <span className="stat-label">Total Transactions</span>
-              <div className="stat-value">{(stats.totalTransactions || 0).toLocaleString()}</div>
-            </div>
-          </div>
-        ) : (
-          <div className="card stat-card">
-            <div className="stat-icon-bg" style={{ backgroundColor: '#eff6ff' }}>
-              <Wallet style={{ color: '#2563eb' }} size={20} />
-            </div>
-            <div className="stat-content">
-              <span className="stat-label">Net Balance</span>
-              <div className="stat-value">
-                <span className="currency-label">BDT</span> {stats.netBalance.toLocaleString()}
-              </div>
-            </div>
-          </div>
-        )}
-
-            <div className="card stat-card">
-              <div className="stat-icon-bg" style={{ backgroundColor: '#ecfdf5' }}>
-                <TrendingUp style={{ color: '#10b981' }} size={20} />
+        {(isPersonal
+          ? ['inflow', 'outflow', 'pending', 'count']
+          : ['balance', 'inflow', 'outflow', 'investment']
+        ).map(key => {
+          const card = {
+            balance: { label: 'Net Balance', icon: Wallet, bg: '#eff6ff', fg: '#2563eb', value: stats.netBalance, money: true },
+            inflow: { label: 'Total Inflow', icon: TrendingUp, bg: '#ecfdf5', fg: '#10b981', value: stats.totalRevenue, money: true, tone: 'text-success' },
+            outflow: { label: 'Total Outflow', icon: TrendingDown, bg: '#fef2f2', fg: '#ef4444', value: stats.totalExpense, money: true, tone: 'text-danger' },
+            investment: { label: 'Investments', icon: PlusCircle, bg: '#f5f3ff', fg: '#8b5cf6', value: stats.totalInvestment, money: true, tone: 'text-accent' },
+            pending: { label: 'Pending Approval', icon: Clock, bg: '#fffbeb', fg: '#d97706', value: stats.pendingAmount, money: true, tone: 'text-warning', sub: `${stats.pendingCount || 0} awaiting review` },
+            count: { label: 'Total Transactions', icon: Receipt, bg: '#eff6ff', fg: '#2563eb', value: stats.totalTransactions, sub: 'Submitted by you' },
+          }[key];
+          const Icon = card.icon;
+          return (
+            <div key={key} className="card stat-card">
+              <div className="stat-icon-bg" style={{ backgroundColor: card.bg }}>
+                <Icon style={{ color: card.fg }} size={20} />
               </div>
               <div className="stat-content">
-                <span className="stat-label">Total Revenue</span>
-                <div className="stat-value text-success">
-                  <span className="currency-label">BDT</span> {stats.totalRevenue.toLocaleString()}
+                <span className="stat-label">{card.label}</span>
+                <div className={`stat-value ${card.tone || ''}`}>
+                  {card.money && <span className="currency-label">BDT</span>} {(card.value || 0).toLocaleString()}
                 </div>
+                {card.sub && <span className="stat-sub">{card.sub}</span>}
               </div>
             </div>
-
-            <div className="card stat-card">
-              <div className="stat-icon-bg" style={{ backgroundColor: '#fef2f2' }}>
-                <TrendingDown style={{ color: '#ef4444' }} size={20} />
-              </div>
-              <div className="stat-content">
-                <span className="stat-label">Total Expenses</span>
-                <div className="stat-value text-danger">
-                  <span className="currency-label">BDT</span> {stats.totalExpense.toLocaleString()}
-                </div>
-              </div>
-            </div>
-
-            {isPersonal ? (
-              <div className="card stat-card">
-                <div className="stat-icon-bg" style={{ backgroundColor: '#fffbeb' }}>
-                  <Clock style={{ color: '#d97706' }} size={20} />
-                </div>
-                <div className="stat-content">
-                  <span className="stat-label">Pending Approval</span>
-                  <div className="stat-value text-warning">
-                    <span className="currency-label">BDT</span> {(stats.pendingAmount || 0).toLocaleString()}
-                  </div>
-                  <span className="stat-sub">{stats.pendingCount || 0} awaiting review</span>
-                </div>
-              </div>
-            ) : (
-              <div className="card stat-card">
-                <div className="stat-icon-bg" style={{ backgroundColor: '#f5f3ff' }}>
-                  <PlusCircle style={{ color: '#8b5cf6' }} size={20} />
-                </div>
-                <div className="stat-content">
-                  <span className="stat-label">Investments</span>
-                  <div className="stat-value text-accent">
-                    <span className="currency-label">BDT</span> {stats.totalInvestment.toLocaleString()}
-                  </div>
-                </div>
-              </div>
-            )}
+          );
+        })}
       </div>
 
       {!isPersonal && stats.accountBalances && stats.accountBalances.length > 0 && (

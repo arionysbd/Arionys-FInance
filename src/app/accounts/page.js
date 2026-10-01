@@ -7,6 +7,7 @@ import { hasPermission } from '@/lib/permissions';
 import { Wallet, Plus, Copy, Check, X, Landmark, TrendingUp, TrendingDown, MoreVertical, Download } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { typeLabel } from '@/lib/transactionTypes';
 
 export default function AccountsPage() {
   const { user } = useAuth();
@@ -126,7 +127,7 @@ export default function AccountsPage() {
         return [
           new Date(tx.date).toLocaleDateString(),
           tx.description,
-          tx.type.toUpperCase(),
+          typeLabel(tx.type),
           `BDT ${tx.amount.toLocaleString()}\n${accountInfo}`,
           tx.performedBy || 'N/A',
           tx.createdBy?.name || 'System',
@@ -194,9 +195,9 @@ export default function AccountsPage() {
       doc.setFontSize(8); doc.setFont('helvetica', 'normal');
       doc.text('Total Investment:', 15, finalY + 22);
       doc.text(`BDT ${totalInvestment.toLocaleString()}`, 60, finalY + 22, { align: 'right' });
-      doc.text('Total Revenue:', 15, finalY + 27);
+      doc.text('Total Inflow:', 15, finalY + 27);
       doc.text(`BDT ${totalRevenue.toLocaleString()}`, 60, finalY + 27, { align: 'right' });
-      doc.text('Total Expense:', 15, finalY + 32);
+      doc.text('Total Outflow:', 15, finalY + 32);
       doc.text(`BDT ${totalExpense.toLocaleString()}`, 60, finalY + 32, { align: 'right' });
       doc.setLineWidth(0.2); doc.line(15, finalY + 34, 60, finalY + 34);
       doc.setFont('helvetica', 'bold');

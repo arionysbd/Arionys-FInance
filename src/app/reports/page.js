@@ -126,7 +126,7 @@ export default function ReportsPage() {
     labels: data?.chartData.map(d => new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) || [],
     datasets: [
       {
-        label: 'Revenue',
+        label: 'Inflow',
         data: data?.chartData.map(d => d.revenue) || [],
         borderColor: '#10b981',
         backgroundColor: 'rgba(16, 185, 129, 0.1)',
@@ -135,7 +135,7 @@ export default function ReportsPage() {
         fill: true
       },
       {
-        label: 'Expense',
+        label: 'Outflow',
         data: data?.chartData.map(d => d.expense) || [],
         borderColor: '#ef4444',
         backgroundColor: 'rgba(239, 68, 68, 0.05)',
@@ -196,14 +196,14 @@ export default function ReportsPage() {
                     <div className="metric-card">
                         <div className="m-icon-box bg-emerald-100 text-emerald-600"><TrendingUp size={24} /></div>
                         <div className="m-content">
-                            <span className="m-label">Total Revenue</span>
+                            <span className="m-label">Total Inflow</span>
                             <span className="m-value">{formatCurrency(data.metrics.totalRevenue)}</span>
                         </div>
                     </div>
                     <div className="metric-card">
                         <div className="m-icon-box bg-rose-100 text-rose-600"><TrendingDown size={24} /></div>
                         <div className="m-content">
-                            <span className="m-label">Total Expenses</span>
+                            <span className="m-label">Total Outflow</span>
                             <span className="m-value">{formatCurrency(data.metrics.totalExpense)}</span>
                         </div>
                     </div>
@@ -227,7 +227,7 @@ export default function ReportsPage() {
 
                 <div className="card chart-card">
                     <div className="chart-header">
-                        <h3>Revenue, Expenses &amp; Investments</h3>
+                        <h3>Inflow, Outflow &amp; Investments</h3>
                         <p className="text-muted">Cash flow overview for the selected period</p>
                     </div>
                     <div className="chart-container">

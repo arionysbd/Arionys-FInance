@@ -14,7 +14,7 @@ export const PERMISSIONS = [
   { key: 'accounts',           label: 'Accounts',            href: '/accounts',                group: 'Finance',      description: 'View and manage bank accounts' },
   { key: 'loans',              label: 'Loans',               href: '/loans',                   group: 'Finance',      description: 'View all loans, create loans and record repayments' },
   { key: 'loan_request',       label: 'Request Loan',        href: '/loans/request',           group: 'Finance',      description: 'Request a loan for themselves' },
-  { key: 'reports',            label: 'Financial Reports',   href: '/reports',                 group: 'Finance',      description: 'Revenue, expense and investment reports' },
+  { key: 'reports',            label: 'Financial Reports',   href: '/reports',                 group: 'Finance',      description: 'Inflow, outflow and investment reports' },
   { key: 'employees',          label: 'Employees',           href: '/employees',               group: 'Organization', description: 'View the employee directory and profiles' },
   { key: 'business_admin',     label: 'Business Admin',      href: '/business-administration', group: 'Organization', description: 'Edit company details and settings' },
   { key: 'audit_log',          label: 'Audit Log',           href: '/audit-log',               group: 'Organization', description: 'View the history of all actions' },
@@ -32,6 +32,12 @@ export const DEFAULT_PERMISSIONS = ['personal_dashboard', 'create_transaction', 
 
 // Abilities that need a page to be useful: { ability: requiredPage }
 export const PERMISSION_REQUIRES = { manage_employees: 'employees' };
+
+/**
+ * Whether a user picks the bank account when recording a transaction and can use every type.
+ * General employees (no Accounts page) only record Inflow/Outflow; the approver chooses the account.
+ */
+export const canPickTransactionAccount = (user) => hasPermission(user, 'accounts');
 
 /** Whether this user may see other people's page access (the company admin and employee managers). */
 export const canSeeAccess = (user) => isOwner(user) || hasPermission(user, 'manage_employees');
