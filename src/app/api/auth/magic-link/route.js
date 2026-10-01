@@ -8,11 +8,13 @@ export async function POST(req) {
   try {
     await dbConnect();
     const { email } = await req.json();
+    const genericReply = NextResponse.json({ success: true, message: 'If an account exists for this email, a sign-in link has been sent.' });
+    if (!email) return genericReply;
 
-    const user = await User.findOne({ email });
-    if (!user) {
-      return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
-    }
+    // Same reply whether or not the account exists, so emails can't be probed
+    const escaped = String(email).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const user = await User.findOne({ email: new RegExp(`^${escaped}$`, 'i') });
+    if (!user || user.isActive === false) return genericReply;
 
     // Generate a 15-minute token
     const token = jwt.sign(

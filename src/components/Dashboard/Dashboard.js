@@ -1,5 +1,5 @@
 'use client';
-import { TrendingUp, TrendingDown, Wallet, PlusCircle, ArrowRight, CircleDot } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, PlusCircle, ArrowRight, CircleDot, Receipt, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { Bar } from 'react-chartjs-2';
 import {
@@ -21,7 +21,10 @@ ChartJS.register(
   Legend
 );
 
-export default function Dashboard({ stats, recentTransactions, user }) {
+// variant 'office' shows the whole company; 'personal' shows only the signed-in user's own records
+// (Total Transactions instead of Net Balance, Pending Approval instead of Investments, no account balances).
+export default function Dashboard({ stats, recentTransactions, user, variant = 'office' }) {
+  const isPersonal = variant === 'personal';
   const chartData = {
     labels: ['Revenue', 'Expenses', 'Investments'],
     datasets: [
@@ -74,18 +77,29 @@ export default function Dashboard({ stats, recentTransactions, user }) {
   return (
     <div className="animate-fade-in">
       <div className="grid-stats">
-        {/* Net Balance - Always visible */}
-        <div className="card stat-card">
-          <div className="stat-icon-bg" style={{ backgroundColor: '#eff6ff' }}>
-            <Wallet style={{ color: '#2563eb' }} size={20} />
-          </div>
-          <div className="stat-content">
-            <span className="stat-label">Net Balance</span>
-            <div className="stat-value">
-              <span className="currency-label">BDT</span> {stats.netBalance.toLocaleString()}
+        {isPersonal ? (
+          <div className="card stat-card">
+            <div className="stat-icon-bg" style={{ backgroundColor: '#eff6ff' }}>
+              <Receipt style={{ color: '#2563eb' }} size={20} />
+            </div>
+            <div className="stat-content">
+              <span className="stat-label">Total Transactions</span>
+              <div className="stat-value">{(stats.totalTransactions || 0).toLocaleString()}</div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="card stat-card">
+            <div className="stat-icon-bg" style={{ backgroundColor: '#eff6ff' }}>
+              <Wallet style={{ color: '#2563eb' }} size={20} />
+            </div>
+            <div className="stat-content">
+              <span className="stat-label">Net Balance</span>
+              <div className="stat-value">
+                <span className="currency-label">BDT</span> {stats.netBalance.toLocaleString()}
+              </div>
+            </div>
+          </div>
+        )}
 
             <div className="card stat-card">
               <div className="stat-icon-bg" style={{ backgroundColor: '#ecfdf5' }}>
@@ -111,20 +125,35 @@ export default function Dashboard({ stats, recentTransactions, user }) {
               </div>
             </div>
 
-            <div className="card stat-card">
-              <div className="stat-icon-bg" style={{ backgroundColor: '#f5f3ff' }}>
-                <PlusCircle style={{ color: '#8b5cf6' }} size={20} />
-              </div>
-              <div className="stat-content">
-                <span className="stat-label">Investments</span>
-                <div className="stat-value text-accent">
-                  <span className="currency-label">BDT</span> {stats.totalInvestment.toLocaleString()}
+            {isPersonal ? (
+              <div className="card stat-card">
+                <div className="stat-icon-bg" style={{ backgroundColor: '#fffbeb' }}>
+                  <Clock style={{ color: '#d97706' }} size={20} />
+                </div>
+                <div className="stat-content">
+                  <span className="stat-label">Pending Approval</span>
+                  <div className="stat-value text-warning">
+                    <span className="currency-label">BDT</span> {(stats.pendingAmount || 0).toLocaleString()}
+                  </div>
+                  <span className="stat-sub">{stats.pendingCount || 0} awaiting review</span>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="card stat-card">
+                <div className="stat-icon-bg" style={{ backgroundColor: '#f5f3ff' }}>
+                  <PlusCircle style={{ color: '#8b5cf6' }} size={20} />
+                </div>
+                <div className="stat-content">
+                  <span className="stat-label">Investments</span>
+                  <div className="stat-value text-accent">
+                    <span className="currency-label">BDT</span> {stats.totalInvestment.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            )}
       </div>
 
-      {stats.accountBalances && stats.accountBalances.length > 0 && (
+      {!isPersonal && stats.accountBalances && stats.accountBalances.length > 0 && (
         <div className="account-balances-container">
           <h3 className="section-title">Account Balances</h3>
           <div className="accounts-grid">
@@ -150,7 +179,7 @@ export default function Dashboard({ stats, recentTransactions, user }) {
         <div className="card chart-container" style={{ overflow: 'hidden', minWidth: 0 }}>
           <div className="card-header">
             <h3>Financial Performance</h3>
-            <p>Distribution of capital across categories</p>
+            <p>{isPersonal ? 'Your approved transactions by category' : 'Distribution of capital across categories'}</p>
           </div>
           <div className="chart-wrapper">
             <Bar data={chartData} options={chartOptions} />
@@ -161,11 +190,13 @@ export default function Dashboard({ stats, recentTransactions, user }) {
           <div className="card-header flex-header">
             <div>
               <h3>Recent Activity</h3>
-              <p>Latest approved transactions</p>
+              <p>{isPersonal ? 'Your latest transactions' : 'Latest approved transactions'}</p>
             </div>
-            <Link href="/transactions" className="view-all-link">
-              View All <ArrowRight size={14} />
-            </Link>
+            {!isPersonal && (
+              <Link href="/transactions" className="view-all-link">
+                View All <ArrowRight size={14} />
+              </Link>
+            )}
           </div>
           <div className="transaction-list">
             {recentTransactions.slice(0, 6).map((tx) => {
@@ -178,7 +209,12 @@ export default function Dashboard({ stats, recentTransactions, user }) {
                     <CircleDot size={14} color={dotColor} className="tx-dot" />
                     <div className="tx-info">
                       <span className="tx-desc">{tx.description}</span>
-                      <span className="tx-date">{new Date(tx.date).toLocaleDateString()}</span>
+                      <span className="tx-date">
+                        {new Date(tx.date).toLocaleDateString()}
+                        {isPersonal && tx.status && tx.status !== 'approved' && (
+                          <span className={`tx-status tx-status-${tx.status}`}>{tx.status}</span>
+                        )}
+                      </span>
                     </div>
                   </div>
                   <div className={`tx-amount ${tx.type}`}>
@@ -231,6 +267,11 @@ export default function Dashboard({ stats, recentTransactions, user }) {
           box-shadow: inset 0 2px 4px rgba(255,255,255,0.5);
         }
         .stat-content { display: flex; flex-direction: column; }
+        .stat-sub { margin-top: 0.125rem; font-size: 0.75rem; color: #94a3b8; }
+        .text-warning { color: #d97706; }
+        .tx-status { margin-left: 0.5rem; padding: 0.0625rem 0.375rem; border-radius: 4px; font-size: 0.625rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+        .tx-status-pending { background: #fef3c7; color: #92400e; }
+        .tx-status-rejected { background: #fee2e2; color: #991b1b; }
         .stat-label {
           color: #64748b;
           font-size: 0.75rem;

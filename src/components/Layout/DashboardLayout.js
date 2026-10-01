@@ -14,6 +14,7 @@ import {
   ClipboardList,
   Banknote,
   HandCoins,
+  LayoutDashboard,
   Menu,
   X,
   Bell,
@@ -135,7 +136,8 @@ export default function DashboardLayout({ children }) {
     {
       title: 'Overview',
       items: [
-        { id: 'dashboard',    label: 'Dashboard',          icon: <Home size={20} />,           href: '/dashboard', permission: 'dashboard' },
+        { id: 'dashboard',    label: 'Office Dashboard',   icon: <Home size={20} />,           href: '/dashboard', permission: 'dashboard' },
+        { id: 'my-dashboard', label: 'Personal Dashboard', icon: <LayoutDashboard size={20} />, href: '/my-dashboard', permission: 'personal_dashboard' },
       ],
     },
     {
@@ -173,6 +175,7 @@ export default function DashboardLayout({ children }) {
 
   const getPageTitle = () => {
     if (pathname === '/dashboard') return 'Financial Overview';
+    if (pathname === '/my-dashboard') return 'Personal Dashboard';
     if (pathname === '/accounts') return 'Account Management';
     if (pathname === '/transactions') return 'Transaction History';
     if (pathname === '/transactions/create') return 'Create Transaction';
@@ -189,7 +192,8 @@ export default function DashboardLayout({ children }) {
   };
 
   const getBreadcrumb = () => {
-    if (pathname === '/dashboard') return 'Dashboard';
+    if (pathname === '/dashboard') return 'Office Dashboard';
+    if (pathname === '/my-dashboard') return 'My Dashboard';
     if (pathname === '/accounts') return 'Accounts';
     if (pathname === '/transactions') return 'Transactions';
     if (pathname === '/transactions/create') return 'Transactions / Create';
@@ -331,7 +335,7 @@ export default function DashboardLayout({ children }) {
         .layout { display: flex; min-height: 100vh; background: transparent; }
         
         .sidebar {
-          width: 260px;
+          width: 288px;
           height: 100vh;
           position: fixed;
           padding: 0.5rem 1.25rem 2rem;
@@ -414,7 +418,7 @@ export default function DashboardLayout({ children }) {
         .mobile-header { display: none; }
         .mobile-nav { display: none; }
 
-        .main-content { flex: 1; margin-left: 260px; padding: 2rem 3rem; min-height: 100vh; background: #fcfcfc; max-width: 100vw; overflow-x: hidden; }
+        .main-content { flex: 1; margin-left: 288px; padding: 2rem 3rem; min-height: 100vh; background: #fcfcfc; max-width: 100vw; overflow-x: hidden; }
         .top-header { margin-bottom: 2.5rem; }
         .breadcrumb { display: flex; align-items: center; gap: 0.5rem; color: #94a3b8; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; }
         .breadcrumb .current { color: #0f172a; }

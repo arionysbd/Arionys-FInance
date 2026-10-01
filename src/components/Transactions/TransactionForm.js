@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import axios from 'axios';
+import { hasPermission } from '@/lib/permissions';
 import { FileText, Tag, Send, User, Wallet, ArrowUpRight, TrendingDown, DollarSign, ChevronDown, Check, ArrowRightLeft, CreditCard } from 'lucide-react';
 
 export default function TransactionForm({ onTransactionAdded }) {
@@ -60,8 +61,8 @@ export default function TransactionForm({ onTransactionAdded }) {
 
   const handleSelectOption = (name, value) => {
     if (name === 'type' && value === 'loan_disbursal') {
-      // Redirect to the dedicated loans page to handle employee loan requests
-      window.location.href = '/loans';
+      // Loans are handled on their own pages: managers go to Loans, everyone else to Request Loan
+      window.location.href = hasPermission(user, 'loans') ? '/loans' : '/loans/request';
       return;
     }
 
@@ -129,7 +130,9 @@ export default function TransactionForm({ onTransactionAdded }) {
     { value: 'expense', label: 'Outflow', icon: <TrendingDown size={16} className="text-tx-expense" /> },
     { value: 'investment', label: 'Investment', icon: <Wallet size={16} className="text-tx-investment" /> },
     { value: 'transfer', label: 'Transfer', icon: <ArrowRightLeft size={16} style={{ color: '#8b5cf6' }} /> },
-    { value: 'loan_disbursal', label: 'Loan Disbursal', icon: <CreditCard size={16} style={{ color: '#eab308' }} /> }
+    ...(hasPermission(user, 'loans', 'loan_request')
+      ? [{ value: 'loan_disbursal', label: hasPermission(user, 'loans') ? 'Loan Disbursal' : 'Request a Loan', icon: <CreditCard size={16} style={{ color: '#eab308' }} /> }]
+      : []),
   ];
 
   const attributionOptions = [

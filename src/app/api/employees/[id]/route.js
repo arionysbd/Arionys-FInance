@@ -4,7 +4,7 @@ import Employee from '@/models/Employee';
 import User from '@/models/User';
 import AuditLog from '@/models/AuditLog';
 import { getAuthUser, unauthorized, forbidden } from '@/lib/auth';
-import { getUserPermissions, hasPermission, isOwner } from '@/lib/permissions';
+import { getUserPermissions, hasPermission, isOwner, canSeeAccess } from '@/lib/permissions';
 
 // GET /api/employees/[id]
 export async function GET(req, { params }) {
@@ -34,7 +34,13 @@ export async function GET(req, { params }) {
       data: {
         ...employee,
         account: account
-          ? { isOwner: isOwner(account), permissions: getUserPermissions(account), isActive: account.isActive, createdAt: account.createdAt }
+          ? {
+              isOwner: isOwner(account),
+              // Page access is only shown to the company admin and employee managers
+              permissions: canSeeAccess(authUser) ? getUserPermissions(account) : undefined,
+              isActive: account.isActive,
+              createdAt: account.createdAt,
+            }
           : null,
       },
     });
@@ -50,7 +56,7 @@ export async function PATCH(req, { params }) {
     const authUser = await getAuthUser(req);
     if (!authUser) return unauthorized();
 
-    if (!hasPermission(authUser, 'employees')) {
+    if (!hasPermission(authUser, 'manage_employees')) {
       return NextResponse.json({ success: false, message: 'Insufficient permissions.' }, { status: 403 });
     }
 
@@ -61,7 +67,7 @@ export async function PATCH(req, { params }) {
     }
 
     const body = await req.json();
-    const allowedFields = ['fullName', 'phone', 'department', 'designation', 'joiningDate', 'status', 'notes', 'employeeId', 'profilePhoto', 'salary', 'loanLimit'];
+    const allowedFields = ['fullName', 'phone', 'designation', 'joiningDate', 'status', 'notes', 'employeeId', 'profilePhoto', 'salary', 'loanLimit'];
     const updates = {};
     for (const field of allowedFields) {
       if (body[field] !== undefined) updates[field] = body[field];
@@ -109,7 +115,7 @@ export async function DELETE(req, { params }) {
     const authUser = await getAuthUser(req);
     if (!authUser) return unauthorized();
 
-    if (!hasPermission(authUser, 'employees')) {
+    if (!hasPermission(authUser, 'manage_employees')) {
       return NextResponse.json({ success: false, message: 'Insufficient permissions.' }, { status: 403 });
     }
 

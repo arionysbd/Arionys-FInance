@@ -42,9 +42,15 @@ export async function GET(req) {
         if (accId && accountBalances[accId]) {
           accountBalances[accId].balance += curr.amount;
         }
-      } else if (curr.type === 'expense') {
+      } else if (curr.type === 'expense' || curr.type === 'loan_disbursement') {
+        // Expenses and loans paid out leave the account
         if (accId && accountBalances[accId]) {
           accountBalances[accId].balance -= curr.amount;
+        }
+      } else if (curr.type === 'loan_repayment') {
+        // Loan repayments come back into the receiving account
+        if (accId && accountBalances[accId]) {
+          accountBalances[accId].balance += curr.amount;
         }
       } else if (curr.type === 'transfer') {
         if (accId && accountBalances[accId]) {

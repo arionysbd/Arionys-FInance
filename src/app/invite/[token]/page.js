@@ -45,7 +45,8 @@ export default function InvitePage() {
     e.preventDefault();
     setFormError('');
 
-    if (!form.name.trim()) { setFormError('Full name is required.'); return; }
+    const prefilled = Boolean(invite?.employee?.fullName);
+    if (!prefilled && !form.name.trim()) { setFormError('Full name is required.'); return; }
     if (form.password.length < 8) { setFormError('Password must be at least 8 characters.'); return; }
     if (form.password !== form.confirmPassword) { setFormError('Passwords do not match.'); return; }
 
@@ -59,10 +60,9 @@ export default function InvitePage() {
       });
 
       if (data.success) {
-        // Log the user in via AuthContext
-        login(data.data);
+        // The API returns { token, user }; the session expects a flat user object with its token
         setStatus('success');
-        setTimeout(() => router.push('/dashboard'), 2000);
+        setTimeout(() => login({ ...data.data.user, token: data.data.token }), 1200);
       }
     } catch (err) {
       setFormError(err.response?.data?.message || 'Failed to create account. Please try again.');
@@ -167,49 +167,45 @@ export default function InvitePage() {
                 </div>
               </div>
 
-              {/* Full name */}
-              <div className="field-group">
-                <label>Full Name <span className="req">*</span></label>
-                <div className="input-wrap">
-                  <User size={16} className="input-icon" />
-                  <input
-                    type="text"
-                    placeholder="Your full name"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    required
-                    autoFocus
-                  />
-                </div>
-              </div>
-
-              {/* Two-column: phone + position */}
-              <div className="two-col">
-                <div className="field-group">
-                  <label>Phone <span className="opt">(optional)</span></label>
-                  <div className="input-wrap">
-                    <Phone size={16} className="input-icon" />
-                    <input
-                      type="tel"
-                      placeholder="+880 1700 000000"
-                      value={form.phone}
-                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    />
+              {invite.employee?.fullName ? (
+                /* Details were already entered when the employee was added */
+                <div className="prefilled">
+                  <div className="prefilled-row">
+                    <User size={15} />
+                    <span className="prefilled-label">Name</span>
+                    <span className="prefilled-value">{invite.employee.fullName}</span>
                   </div>
+                  {invite.employee.phone && (
+                    <div className="prefilled-row">
+                      <Phone size={15} />
+                      <span className="prefilled-label">Phone</span>
+                      <span className="prefilled-value">{invite.employee.phone}</span>
+                    </div>
+                  )}
+                  {invite.employee.designation && (
+                    <div className="prefilled-row">
+                      <Briefcase size={15} />
+                      <span className="prefilled-label">Designation</span>
+                      <span className="prefilled-value">{invite.employee.designation}</span>
+                    </div>
+                  )}
                 </div>
+              ) : (
                 <div className="field-group">
-                  <label>Job Title <span className="opt">(optional)</span></label>
+                  <label>Full Name <span className="req">*</span></label>
                   <div className="input-wrap">
-                    <Briefcase size={16} className="input-icon" />
+                    <User size={16} className="input-icon" />
                     <input
                       type="text"
-                      placeholder="e.g. Senior Analyst"
-                      value={form.position}
-                      onChange={(e) => setForm({ ...form, position: e.target.value })}
+                      placeholder="Your full name"
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      required
+                      autoFocus
                     />
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Password */}
               <div className="field-group">
@@ -399,6 +395,11 @@ export default function InvitePage() {
 
         /* Form body */
         .reg-form { padding: 1.75rem 2.5rem 2.5rem; }
+        .prefilled { margin-bottom: 1.5rem; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; }
+        .prefilled-row { display: flex; align-items: center; gap: 0.625rem; padding: 0.75rem 1rem; color: #94a3b8; }
+        .prefilled-row + .prefilled-row { border-top: 1px solid #eef2f6; }
+        .prefilled-label { font-size: 0.8125rem; font-weight: 600; color: #64748b; }
+        .prefilled-value { margin-left: auto; font-size: 0.875rem; font-weight: 700; color: #0f172a; text-align: right; }
         .field-group { margin-bottom: 1.25rem; }
         .field-group label {
           display: block;

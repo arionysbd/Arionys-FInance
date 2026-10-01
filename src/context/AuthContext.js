@@ -43,7 +43,9 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!loading) {
       const isAuthPage = pathname === '/login' || pathname === '/signup';
-      if (!user && !isAuthPage) {
+      // Pages that work without signing in: invitation links and magic-link verification
+      const isPublicPage = isAuthPage || pathname === '/verify' || pathname?.startsWith('/invite');
+      if (!user && !isPublicPage) {
         router.push('/login');
       } else if (user && isAuthPage) {
         router.push('/');

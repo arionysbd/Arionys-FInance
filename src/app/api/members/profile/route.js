@@ -31,18 +31,31 @@ export async function PUT(req) {
 
     // Check if email is being changed and if it's already taken
     if (email && email !== user.email) {
-      const existingUser = await User.findOne({ email });
+      const existingUser = await User.findOne({ email: new RegExp(`^${String(email).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') });
       if (existingUser) {
         return NextResponse.json({ success: false, message: 'Email already in use' }, { status: 400 });
       }
     }
 
+    const previousEmail = user.email;
     if (name) user.name = name;
     if (email) user.email = email;
     if (phone !== undefined) user.phone = phone;
     if (position !== undefined) user.position = position;
 
     await user.save();
+
+    // Keep the linked employee record in step, otherwise the directory shows a duplicate person
+    if (user.companyId) {
+      const Employee = (await import('@/models/Employee')).default;
+      const updates = { userId: user._id, email: user.email.toLowerCase() };
+      if (name) updates.fullName = name;
+      if (phone) updates.phone = phone;
+      await Employee.findOneAndUpdate(
+        { companyId: user.companyId, $or: [{ userId: user._id }, { email: previousEmail?.toLowerCase() }] },
+        { $set: updates }
+      );
+    }
 
     return NextResponse.json({ 
       success: true, 

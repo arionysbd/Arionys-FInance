@@ -37,6 +37,12 @@ export const getTransactions = async (filters = {}) => {
   return data;
 };
 
+// Transactions recorded by the signed-in user, with totals (Personal Dashboard)
+export const getMyTransactions = async () => {
+  const { data } = await api.get('/transactions/mine');
+  return data;
+};
+
 export const getStats = async (filters = {}) => {
   const { data } = await api.get('/transactions/stats', { params: filters });
   return data;

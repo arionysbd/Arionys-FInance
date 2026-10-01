@@ -32,11 +32,20 @@ export async function GET(req, { params }) {
 
     const grantedKeys = sanitizePermissions(invite.permissions?.length ? invite.permissions : DEFAULT_PERMISSIONS);
 
+    // Details already entered by whoever added this employee
+    const Employee = (await import('@/models/Employee')).default;
+    const employee = await Employee.findOne({ email: invite.email, companyId: invite.companyId })
+      .select('fullName phone designation')
+      .lean();
+
     return NextResponse.json({
       success: true,
       data: {
         email: invite.email,
         accessLabels: PERMISSIONS.filter(p => grantedKeys.includes(p.key)).map(p => p.label),
+        employee: employee
+          ? { fullName: employee.fullName, phone: employee.phone || '', designation: employee.designation || '' }
+          : null,
         companyName: company?.name || 'Arionys Finance',
         expiresAt: invite.expiresAt,
       }
@@ -62,7 +71,15 @@ export async function POST(req, { params }) {
       return NextResponse.json({ success: false, message: 'Invitation has expired.' }, { status: 410 });
     }
 
-    const { name, password, phone, position } = await req.json();
+    const body = await req.json();
+    const { password } = body;
+
+    // Use the details already entered when the employee was added; only fall back to the form when none exist
+    const Employee = (await import('@/models/Employee')).default;
+    const employeeRecord = await Employee.findOne({ email: invite.email, companyId: invite.companyId }).lean();
+    const name = employeeRecord?.fullName || body.name;
+    const phone = employeeRecord?.phone || body.phone;
+    const position = employeeRecord?.designation || body.position;
 
     if (!name?.trim() || !password) {
       return NextResponse.json({ success: false, message: 'Name and password are required.' }, { status: 400 });
@@ -96,7 +113,6 @@ export async function POST(req, { params }) {
     await invite.save();
 
     // If an Employee record exists for this email, link it!
-    const Employee = (await import('@/models/Employee')).default;
     await Employee.findOneAndUpdate(
       { email: invite.email, companyId: invite.companyId },
       { $set: { userId: user._id, status: 'active' } }

@@ -1,13 +1,18 @@
 'use client';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import { getHomePath } from '@/lib/permissions';
 
 export default function Home() {
   const router = useRouter();
+  const { user, loading } = useAuth();
 
+  // Send each user straight to the first page they have access to
   useEffect(() => {
-    router.replace('/dashboard');
-  }, [router]);
+    if (loading) return;
+    router.replace(user ? getHomePath(user) : '/login');
+  }, [router, user, loading]);
 
   return (
     <div className="redirect-screen">

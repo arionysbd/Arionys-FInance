@@ -50,7 +50,7 @@ export async function GET(req) {
     }
 
     const loans = await EmployeeLoan.find(query)
-      .populate('employeeId', 'fullName email department designation')
+      .populate('employeeId', 'fullName email designation')
       .populate('paidFromAccount', 'bankName accountType')
       .populate('createdBy', 'name')
       .populate('approvedBy', 'name')

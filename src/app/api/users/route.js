@@ -3,7 +3,7 @@ import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import { sendEmail } from '@/lib/mail';
 import { getAuthUser, unauthorized } from '@/lib/auth';
-import { getUserPermissions, hasPermission, isOwner, sanitizePermissions, DEFAULT_PERMISSIONS } from '@/lib/permissions';
+import { hasPermission, isOwner, sanitizePermissions } from '@/lib/permissions';
 
 export async function GET(req) {
   try {
@@ -17,8 +17,12 @@ export async function GET(req) {
       return NextResponse.json({ success: false, message: 'Company ID is required' }, { status: 400 });
     }
 
-    // Scope to the requester's company so users of other tenants are never exposed
-    const users = await User.find({ companyId }).select('-password');
+    if (!hasPermission(authUser, 'manage_employees')) {
+      return NextResponse.json({ success: false, message: 'You do not have access to users.' }, { status: 403 });
+    }
+
+    // Scope to the requester's company so users of other tenants are never exposed; never return secrets
+    const users = await User.find({ companyId }).select('name email phone position isActive createdAt');
     return NextResponse.json({ success: true, data: users });
   } catch (error) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
@@ -34,7 +38,7 @@ export async function PATCH(req) {
 
     const { userId, permissions, isActive } = await req.json();
 
-    if (!hasPermission(admin, 'employees')) {
+    if (!hasPermission(admin, 'manage_employees')) {
       return NextResponse.json({ success: false, message: 'You do not have access to manage users.' }, { status: 403 });
     }
 
@@ -54,12 +58,10 @@ export async function PATCH(req) {
     }
 
     if (permissions !== undefined) {
-      const next = sanitizePermissions(permissions);
-      const own = getUserPermissions(admin);
-      if (next.some(k => !own.includes(k))) {
-        return NextResponse.json({ success: false, message: 'You can only give access to pages you have access to yourself.' }, { status: 403 });
+      if (!isOwner(admin)) {
+        return NextResponse.json({ success: false, message: 'Only the company admin account can change page access.' }, { status: 403 });
       }
-      user.permissions = next;
+      user.permissions = sanitizePermissions(permissions);
     }
     
     // Check if user is being approved
@@ -110,7 +112,7 @@ export async function DELETE(req) {
 
     const { userId } = await req.json();
 
-    if (!hasPermission(admin, 'employees')) {
+    if (!hasPermission(admin, 'manage_employees')) {
       return NextResponse.json({ success: false, message: 'You do not have access to delete accounts.' }, { status: 403 });
     }
 

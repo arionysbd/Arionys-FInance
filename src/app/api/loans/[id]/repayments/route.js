@@ -49,11 +49,11 @@ export async function GET(req, { params }) {
 
 // POST /api/loans/[id]/repayments - Add a repayment
 export async function POST(req, { params }) {
+  await dbConnect();
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    await dbConnect();
     const authUser = await getAuthUser(req);
     if (!authUser) return unauthorized();
 
@@ -168,8 +168,10 @@ export async function POST(req, { params }) {
 
     return NextResponse.json({ success: true, data: repayment[0] }, { status: 201 });
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+  } finally {
+    // Early returns and errors must never leave the transaction open
+    if (session.inTransaction()) await session.abortTransaction().catch(() => {});
+    session.endSession();
   }
 }

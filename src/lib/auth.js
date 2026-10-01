@@ -26,7 +26,9 @@ export async function getAuthUser(req) {
 
     await dbConnect();
     const user = await User.findById(decoded.id).select('-password');
-    return user || null;
+    // Revoked or not-yet-approved accounts keep a valid token but must not act on company data
+    if (!user || user.isActive === false) return null;
+    return user;
   } catch {
     return null;
   }

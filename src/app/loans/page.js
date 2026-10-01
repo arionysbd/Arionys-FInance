@@ -5,7 +5,7 @@ import DashboardLayout from '@/components/Layout/DashboardLayout';
 import { hasPermission } from '@/lib/permissions';
 import CustomSelect from '@/components/UI/CustomSelect';
 import { getLoans, createLoan, getEmployees, getAccounts } from '@/lib/api';
-import { Banknote, Plus, Search, Filter, Loader2, ArrowRight, HandCoins } from 'lucide-react';
+import { Banknote, Plus, Search, Filter, Loader2, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 export default function LoansPage() {
@@ -156,16 +156,13 @@ export default function LoansPage() {
                     ]}
                 />
             </div>
-            <div className="toolbar-actions">
-                <Link href="/loans/request" className={`btn ${canCreateLoan ? 'btn-secondary' : 'btn-primary'} toolbar-btn`}>
-                    <HandCoins size={18} /> Request Loan
-                </Link>
-                {canCreateLoan && (
+            {canCreateLoan && (
+                <div className="toolbar-actions">
                     <button className="btn btn-primary toolbar-btn" onClick={openModal}>
                         <Plus size={18} /> Create Loan
                     </button>
-                )}
-            </div>
+                </div>
+            )}
         </div>
 
         {loading ? (
@@ -229,15 +226,11 @@ export default function LoansPage() {
                     <div className="empty-state">
                         <Banknote size={48} className="empty-icon" />
                         <h3>No loans found</h3>
-                        <p className="text-muted">{canCreateLoan ? "No employee loans or requests yet." : "You haven't requested any loans yet."}</p>
-                        {canCreateLoan ? (
+                        <p className="text-muted">No employee loans or requests yet.</p>
+                        {canCreateLoan && (
                             <button className="btn btn-primary" style={{marginTop: '1rem'}} onClick={openModal}>
                                 <Plus size={18} /> Create First Loan
                             </button>
-                        ) : (
-                            <Link href="/loans/request" className="btn btn-primary" style={{marginTop: '1rem'}}>
-                                <HandCoins size={18} /> Request a Loan
-                            </Link>
                         )}
                     </div>
                 )}

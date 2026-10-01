@@ -74,6 +74,19 @@ export async function POST(req) {
       return NextResponse.json({ success: false, message: 'Company ID is required' }, { status: 400 });
     }
 
+    // Manually recorded transactions; loan disbursements/repayments are created by the loan flow
+    if (!['revenue', 'expense', 'investment', 'transfer'].includes(type)) {
+      return NextResponse.json({ success: false, message: 'Invalid transaction type.' }, { status: 400 });
+    }
+
+    if (!(Number(amount) > 0)) {
+      return NextResponse.json({ success: false, message: 'Amount must be greater than 0.' }, { status: 400 });
+    }
+
+    if (!description?.trim()) {
+      return NextResponse.json({ success: false, message: 'Description is required.' }, { status: 400 });
+    }
+
     if (!account) {
       return NextResponse.json({ success: false, message: 'Account selection is mandatory' }, { status: 400 });
     }
@@ -86,9 +99,16 @@ export async function POST(req) {
       return NextResponse.json({ success: false, message: 'Source and destination accounts must be different' }, { status: 400 });
     }
 
+    // Accounts must belong to the caller's company
+    const accountIds = type === 'transfer' ? [account, toAccount] : [account];
+    const ownedAccounts = await Account.countDocuments({ _id: { $in: accountIds }, companyId });
+    if (ownedAccounts !== accountIds.length) {
+      return NextResponse.json({ success: false, message: 'Account not found.' }, { status: 404 });
+    }
+
     const transaction = await Transaction.create({
       type,
-      amount,
+      amount: Number(amount),
       description,
       performedBy,
       createdBy: userId,

@@ -154,8 +154,8 @@ export default function SettingsPage() {
             
             <form onSubmit={handleProfileSubmit} className="professional-form">
               <div className="form-grid">
-                <div className="input-field">
-                  <label>Full Legal Name</label>
+                <div className="form-field">
+                  <label>Full name</label>
                   <div className="input-control">
                     <UserIcon size={18} className="icon" />
                     <input 
@@ -168,8 +168,8 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="input-field">
-                  <label>Position in Company</label>
+                <div className="form-field">
+                  <label>Position</label>
                   <div className="input-control">
                     <Briefcase size={18} className="icon" />
                     <input 
@@ -181,8 +181,8 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="input-field full-width">
-                  <label>Professional Email</label>
+                <div className="form-field full-width">
+                  <label>Email address</label>
                   <div className="input-control">
                     <Mail size={18} className="icon" />
                     <input 
@@ -195,8 +195,8 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="input-field full-width">
-                  <label>Contact Number</label>
+                <div className="form-field full-width">
+                  <label>Phone number</label>
                   <div className="input-control">
                     <Phone size={18} className="icon" />
                     <input 
@@ -208,8 +208,9 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="input-field full-width highlight">
-                  <label>Confirm Identity (Enter Password to Save Changes)</label>
+                <div className="form-field full-width highlight">
+                  <label>Current password</label>
+                  <p className="field-hint">Required to save changes to your profile.</p>
                   <div className="input-control">
                     <Lock size={18} className="icon" />
                     <input 
@@ -268,8 +269,8 @@ export default function SettingsPage() {
 
             <form onSubmit={handlePasswordChange} className="professional-form">
               <div className="form-grid">
-                <div className="input-field full-width">
-                  <label>Current Password</label>
+                <div className="form-field full-width">
+                  <label>Current password</label>
                   <div className="input-control">
                     <Key size={18} className="icon" />
                     <input 
@@ -290,8 +291,8 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="input-field">
-                  <label>New Password</label>
+                <div className="form-field">
+                  <label>New password</label>
                   <div className="input-control">
                     <Lock size={18} className="icon" />
                     <input 
@@ -312,8 +313,8 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="input-field">
-                  <label>Confirm New Password</label>
+                <div className="form-field">
+                  <label>Confirm new password</label>
                   <div className="input-control">
                     <Lock size={18} className="icon" />
                     <input 
@@ -353,114 +354,72 @@ export default function SettingsPage() {
       </div>
 
       <style jsx>{`
-        .settings-page { max-width: var(--form-max-width); margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; }
-        .mt-2 { margin-top: 2rem; }
-        
+        .settings-page { max-width: var(--form-max-width); margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; }
+        .mt-2 { margin-top: 1.5rem; }
         .settings-content { width: 100%; }
-        
-        .settings-card { background: white; border: 1px solid #e2e8f0; border-radius: 4px; padding: 2.5rem; }
-        .card-header { margin-bottom: 2.5rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 1.5rem; }
-        .flex-header { display: flex; justify-content: space-between; align-items: flex-start; }
-        .card-header h3 { font-size: 1.25rem; font-weight: 800; color: #0f172a; margin-bottom: 0.5rem; }
-        .card-header p { color: #64748b; font-size: 0.875rem; font-weight: 500; }
+        .settings-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.75rem 2rem; }
+        .card-header { margin-bottom: 1.5rem; padding-bottom: 1.25rem; border-bottom: 1px solid #f1f5f9; }
+        .flex-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+        .card-header h3 { margin: 0 0 0.25rem; font-size: 1.0625rem; font-weight: 800; color: #0f172a; }
+        .card-header p { margin: 0; color: #64748b; font-size: 0.8125rem; }
+        .reset-btn-link { flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.875rem; background: #ffffff; color: #0f172a; border: 1px solid #e2e8f0; border-radius: 6px; font-family: inherit; font-size: 0.8125rem; font-weight: 600; cursor: pointer; transition: background 0.15s, border-color 0.15s; white-space: nowrap; }
+        .reset-btn-link:hover:not(:disabled) { background: #f8fafc; border-color: #cbd5e1; }
+        .reset-btn-link :global(.spin) { animation: spin 0.8s linear infinite; }
 
-        .reset-btn-link {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          background: #f1f5f9;
-          color: #0f172a;
-          border: none;
-          padding: 0.6rem 1rem;
-          border-radius: 4px;
-          font-size: 0.75rem;
-          font-weight: 800;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-        .reset-btn-link:hover { background: #e2e8f0; }
+        .professional-form { display: flex; flex-direction: column; gap: 1.5rem; }
+        .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem 1.5rem; }
+        .form-field { display: flex; flex-direction: column; gap: 0.375rem; min-width: 0; }
+        .form-field.full-width { grid-column: 1 / -1; }
+        .form-field label { font-size: 0.8125rem; font-weight: 600; color: #334155; }
+        .field-hint { margin: -0.125rem 0 0.25rem; font-size: 0.75rem; color: #64748b; }
 
-        .professional-form { display: flex; flex-direction: column; gap: 2.5rem; }
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
-        .input-field { display: flex; flex-direction: column; gap: 0.75rem; }
-        .input-field.full-width { grid-column: span 2; }
-        
-        .input-field label { font-size: 0.75rem; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; padding-left: 2px; }
-        .input-control { display: flex; align-items: center; gap: 1rem; }
-        .input-control .icon { color: #94a3b8; flex-shrink: 0; }
+        /* Icon and show/hide button sit inside the input */
+        .input-control { position: relative; display: flex; align-items: center; min-width: 0; }
+        .input-control :global(.icon) { position: absolute; left: 0.875rem; color: #94a3b8; pointer-events: none; }
+        .input-control:focus-within :global(.icon) { color: #4f46e5; }
         .input-control input {
-          flex: 1;
-          padding: 1rem 1.25rem;
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-          border-radius: 4px;
-          font-size: 0.9375rem;
-          font-weight: 600;
+          width: 100%;
+          min-width: 0;
+          padding: 0.6875rem 0.875rem 0.6875rem 2.625rem;
+          background: #ffffff;
+          border: 1px solid #cbd5e1;
+          border-radius: 6px;
+          font-family: inherit;
+          font-size: 0.875rem;
+          font-weight: 500;
           color: #0f172a;
-          transition: all 0.2s;
+          transition: border-color 0.15s, box-shadow 0.15s;
         }
-        .input-control input:focus { background: white; border-color: #0f172a; box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.05); outline: none; }
+        .input-control input:has(+ .visibility-toggle) { padding-right: 2.75rem; }
+        .input-control input::placeholder { color: #94a3b8; }
+        .input-control input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
+        .visibility-toggle { position: absolute; right: 0.375rem; width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: none; border-radius: 4px; background: transparent; color: #94a3b8; cursor: pointer; }
+        .visibility-toggle:hover { color: #0f172a; background: #f1f5f9; }
 
-        .notification-bar { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.5rem; border-radius: 4px; font-weight: 700; font-size: 0.875rem; }
-        .notification-bar.success { background: #f0fdf4; color: #16a34a; border: 1px solid #dcfce7; }
-        .notification-bar.error { background: #fef2f2; color: #ef4444; border: 1px solid #fee2e2; }
+        .highlight { padding: 1rem 1.125rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; }
 
-        .form-footer { display: flex; justify-content: flex-end; border-top: 1px solid #f1f5f9; padding-top: 2rem; }
-        .prime-save-btn {
-          background: #0f172a;
-          color: white;
-          border: none;
-          padding: 1rem 2.5rem;
-          border-radius: 4px;
-          font-weight: 800;
-          font-size: 1rem;
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-        .prime-save-btn:hover:not(:disabled) { background: #1e293b; transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
-        .prime-save-btn.secondary { background: #334155; }
-        .prime-save-btn.secondary:hover { background: #1e293b; }
+        .notification-bar { display: flex; align-items: center; gap: 0.625rem; padding: 0.75rem 1rem; border-radius: 6px; font-weight: 600; font-size: 0.8125rem; }
+        .notification-bar.success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+        .notification-bar.error { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+
+        .form-footer { display: flex; justify-content: flex-end; padding-top: 1.25rem; border-top: 1px solid #f1f5f9; }
+        .prime-save-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.6875rem 1.5rem; background: #0f172a; color: #ffffff; border: none; border-radius: 6px; font-family: inherit; font-weight: 700; font-size: 0.875rem; cursor: pointer; transition: background 0.15s; }
+        .prime-save-btn:hover:not(:disabled) { background: #1e293b; }
+        .prime-save-btn.secondary { background: #4f46e5; }
+        .prime-save-btn.secondary:hover:not(:disabled) { background: #4338ca; }
         .prime-save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-        .btn-loader { width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; }
+        .btn-loader { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.35); border-top-color: #ffffff; border-radius: 50%; animation: spin 0.6s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        @media (max-width: 1024px) {
+        @media (max-width: 768px) {
           .settings-page { max-width: 100%; }
-          .form-grid { grid-template-columns: 1fr; }
-          .input-field.full-width { grid-column: span 1; }
-          .prime-save-btn { width: 100%; justify-content: center; }
-          .flex-header { flex-direction: column; gap: 1rem; }
+          .settings-card { padding: 1.25rem; }
+          .form-grid { grid-template-columns: 1fr; gap: 1rem; }
+          .flex-header { flex-direction: column; }
           .reset-btn-link { width: 100%; justify-content: center; }
+          .form-footer { padding-top: 1rem; }
+          .prime-save-btn { width: 100%; }
         }
-        
-        .highlight {
-          padding: 1.5rem;
-          background: #f8fafc;
-          border: 1px dashed #cbd5e1;
-          border-radius: var(--radius);
-          margin-top: 0.5rem;
-        }
-        .highlight label { color: #0f172a; font-weight: 900; }
-        .highlight .input-control input { background: white; border-color: #cbd5e1; }
-
-        .visibility-toggle {
-          background: transparent;
-          border: none;
-          color: #94a3b8;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 0.5rem;
-          cursor: pointer;
-          transition: all 0.2s;
-          margin-left: -3rem;
-          z-index: 10;
-        }
-        .visibility-toggle:hover { color: #0f172a; }
       `}</style>
     </DashboardLayout>
   );

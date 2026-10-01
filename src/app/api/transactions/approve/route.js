@@ -17,6 +17,10 @@ export async function POST(req) {
     const { transactionId, status } = await req.json();
     const userId = user._id;
 
+    if (!['approved', 'rejected'].includes(status)) {
+      return NextResponse.json({ success: false, message: 'Status must be approved or rejected.' }, { status: 400 });
+    }
+
     if (!hasPermission(user, 'pending_approvals')) {
       return NextResponse.json({ success: false, message: 'You do not have access to approve transactions.' }, { status: 403 });
     }
@@ -29,6 +33,11 @@ export async function POST(req) {
     // Enforce tenant isolation: approvers can only act on their own company's transactions
     if (String(transaction.companyId) !== String(user.companyId)) {
       return NextResponse.json({ success: false, message: 'You can only review transactions for your own company.' }, { status: 403 });
+    }
+
+    // Only pending transactions can be reviewed; decisions are final
+    if (transaction.status !== 'pending') {
+      return NextResponse.json({ success: false, message: `This transaction was already ${transaction.status}.` }, { status: 409 });
     }
 
     transaction.status = status; // approved or rejected

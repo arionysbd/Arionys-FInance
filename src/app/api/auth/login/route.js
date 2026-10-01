@@ -9,8 +9,13 @@ export async function POST(req) {
   try {
     await dbConnect();
     const { email, password } = await req.json();
+    if (!email || !password) {
+      return NextResponse.json({ success: false, message: 'Email and password are required.' }, { status: 400 });
+    }
 
-    const user = await User.findOne({ email });
+    // Emails are matched case-insensitively (some older accounts were saved with capitals)
+    const escaped = String(email).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const user = await User.findOne({ email: new RegExp(`^${escaped}$`, 'i') });
 
     // Block users who haven't confirmed their invitation yet
     if (user && user.inviteToken) {

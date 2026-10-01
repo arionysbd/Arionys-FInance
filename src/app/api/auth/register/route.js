@@ -24,6 +24,12 @@ export async function POST(req) {
       return NextResponse.json({ success: false, message: 'Verification code has expired. Please request a new one.' }, { status: 400 });
     }
     if (stored.code !== otp) {
+      // Limit guesses so the 6-digit code can't be brute-forced
+      stored.attempts = (stored.attempts || 0) + 1;
+      if (stored.attempts >= 5) {
+        otpStore.delete(email);
+        return NextResponse.json({ success: false, message: 'Too many incorrect attempts. Please request a new code.' }, { status: 429 });
+      }
       return NextResponse.json({ success: false, message: 'Invalid verification code.' }, { status: 400 });
     }
     // OTP is valid — clear it

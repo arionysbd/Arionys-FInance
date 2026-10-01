@@ -3,8 +3,12 @@ import TransactionForm from '@/components/Transactions/TransactionForm';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { hasPermission, getHomePath } from '@/lib/permissions';
 
 export default function CreateTransactionPage() {
+  const { user } = useAuth();
+  const canSeeHistory = hasPermission(user, 'transactions');
   const handleTransactionAdded = () => {
     // Stay on the create page after submitting (no redirect).
     // The form resets itself and shows a confirmation alert.
@@ -14,9 +18,9 @@ export default function CreateTransactionPage() {
     <DashboardLayout>
       <div className="create-tx-layout">
         <div className="back-link-container">
-          <Link href="/transactions" className="back-link">
+          <Link href={canSeeHistory ? '/transactions' : getHomePath(user)} className="back-link">
             <ArrowLeft size={16} />
-            Back to Transactions
+            {canSeeHistory ? 'Back to Transactions' : 'Back to Dashboard'}
           </Link>
         </div>
         <div className="tx-form-container">

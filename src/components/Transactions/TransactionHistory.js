@@ -344,45 +344,45 @@ export default function TransactionHistory({ transactions, onUpdate, filterType,
 
       <div className="mobile-only tx-card-list">
         {transactions.map((tx) => (
-          <div key={tx._id} className="tx-premium-mobile-card">
-            <div className="mobile-card-header">
+          <article key={tx._id} className={`txm-card txm-${tx.type}`}>
+            <header className="txm-top">
               <div className={`type-pill-minimal type-${tx.type}`}>
                 <span>{tx.type}</span>
               </div>
-              <span className="mobile-date">{new Date(tx.date).toLocaleDateString()}</span>
-            </div>
-            
-            <div className="mobile-card-body">
-              <h4 className="mobile-desc"><span className="label-dim">Description:</span> {tx.description}</h4>
-              
-              <div className="mobile-financials" style={{ marginTop: '1rem' }}>
-                <div>
-                  <div className="mobile-amount-value">
-                    <span className="m-curr">BDT</span>
-                    <span className="m-val">{tx.amount.toLocaleString()}</span>
-                  </div>
-                  <div className="mobile-account" style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem', fontWeight: 600 }}>
-                    {tx.type === 'transfer' ? `From: ${tx.account?.bankName || 'Unknown'} → To: ${tx.toAccount?.bankName || 'Unknown'}` : `Account: ${tx.account?.bankName || 'Unknown'}`}
-                  </div>
-                </div>
-                <div className="status-stack">
-                  <div className={`status-chip ${tx.status} mini`}>
-                    {tx.status === 'approved' ? <CheckCircle size={10} /> : <XCircle size={10} />}
-                    {tx.status === 'approved' ? 'Verified' : 'Rejected'}
-                  </div>
-                  {tx.approvedBy?.name && (
-                    <span className="m-verifier">By: {tx.approvedBy.name}</span>
-                  )}
-                </div>
+              <div className="txm-amount">
+                <span className="txm-cur">BDT</span>
+                {tx.amount.toLocaleString()}
               </div>
+            </header>
+
+            <div className="txm-body">
+              <h4 className="txm-title">{tx.description}</h4>
+              <p className="txm-account">
+                {tx.type === 'transfer'
+                  ? `${tx.account?.bankName || 'Unknown'} → ${tx.toAccount?.bankName || 'Unknown'}`
+                  : tx.account?.bankName || 'No account'}
+              </p>
             </div>
 
-            <div className="mobile-card-footer">
-              <div className="creator-badge">
-                <span>{tx.createdBy?.name || 'System'}</span>
+            <dl className="txm-meta">
+              <div>
+                <dt>Date</dt>
+                <dd>{new Date(tx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</dd>
               </div>
-            </div>
-          </div>
+              <div>
+                <dt>Recorded by</dt>
+                <dd>{tx.createdBy?.name || tx.performedBy || 'System'}</dd>
+              </div>
+            </dl>
+
+            <footer className="txm-foot">
+              <span className={`txm-status ${tx.status}`}>
+                {tx.status === 'approved' ? <CheckCircle size={13} /> : <XCircle size={13} />}
+                {tx.status === 'approved' ? 'Verified' : 'Rejected'}
+              </span>
+              {tx.approvedBy?.name && <span className="txm-by">by {tx.approvedBy.name}</span>}
+            </footer>
+          </article>
         ))}
       </div>
 
@@ -597,26 +597,29 @@ export default function TransactionHistory({ transactions, onUpdate, filterType,
         .status-stack { display: flex; flex-direction: column; align-items: flex-end; gap: 0.2rem; }
         .m-verifier { font-size: 0.6rem; color: #94a3b8; font-weight: 600; }
 
-        /* Mobile Premium Cards */
-        .tx-card-list { display: flex; flex-direction: column; gap: 1rem; }
-        .tx-premium-mobile-card { 
-          background: white; 
-          border-radius: 4px; 
-          padding: clamp(1rem, 4vw, 1.25rem); 
-          border: 1px solid #e2e8f0;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-        }
-        .mobile-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
-        .mobile-date { font-size: clamp(0.65rem, 2.5vw, 0.75rem); font-weight: 700; color: #64748b; }
-        .mobile-desc { font-size: clamp(0.9rem, 4vw, 1rem); font-weight: 800; color: #0f172a; margin-bottom: 0.25rem; }
-        .label-dim { color: #94a3b8; font-weight: 600; font-size: 0.875rem; margin-right: 0.25rem; }
-        .mobile-performed { font-size: 0.8125rem; color: #64748b; margin-bottom: 1.25rem; }
-        .mobile-financials { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-        .mobile-amount-value { display: flex; align-items: baseline; gap: 0.25rem; font-weight: 900; color: #0f172a; }
-        .m-curr { font-size: clamp(0.6rem, 2vw, 0.7rem); color: #64748b; }
-        .m-val { font-size: clamp(1.1rem, 5vw, 1.25rem); }
-        .status-chip.mini { padding: 0.125rem 0.5rem; font-size: 0.7rem; }
-        .mobile-card-footer { border-top: 1px solid #f1f5f9; padding-top: 1rem; }
+        /* Mobile cards */
+        .tx-card-list { display: flex; flex-direction: column; gap: 0.75rem; }
+        .txm-card { position: relative; overflow: hidden; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04); }
+        .txm-card::before { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 3px; background: #cbd5e1; }
+        .txm-expense::before { background: #ef4444; }
+        .txm-revenue::before { background: #10b981; }
+        .txm-investment::before { background: #6366f1; }
+        .txm-transfer::before { background: #a855f7; }
+        .txm-top { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.875rem 1rem 0; }
+        .txm-amount { display: flex; align-items: baseline; gap: 0.25rem; font-size: 1.125rem; font-weight: 800; color: #0f172a; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .txm-cur { font-size: 0.6875rem; font-weight: 700; color: #94a3b8; }
+        .txm-body { padding: 0.625rem 1rem 0.875rem; min-width: 0; }
+        .txm-title { margin: 0 0 0.25rem; font-size: 0.9375rem; font-weight: 700; line-height: 1.4; color: #0f172a; word-break: break-word; }
+        .txm-account { margin: 0; font-size: 0.8125rem; color: #64748b; word-break: break-word; }
+        .txm-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin: 0; padding: 0.75rem 1rem; background: #f8fafc; border-top: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; }
+        .txm-meta div { min-width: 0; }
+        .txm-meta dt { margin-bottom: 0.125rem; font-size: 0.6875rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; }
+        .txm-meta dd { margin: 0; font-size: 0.8125rem; font-weight: 600; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .txm-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.625rem 1rem; }
+        .txm-status { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.1875rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
+        .txm-status.approved { background: #f0fdf4; color: #15803d; }
+        .txm-status.rejected { background: #fef2f2; color: #b91c1c; }
+        .txm-by { min-width: 0; font-size: 0.75rem; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
         .download-area { position: relative; }
         .download-btn { 
@@ -703,7 +706,8 @@ export default function TransactionHistory({ transactions, onUpdate, filterType,
           .header-actions { flex-direction: row; width: 100%; gap: 0.75rem; align-items: center; }
           .custom-dropdown-wrapper, .download-area { flex: 1; min-width: 0; }
           .custom-filter-trigger, .download-btn { width: 100%; padding: 0 0.75rem; font-size: 0.75rem; }
-          .trigger-content span, .download-btn span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .trigger-content span, .download-btn span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.8125rem; font-weight: 700; }
+          .custom-filter-trigger, .download-btn { min-height: 42px; }
           .download-menu { width: 200px; left: auto; right: 0; }
         }
 

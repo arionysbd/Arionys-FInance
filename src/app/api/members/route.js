@@ -4,7 +4,7 @@ import User from '@/models/User';
 import AuditLog from '@/models/AuditLog';
 import { sendEmail } from '@/lib/mail';
 import { getAuthUser, unauthorized, forbidden } from '@/lib/auth';
-import { getUserPermissions, hasPermission, isOwner, sanitizePermissions, DEFAULT_PERMISSIONS } from '@/lib/permissions';
+import { getUserPermissions, hasPermission, isOwner, sanitizePermissions, canSeeAccess, DEFAULT_PERMISSIONS } from '@/lib/permissions';
 
 export async function GET(req) {
   try {
@@ -22,6 +22,7 @@ export async function GET(req) {
     const Employee = (await import('@/models/Employee')).default;
     const Invite = (await import('@/models/Invite')).default;
     const pendingInvites = await Invite.find({ companyId, usedAt: null }).lean();
+    const showAccess = canSeeAccess(authUser);
     const users = await User.find({ companyId }).select('-password').lean();
     const employees = await Employee.find({ companyId }).lean();
     
@@ -29,8 +30,9 @@ export async function GET(req) {
     const handledEmails = new Set();
 
     for (const u of users) {
-      // The company owner is not listed or managed here
+      // The company owner is not listed or managed here (nor their own employee record)
       if (isOwner(u)) {
+        handledEmails.add(u.email.toLowerCase());
         continue;
       }
       const emp = employees.find(e => e.email.toLowerCase() === u.email.toLowerCase());
@@ -40,7 +42,6 @@ export async function GET(req) {
         isUser: true,
         employeeDocId: emp?._id || null,
         fullName: emp?.fullName || u.name,
-        department: emp?.department || '',
         designation: emp?.designation || '',
         empIdString: emp?.employeeId || '',
         phone: emp?.phone || u.phone || '',
@@ -49,7 +50,7 @@ export async function GET(req) {
         loanLimit: emp?.loanLimit || 0,
         joiningDate: emp?.joiningDate || null,
         profilePhoto: emp?.profilePhoto || '',
-        permissions: getUserPermissions(u),
+        permissions: showAccess ? getUserPermissions(u) : undefined,
       });
       handledEmails.add(u.email.toLowerCase());
     }
@@ -63,7 +64,6 @@ export async function GET(req) {
           name: emp.fullName,
           fullName: emp.fullName,
           email: emp.email,
-          department: emp.department,
           designation: emp.designation,
           empIdString: emp.employeeId,
           phone: emp.phone,
@@ -72,9 +72,9 @@ export async function GET(req) {
           loanLimit: emp.loanLimit || 0,
           joiningDate: emp.joiningDate || null,
           profilePhoto: emp.profilePhoto || '',
-          permissions: sanitizePermissions(
-            pendingInvites.find(i => i.email === emp.email.toLowerCase())?.permissions || DEFAULT_PERMISSIONS
-          ),
+          permissions: showAccess
+            ? sanitizePermissions(pendingInvites.find(i => i.email === emp.email.toLowerCase())?.permissions || DEFAULT_PERMISSIONS)
+            : undefined,
           role: 'pending_invite',
           isActive: false,
         });
@@ -90,18 +90,11 @@ export async function GET(req) {
 // Shared rules for changing another member:
 // the actor needs the Employees page, the owner can never be changed, and nobody can change themselves.
 function checkCanManage(actor, target) {
-  if (!hasPermission(actor, 'employees')) return 'You do not have access to manage employees.';
+  if (!hasPermission(actor, 'manage_employees')) return 'You do not have access to manage employees.';
   if (String(target.companyId) !== String(actor.companyId)) return 'You can only manage members of your own company.';
   if (isOwner(target)) return 'The company owner cannot be changed.';
   if (String(target._id) === String(actor._id)) return 'You cannot change your own access.';
   return null;
-}
-
-// Users may only hand out pages they can open themselves (the owner can hand out everything)
-function checkGrantable(actor, permissions) {
-  const own = getUserPermissions(actor);
-  const notAllowed = permissions.filter(k => !own.includes(k));
-  return notAllowed.length ? 'You can only give access to pages you have access to yourself.' : null;
 }
 
 // PATCH /api/members — change a member's page access and/or account status.
@@ -112,15 +105,15 @@ export async function PATCH(req) {
 
     const actor = await getAuthUser(req);
     if (!actor) return unauthorized();
-    if (!hasPermission(actor, 'employees')) return forbidden('You do not have access to manage employees.');
+    if (!hasPermission(actor, 'manage_employees')) return forbidden('You do not have access to manage employees.');
 
     const body = await req.json();
     const { userId, employeeId, isActive } = body;
     const permissions = body.permissions !== undefined ? sanitizePermissions(body.permissions) : undefined;
 
-    if (permissions) {
-      const grantError = checkGrantable(actor, permissions);
-      if (grantError) return forbidden(grantError);
+    // Page access can only be changed from the company admin (owner) account
+    if (permissions && !isOwner(actor)) {
+      return forbidden('Only the company admin account can change page access.');
     }
 
     // Pending invite: update the access the person will get when they accept
@@ -224,7 +217,7 @@ export async function DELETE(req) {
 
     const { userId, employeeId } = await req.json();
 
-    if (!hasPermission(actor, 'employees')) return forbidden('You do not have access to delete employees.');
+    if (!hasPermission(actor, 'manage_employees')) return forbidden('You do not have access to delete employees.');
 
     const Employee = (await import('@/models/Employee')).default;
     const Invite = (await import('@/models/Invite')).default;

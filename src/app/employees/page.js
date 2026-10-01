@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import CustomSelect from '@/components/UI/CustomSelect';
 import AccessPicker from '@/components/UI/AccessPicker';
-import { PERMISSIONS, DEFAULT_PERMISSIONS, getUserPermissions, hasPermission } from '@/lib/permissions';
+import { PERMISSIONS, DEFAULT_PERMISSIONS, hasPermission, isOwner, canSeeAccess } from '@/lib/permissions';
 import Link from 'next/link';
 
 export default function CompanyMembers() {
@@ -24,7 +24,6 @@ export default function CompanyMembers() {
   const [accessEditor, setAccessEditor] = useState(null);
   const [savingAccess, setSavingAccess] = useState(false);
   const [accessError, setAccessError] = useState('');
-  const [companySettings, setCompanySettings] = useState({ departments: [], designations: [] });
   
   // Add Employee Form State
   const today = () => new Date().toISOString().split('T')[0];
@@ -33,12 +32,10 @@ export default function CompanyMembers() {
     email: '',
     phone: '',
     employeeId: '',
-    department: '',
     designation: '',
     joiningDate: today(),
     salary: '',
     loanLimit: '',
-    permissions: DEFAULT_PERMISSIONS,
   });
   const [formData, setFormData] = useState(emptyEmployeeForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -85,10 +82,6 @@ export default function CompanyMembers() {
       const { data } = await axios.get('/api/company');
       if (data.success) {
         setCompany(data.data);
-        setCompanySettings({
-          departments: data.data.departments || [],
-          designations: data.data.designations || []
-        });
       }
     } catch (err) {
       console.error('Error fetching company:', err);
@@ -199,10 +192,13 @@ export default function CompanyMembers() {
 
   // Anyone with the Employees page can manage other members, but never their own account
   // (the owner is not listed here at all). The API enforces the same rules.
-  const canManage = (member) => Boolean(member) && member._id !== currentUser?._id;
+  const canManageEmployees = hasPermission(currentUser, 'manage_employees');
+  const canManage = (member) => canManageEmployees && Boolean(member) && member._id !== currentUser?._id;
+  // Page access is only visible to the company admin and employee managers
+  const showAccess = canSeeAccess(currentUser);
 
-  // Pages the current user may hand out: only the ones they can open themselves
-  const grantable = getUserPermissions(currentUser);
+  // Page access can only be changed from the company admin account; others can view it
+  const canEditAccess = isOwner(currentUser);
 
   const accessSummary = (keys = []) =>
     PERMISSIONS.filter(p => keys.includes(p.key)).map(p => p.label).join(', ') || 'No pages';
@@ -264,7 +260,7 @@ export default function CompanyMembers() {
             </div>
           </div>
           <span className="m-count">{users.length} {users.length === 1 ? 'member' : 'members'}</span>
-          {hasPermission(currentUser, 'employees') && (
+          {canManageEmployees && (
             <div className="page-actions">
               <button className="btn-create-user" onClick={() => setShowCreateModal(true)}>
                 <UserPlus size={16} />
@@ -287,8 +283,8 @@ export default function CompanyMembers() {
                       <th>Name</th>
                       <th>Email</th>
                       <th>Phone No</th>
-                      <th>Department</th>
-                      <th>Access</th>
+                      <th>Designation</th>
+                      {showAccess && <th>Access</th>}
                       <th>Limit</th>
                       <th>Status</th>
                       <th className="th-actions">Actions</th>
@@ -299,24 +295,24 @@ export default function CompanyMembers() {
                       <tr key={u._id} className="user-row">
                         <td>
                           <span className="user-name">{u.fullName || u.name}</span>
-                          {u.designation && <span className="cell-sub">{u.designation}</span>}
                         </td>
                         <td><span className="cell-text">{u.email}</span></td>
                         <td><span className="cell-text">{u.phone || '—'}</span></td>
-                        <td><span className="cell-text">{u.department || '—'}</span></td>
+                        <td><span className="cell-text">{u.designation || '—'}</span></td>
+                        {showAccess && (
                         <td>
                           <button
                             type="button"
                             className="access-cell"
-                            onClick={() => canManage(u) && openAccess(u)}
-                            disabled={!canManage(u)}
-                            title={accessSummary(u.permissions)}
+                            onClick={() => openAccess(u)}
+                                                        title={accessSummary(u.permissions)}
                           >
                             <span className="access-count">{u.permissions?.length || 0}</span>
                             <span>{(u.permissions?.length || 0) === 1 ? 'page' : 'pages'}</span>
-                            {canManage(u) && <Pencil size={12} className="access-edit" />}
+                            {canEditAccess && canManage(u) && <Pencil size={12} className="access-edit" />}
                             </button>
                         </td>
+                        )}
                         <td>
                           <span className="cell-text cell-strong">{u.loanLimit > 0 ? u.loanLimit.toLocaleString() : '—'}</span>
                         </td>
@@ -334,7 +330,7 @@ export default function CompanyMembers() {
                           )}
                         </td>
                         <td>
-                          {(u.employeeDocId || canManage(u) || !u.isUser) && (
+                          {(u.employeeDocId || canManage(u) || showAccess) && (
                             <div className="action-menu">
                               <button
                                 type="button"
@@ -354,13 +350,13 @@ export default function CompanyMembers() {
                                       <span>View Profile</span>
                                     </Link>
                                   )}
-                                  {canManage(u) && (
+                                  {showAccess && (
                                     <button type="button" className="action-menu-item" role="menuitem" onClick={() => openAccess(u)}>
                                       <ShieldCheck size={14} />
-                                      <span>Manage Access</span>
+                                      <span>{canEditAccess ? 'Manage Access' : 'View Access'}</span>
                                     </button>
                                   )}
-                                  {(canManage(u) || !u.isUser) && (
+                                  {canManage(u) && (
                                     <button
                                       type="button"
                                       className="action-menu-item danger"
@@ -390,7 +386,7 @@ export default function CompanyMembers() {
                   {users.map((u) => {
                     const displayName = u.fullName || u.name;
                     const isSelf = u._id === currentUser._id;
-                    const showMenu = u.employeeDocId || canManage(u) || !u.isUser;
+                    const showMenu = u.employeeDocId || canManage(u) || showAccess;
                     return (
                       <article key={u._id} className="m-card">
                         <header className="m-head">
@@ -426,13 +422,13 @@ export default function CompanyMembers() {
                                       <span>View Profile</span>
                                     </Link>
                                   )}
-                                  {canManage(u) && (
+                                  {showAccess && (
                                     <button type="button" className="action-menu-item" role="menuitem" onClick={() => openAccess(u)}>
                                       <ShieldCheck size={14} />
-                                      <span>Manage Access</span>
+                                      <span>{canEditAccess ? 'Manage Access' : 'View Access'}</span>
                                     </button>
                                   )}
-                                  {(canManage(u) || !u.isUser) && (
+                                  {canManage(u) && (
                                     <button
                                       type="button"
                                       className="action-menu-item danger"
@@ -458,8 +454,8 @@ export default function CompanyMembers() {
                             <dd>{u.phone || '—'}</dd>
                           </div>
                           <div>
-                            <dt>Department</dt>
-                            <dd>{u.department || '—'}</dd>
+                            <dt>Employee ID</dt>
+                            <dd>{u.empIdString || '—'}</dd>
                           </div>
                           <div>
                             <dt>Designation</dt>
@@ -474,20 +470,21 @@ export default function CompanyMembers() {
                         <footer className="m-foot">
                           {u.isUser ? (
                             <>
+                              {showAccess && (
                               <div className="m-foot-row">
                                 <span className="m-foot-label">Pages</span>
                                 <button
                                   type="button"
                                   className="access-cell"
-                                  onClick={() => canManage(u) && openAccess(u)}
-                                  disabled={!canManage(u)}
-                                  title={accessSummary(u.permissions)}
+                                  onClick={() => openAccess(u)}
+                                                                    title={accessSummary(u.permissions)}
                                 >
                                   <span className="access-count">{u.permissions?.length || 0}</span>
                                   <span>{(u.permissions?.length || 0) === 1 ? 'page' : 'pages'}</span>
-                                  {canManage(u) && <Pencil size={12} className="access-edit" />}
+                                  {canEditAccess && canManage(u) && <Pencil size={12} className="access-edit" />}
                             </button>
                               </div>
+                              )}
 
                               {canManage(u) && !u.isActive ? (
                                 <div className="m-approval-grid">
@@ -509,20 +506,21 @@ export default function CompanyMembers() {
                             </>
                           ) : (
                             <>
+                              {showAccess && (
                               <div className="m-foot-row">
                                 <span className="m-foot-label">Pages</span>
                                 <button
                                   type="button"
                                   className="access-cell"
-                                  onClick={() => canManage(u) && openAccess(u)}
-                                  disabled={!canManage(u)}
-                                  title={accessSummary(u.permissions)}
+                                  onClick={() => openAccess(u)}
+                                                                    title={accessSummary(u.permissions)}
                                 >
                                   <span className="access-count">{u.permissions?.length || 0}</span>
                                   <span>{(u.permissions?.length || 0) === 1 ? 'page' : 'pages'}</span>
-                                  {canManage(u) && <Pencil size={12} className="access-edit" />}
+                                  {canEditAccess && canManage(u) && <Pencil size={12} className="access-edit" />}
                             </button>
                               </div>
+                              )}
                               <div className="m-foot-row">
                                 <span className="m-foot-label">Status</span>
                                 <span className="m-invite-badge">Invite pending</span>
@@ -545,7 +543,11 @@ export default function CompanyMembers() {
               <div className="modal-header">
                 <div>
                   <h3>Page Access</h3>
-                  <p>{accessEditor.member.fullName || accessEditor.member.name} will only see the pages selected below.</p>
+                  <p>
+                    {canEditAccess && canManage(accessEditor.member)
+                      ? <>Choose which pages <strong>{accessEditor.member.fullName || accessEditor.member.name}</strong> can open. Everything else is hidden.</>
+                      : <>Pages <strong>{accessEditor.member.fullName || accessEditor.member.name}</strong> can open. Only the company admin account can change this.</>}
+                  </p>
                 </div>
                 <button className="modal-close" onClick={() => setAccessEditor(null)} disabled={savingAccess}>
                   <X size={18} />
@@ -561,14 +563,20 @@ export default function CompanyMembers() {
                 <AccessPicker
                   value={accessEditor.permissions}
                   onChange={(keys) => setAccessEditor(prev => ({ ...prev, permissions: keys }))}
-                  grantable={grantable}
+                  disabled={!(canEditAccess && canManage(accessEditor.member))}
                 />
               </div>
               <div className="modal-footer">
-                <button className="btn-cancel" onClick={() => setAccessEditor(null)} disabled={savingAccess}>Cancel</button>
-                <button className="btn-confirm" onClick={saveAccess} disabled={savingAccess}>
-                  {savingAccess ? 'Saving...' : 'Save Access'}
-                </button>
+                {canEditAccess && canManage(accessEditor.member) ? (
+                  <>
+                    <button className="btn-cancel" onClick={() => setAccessEditor(null)} disabled={savingAccess}>Cancel</button>
+                    <button className="btn-confirm" onClick={saveAccess} disabled={savingAccess}>
+                      {savingAccess ? 'Saving...' : 'Save Access'}
+                    </button>
+                  </>
+                ) : (
+                  <button className="btn-cancel" onClick={() => setAccessEditor(null)}>Close</button>
+                )}
               </div>
             </div>
           </div>
@@ -645,46 +653,14 @@ export default function CompanyMembers() {
                   </div>
 
                   <div className="modal-field">
-                    <label>Department *</label>
-                    <CustomSelect
-                      name="department"
-                      required
-                      icon={<Building2 size={16} />}
-                      placeholder="Select department"
-                      value={formData.department}
-                      onChange={(val) => handleInputChange({ target: { name: 'department', value: val } })}
-                      options={companySettings.departments.map(d => ({ value: d, label: d }))}
-                    />
+                    <label>Designation *</label>
+                    <div className="modal-input-wrap">
+                      <Briefcase size={16} />
+                      <input type="text" name="designation" placeholder="e.g. Software Engineer" required value={formData.designation} onChange={handleInputChange} />
+                    </div>
                   </div>
 
                   <div className="modal-field">
-                    <label>Designation *</label>
-                    <CustomSelect
-                      name="designation"
-                      required
-                      icon={<Briefcase size={16} />}
-                      placeholder="Select designation"
-                      value={formData.designation}
-                      onChange={(val) => handleInputChange({ target: { name: 'designation', value: val } })}
-                      options={companySettings.designations.map(d => ({ value: d, label: d }))}
-                    />
-                  </div>
-
-                  {(companySettings.departments.length === 0 || companySettings.designations.length === 0) && (
-                    <div className="form-hint ec-full">
-                      <AlertCircle size={14} />
-                      <span>
-                        No {companySettings.departments.length === 0 ? 'departments' : ''}
-                        {companySettings.departments.length === 0 && companySettings.designations.length === 0 ? ' or ' : ''}
-                        {companySettings.designations.length === 0 ? 'designations' : ''} configured yet.{' '}
-                        {hasPermission(currentUser, 'business_admin')
-                          ? <><Link href="/business-administration">Add them in Business Administration</Link>.</>
-                          : 'Ask an administrator to add them in Business Administration.'}
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="modal-field ec-full">
                     <label>Joining Date</label>
                     <div className="modal-input-wrap">
                       <Calendar size={16} />
@@ -693,14 +669,13 @@ export default function CompanyMembers() {
                   </div>
                 </div>
 
-                <div className="modal-field access-field">
-                  <label>Page Access</label>
-                  <p className="field-help">The employee will only see the pages you select.</p>
-                  <AccessPicker
-                    value={formData.permissions}
-                    onChange={(keys) => setFormData(prev => ({ ...prev, permissions: keys }))}
-                    grantable={grantable}
-                  />
+                <div className="access-note">
+                  <ShieldCheck size={16} />
+                  <p>
+                    New employees start with basic access:{' '}
+                    <strong>{PERMISSIONS.filter(p => DEFAULT_PERMISSIONS.includes(p.key)).map(p => p.label).join(', ')}</strong>.
+                    {canEditAccess ? ' You can add more from Manage Access after they are added.' : ' The company admin can add more later.'}
+                  </p>
                 </div>
 
                 <div className="modal-footer" style={{ marginTop: '2rem' }}>
@@ -722,8 +697,12 @@ export default function CompanyMembers() {
           .access-cell:disabled { cursor: default; opacity: 0.75; }
           .access-count { min-width: 20px; height: 20px; padding: 0 0.3rem; display: inline-grid; place-items: center; border-radius: 4px; background: #eef2ff; color: #4338ca; font-size: 0.75rem; font-weight: 800; }
           .access-cell :global(.access-edit) { color: #94a3b8; }
-          .access-modal { max-width: 640px; }
-          .access-field { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid #f1f5f9; }
+          .access-modal { max-width: 960px; display: flex; flex-direction: column; overflow: hidden; }
+          .access-modal .modal-body { flex: 1; min-height: 0; overflow-y: auto; padding: 1.25rem 1.5rem; }
+          .access-modal .modal-header p strong { color: #0f172a; font-weight: 700; }
+          .access-note { display: flex; align-items: flex-start; gap: 0.625rem; margin-top: 1.5rem; padding: 0.75rem 1rem; border: 1px solid #e0e7ff; border-radius: 6px; background: #f5f7ff; color: #4338ca; }
+          .access-note p { margin: 0; font-size: 0.8125rem; line-height: 1.5; color: #475569; }
+          .access-note strong { color: #0f172a; font-weight: 600; }
           .field-help { margin: -0.125rem 0 0.875rem; font-size: 0.8125rem; color: #64748b; }
           .form-hint { display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.625rem 0.875rem; border: 1px solid #fde68a; border-radius: 6px; background: #fffbeb; color: #92400e; font-size: 0.8125rem; font-weight: 600; }
           .form-hint :global(a) { color: #4f46e5; text-decoration: underline; }
@@ -744,8 +723,11 @@ export default function CompanyMembers() {
           .btn-create-user:hover { background: #1e293b; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15); }
           .m-count { display: none; }
           @media (max-width: 768px) {
-            .users-header { align-items: center; margin-bottom: 1rem; }
-            .title-area { display: none; }
+            .users-header { align-items: center; gap: 1rem; margin-bottom: 1rem; }
+            .users-header .title-area { display: none; }
+            .btn-create-user { white-space: nowrap; }
+            /* Show the Active/Revoked label on the left of the switch so it stays inside the card */
+            .m-foot-row .status-toggle .status-label { left: auto; right: calc(100% + 0.625rem); }
             .m-count { display: block; font-size: 0.875rem; font-weight: 600; color: #64748b; }
             .btn-create-user { padding: 0.625rem 1rem; }
             .table-card { background: transparent; border: none; box-shadow: none; }

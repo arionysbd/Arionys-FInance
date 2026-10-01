@@ -17,7 +17,7 @@ export async function POST(req) {
     const { name, email } = await req.json();
     const permissions = DEFAULT_PERMISSIONS;
 
-    if (!hasPermission(admin, 'employees')) {
+    if (!hasPermission(admin, 'manage_employees')) {
       return NextResponse.json(
         { success: false, message: 'You do not have access to invite users.' },
         { status: 403 }

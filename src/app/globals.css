@@ -341,9 +341,10 @@ select.input-field {
   h3 { font-size: 1.05rem !important; }
 
   /* Improve touch targets */
-  .btn, .input-field, select {
-    min-height: 46px;
-    font-size: 16px !important; /* Prevent iOS zoom */
+  .btn { min-height: 44px; }
+  .input-field, select, textarea, input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+    min-height: 44px;
+    font-size: 16px !important; /* Prevent iOS zoom on focus */
   }
 }
 

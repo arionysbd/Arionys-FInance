@@ -5,9 +5,9 @@ import DashboardLayout from '@/components/Layout/DashboardLayout';
 import { useParams, useRouter } from 'next/navigation';
 import axios from 'axios';
 import { getLoans } from '@/lib/api';
-import { PERMISSIONS, hasPermission } from '@/lib/permissions';
+import { PERMISSIONS, hasPermission, canSeeAccess } from '@/lib/permissions';
 import { 
-    ArrowLeft, User, Mail, Phone, Briefcase, Building2, Hash, Calendar, 
+    ArrowLeft, User, Mail, Phone, Briefcase, Hash, Calendar, 
     Calculator, Edit, AlertCircle, Banknote, ShieldCheck, Loader2, Save, X, Camera, Trash2,
     KeyRound, Activity, Clock, UserPlus, FileText, Wallet
 } from 'lucide-react';
@@ -82,7 +82,6 @@ export default function EmployeeDetailsPage() {
     const toEditForm = (emp) => ({
         fullName: emp.fullName || '',
         phone: emp.phone || '',
-        department: emp.department || '',
         designation: emp.designation || '',
         employeeId: emp.employeeId || '',
         salary: emp.salary || 0,
@@ -183,7 +182,8 @@ export default function EmployeeDetailsPage() {
         return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT' }).format(amount || 0);
     };
 
-    const canEdit = hasPermission(user, 'employees');
+    const canEdit = hasPermission(user, 'manage_employees');
+    const showAccess = canSeeAccess(user);
 
     // Renders an input in place of a detail value while the profile is in edit mode
     const editInput = (name, props = {}) => (
@@ -324,10 +324,6 @@ export default function EmployeeDetailsPage() {
                             <h3 className="card-title">Employment Details</h3>
                             <div className="info-list">
                                 <div className="info-row">
-                                    <div className="info-label"><Building2 size={16}/> Department</div>
-                                    {isEditing ? editInput('department') : <div className={`info-value ${!employee.department ? 'muted' : ''}`}>{employee.department || 'Not Assigned'}</div>}
-                                </div>
-                                <div className="info-row">
                                     <div className="info-label"><Briefcase size={16}/> Designation</div>
                                     {isEditing ? editInput('designation') : <div className={`info-value ${!employee.designation ? 'muted' : ''}`}>{employee.designation || 'Not Assigned'}</div>}
                                 </div>
@@ -349,6 +345,7 @@ export default function EmployeeDetailsPage() {
                         <div className="card info-card">
                             <h3 className="card-title">System Access</h3>
                             <div className="info-list">
+                                {showAccess && (
                                 <div className="info-row">
                                     <div className="info-label"><ShieldCheck size={16}/> Pages</div>
                                     {!employee.account ? (
@@ -365,6 +362,7 @@ export default function EmployeeDetailsPage() {
                                         <div className="info-value muted">No pages</div>
                                     )}
                                 </div>
+                                )}
                                 <div className="info-row">
                                     <div className="info-label"><KeyRound size={16}/> Account Access</div>
                                     <div className="info-value">
