@@ -1,0 +1,435 @@
+'use client';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import DashboardLayout from '@/components/Layout/DashboardLayout';
+import CustomSelect from '@/components/UI/CustomSelect';
+import { getLoans, createLoan, getEmployees, getAccounts } from '@/lib/api';
+import { Banknote, Plus, Search, Filter, Loader2, ArrowRight, HandCoins } from 'lucide-react';
+import Link from 'next/link';
+
+export default function LoansPage() {
+  const { user, loading: authLoading } = useAuth();
+  const [loans, setLoans] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  
+  // null | 'request' (any member, for themselves) | 'create' (CEO/CFO/Admin, for an employee)
+  const [modalMode, setModalMode] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  
+  const [employees, setEmployees] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+  
+  const [formData, setFormData] = useState(() => ({
+    employeeId: '',
+    paidFromAccount: '',
+    amount: '',
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: '',
+    notes: '',
+  }));
+
+  const canCreateLoan = ['owner', 'admin', 'ceo', 'cfo'].includes(user?.role?.toLowerCase());
+  const isCreateMode = modalMode === 'create';
+
+  const emptyLoanForm = () => ({
+    employeeId: '',
+    paidFromAccount: '',
+    amount: '',
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: '',
+    notes: '',
+  });
+
+  const openModal = (mode) => {
+    setFormData(emptyLoanForm());
+    setError('');
+    setModalMode(mode);
+  };
+
+  const closeModal = () => setModalMode(null);
+
+  useEffect(() => {
+    if (authLoading) return;
+    fetchLoans();
+  }, [user, authLoading, search, filterStatus]);
+
+  useEffect(() => {
+    if (modalMode === 'create') {
+        fetchFormData();
+    }
+  }, [modalMode]);
+
+  const fetchLoans = async () => {
+    try {
+      setLoading(true);
+      const res = await getLoans({ search, status: filterStatus });
+      if (res.success) {
+        setLoans(res.data);
+      }
+    } catch (err) {
+      console.error('Error fetching loans:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchFormData = async () => {
+      if (!canCreateLoan) return;
+      try {
+          const [empRes, accRes] = await Promise.all([
+              getEmployees({ status: 'active' }),
+              getAccounts()
+          ]);
+          if (empRes.success) setEmployees(empRes.data);
+          if (accRes.success) setAccounts(accRes.data);
+      } catch (err) {
+          console.error("Error fetching form data:", err);
+      }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setIsSubmitting(true);
+    try {
+      // Empty employeeId = request for myself
+      const payload = isCreateMode
+        ? { ...formData, type: 'create' }
+        : { amount: formData.amount, startDate: formData.startDate, endDate: formData.endDate, notes: formData.notes, type: 'request' };
+      const res = await createLoan(payload);
+      if (res.success) {
+        closeModal();
+        setFormData(emptyLoanForm());
+        fetchLoans();
+      } else {
+        setError(res.message);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const formatCurrency = (amount, currency = 'BDT') => {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+  };
+
+  return (
+    <DashboardLayout>
+      <div className="animate-fade-in">
+        <div className="card loans-toolbar">
+            <div className="toolbar-title">
+                <h2>Employee Loans</h2>
+                <p className="text-muted">Manage advances and loans for your staff</p>
+            </div>
+            <div className="search-box">
+                <Search size={18} className="search-icon" />
+                <input 
+                    type="text" 
+                    placeholder="Search by employee name..." 
+                    className="input-field"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                />
+            </div>
+            <div className="filter-box">
+                <Filter size={16} className="filter-icon" />
+                <select className="input-field" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+                    <option value="">All Statuses</option>
+                    <option value="pending_approval">Pending Approval</option>
+                    <option value="approved">Approved</option>
+                    <option value="active,partially_repaid">Active & Disbursed</option>
+                    <option value="overdue">Overdue</option>
+                    <option value="completed">Completed</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+            </div>
+            <div className="toolbar-actions">
+                <button className={`btn ${canCreateLoan ? 'btn-secondary' : 'btn-primary'} toolbar-btn`} onClick={() => openModal('request')}>
+                    <HandCoins size={18} /> Request Loan
+                </button>
+                {canCreateLoan && (
+                    <button className="btn btn-primary toolbar-btn" onClick={() => openModal('create')}>
+                        <Plus size={18} /> Create Loan
+                    </button>
+                )}
+            </div>
+        </div>
+
+        {loading ? (
+            <div className="loading-state">
+                <Loader2 size={32} className="spinner" />
+                <p>Loading loans...</p>
+            </div>
+        ) : (
+            <div className="loans-grid">
+                {loans.map(loan => (
+                    <Link href={`/loans/${loan._id}`} key={loan._id} className="card loan-card">
+                        <div className="loan-header">
+                            <div>
+                                <h3 className="emp-name">
+                                    {loan.employeeName}
+                                    <span className={`origin-tag ${loan.origin === 'request' ? 'is-request' : 'is-issued'}`}>
+                                        {loan.origin === 'request' ? 'Request' : 'Issued'}
+                                    </span>
+                                </h3>
+                                <p className="loan-date">Created {new Date(loan.createdAt).toLocaleDateString()}</p>
+                            </div>
+                            <div className="loan-status">
+                                {loan.status === 'pending_approval' && <span className="badge badge-pending">Pending</span>}
+                                {loan.status === 'approved' && <span className="badge" style={{background:'#fef3c7',color:'#d97706'}}>Approved</span>}
+                                {(loan.status === 'active' || loan.status === 'partially_repaid') && <span className="badge badge-approved">Active</span>}
+                                {loan.status === 'overdue' && <span className="badge badge-expense">Overdue</span>}
+                                {loan.status === 'completed' && <span className="badge" style={{background:'#f1f5f9',color:'#64748b'}}>Completed</span>}
+                                {loan.status === 'rejected' && <span className="badge badge-expense">Rejected</span>}
+                            </div>
+                        </div>
+                        
+                        <div className="loan-amounts">
+                            <div className="amount-block">
+                                <span className="label">Total Loan</span>
+                                <span className="value">{formatCurrency(loan.amount, loan.currency)}</span>
+                            </div>
+                            <div className="amount-block text-right">
+                                <span className="label">Outstanding</span>
+                                <span className={`value ${loan.outstandingAmount > 0 ? 'text-danger' : 'text-success'}`}>
+                                    {formatCurrency(loan.outstandingAmount, loan.currency)}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="loan-progress">
+                            <div className="progress-bar">
+                                <div className="progress-fill" style={{width: `${(loan.totalRepaid / loan.amount) * 100}%`}}></div>
+                            </div>
+                            <div className="progress-text">
+                                {((loan.totalRepaid / loan.amount) * 100).toFixed(0)}% Repaid
+                            </div>
+                        </div>
+
+                        <div className="loan-footer">
+                            <span className="text-sm text-slate-500">View Details</span>
+                            <ArrowRight size={16} className="text-slate-400" />
+                        </div>
+                    </Link>
+                ))}
+                {loans.length === 0 && (
+                    <div className="empty-state">
+                        <Banknote size={48} className="empty-icon" />
+                        <h3>No loans found</h3>
+                        <p className="text-muted">{canCreateLoan ? "No employee loans or requests yet." : "You haven't requested any loans yet."}</p>
+                        <button className="btn btn-primary" style={{marginTop: '1rem'}} onClick={() => openModal(canCreateLoan ? 'create' : 'request')}>
+                            <Plus size={18} /> {canCreateLoan ? 'Create First Loan' : 'Request a Loan'}
+                        </button>
+                    </div>
+                )}
+            </div>
+        )}
+      </div>
+
+      {modalMode && (
+          <div className="modal-overlay animate-fade-in">
+              <div className="modal-content animate-slide-up">
+                  <div className="modal-header">
+                      <div>
+                          <h3>{isCreateMode ? 'Create Employee Loan' : 'Request a Loan'}</h3>
+                          <p className="modal-sub">
+                              {isCreateMode
+                                  ? 'Issue a loan to an employee. It will be sent for approval.'
+                                  : 'Ask for a loan for yourself. An approver will review it.'}
+                          </p>
+                      </div>
+                      <button className="close-btn" onClick={closeModal}>&times;</button>
+                  </div>
+                  {error && <div className="alert alert-danger">{error}</div>}
+                    <form onSubmit={handleSubmit} className="modal-form">
+                      {!isCreateMode && (
+                          <div className="requester-box">
+                              <span className="requester-label">Requesting as</span>
+                              <span className="requester-name">{user?.name}</span>
+                              <span className="requester-email">{user?.email}</span>
+                          </div>
+                      )}
+                      {isCreateMode && (
+                          <div className="form-group">
+                              <label>Employee *</label>
+                              <CustomSelect 
+                                  required
+                                  value={formData.employeeId} 
+                                  onChange={(val) => handleInputChange({ target: { name: 'employeeId', value: val } })}
+                                  placeholder="Select Employee..."
+                                  options={employees.map(emp => ({
+                                      value: emp._id,
+                                      label: `${emp.fullName} ${emp.designation ? `(${emp.designation})` : ''}`,
+                                      subtext: emp.email
+                                  }))}
+                              />
+                              {formData.employeeId && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                      Limit: {formatCurrency(employees.find(e => e._id === formData.employeeId)?.loanLimit || 0)} 
+                                      (Salary: {formatCurrency(employees.find(e => e._id === formData.employeeId)?.salary || 0)})
+                                  </p>
+                              )}
+                          </div>
+                      )}
+                      {isCreateMode && (
+                          <div className="form-group">
+                              <label>Source Account (For Disbursement)</label>
+                              <CustomSelect 
+                                  value={formData.paidFromAccount} 
+                                  onChange={(val) => handleInputChange({ target: { name: 'paidFromAccount', value: val } })}
+                                  placeholder="Select Account..."
+                                  options={accounts.map(acc => ({
+                                      value: acc._id,
+                                      label: `${acc.bankName} - ${acc.acName || 'Cash'}`,
+                                      subtext: `Balance: ${formatCurrency(acc.balance)}`
+                                  }))}
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">Optional. Can also be chosen at disbursement. Funds are deducted only when the loan is disbursed.</p>
+                          </div>
+                      )}
+                      <div className="form-group">
+                          <label>Loan Amount *</label>
+                          <input type="number" step="0.01" min="1" name="amount" className="input-field" required value={formData.amount} onChange={handleInputChange} />
+                      </div>
+                      <div className="form-row">
+                          <div className="form-group">
+                              <label>Start Date *</label>
+                              <input type="date" name="startDate" className="input-field" required value={formData.startDate} onChange={handleInputChange} />
+                          </div>
+                          <div className="form-group">
+                              <label>End Date *</label>
+                              <input 
+                                  type="date" 
+                                  name="endDate" 
+                                  className="input-field" 
+                                  required 
+                                  value={formData.endDate} 
+                                  onChange={handleInputChange} 
+                              />
+                          </div>
+                      </div>
+                      <div className="form-group">
+                          <label>{isCreateMode ? 'Notes' : 'Reason *'}</label>
+                          <textarea
+                              name="notes"
+                              className="input-field"
+                              rows="3"
+                              required={!isCreateMode}
+                              value={formData.notes}
+                              onChange={handleInputChange}
+                              placeholder={isCreateMode ? 'Terms, repayment plan, etc.' : 'Why do you need this loan?'}
+                          ></textarea>
+                      </div>
+                      <div className="modal-actions">
+                          <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
+                          <button type="submit" className="btn btn-primary" disabled={isSubmitting || (isCreateMode && !formData.employeeId)}>
+                              {isSubmitting ? <Loader2 size={18} className="spinner" /> : (isCreateMode ? 'Create Loan' : 'Submit Request')}
+                          </button>
+                      </div>
+                  </form>
+              </div>
+          </div>
+      )}
+
+        <style jsx>{`
+            .loans-toolbar { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; margin-bottom: 2rem; }
+            .toolbar-title { flex: 1; min-width: 0; }
+            .toolbar-title h2 { font-size: 1.25rem; color: #0f172a; margin: 0 0 0.125rem; white-space: nowrap; }
+            .toolbar-title p { margin: 0; font-size: 0.8125rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .search-box { position: relative; flex: 0 1 340px; min-width: 200px; }
+            :global(.search-icon) { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
+            .search-box .input-field { padding-left: 2.5rem; width: 100%; }
+            .filter-box { position: relative; flex: 0 0 210px; }
+            .filter-box :global(.filter-icon) { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
+            .filter-box .input-field { padding-left: 2.25rem; width: 100%; }
+            .toolbar-btn { flex-shrink: 0; white-space: nowrap; }
+            .toolbar-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+            .modal-sub { margin: 0.25rem 0 0; font-size: 0.8125rem; color: #64748b; }
+            .requester-box { display: flex; flex-direction: column; gap: 0.125rem; margin-bottom: 1.25rem; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; }
+            .requester-label { font-size: 0.6875rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; }
+            .requester-name { font-size: 0.9375rem; font-weight: 700; color: #0f172a; }
+            .requester-email { font-size: 0.8125rem; color: #64748b; }
+            .emp-name { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+            .origin-tag { padding: 0.0625rem 0.4375rem; border-radius: 4px; font-size: 0.625rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
+            .origin-tag.is-request { background: #fef3c7; color: #92400e; }
+            .origin-tag.is-issued { background: #e0e7ff; color: #3730a3; }
+            @media (max-width: 960px) {
+                .loans-toolbar { flex-wrap: wrap; }
+                .toolbar-title { flex: 1 1 100%; }
+                .search-box { flex: 1 1 200px; }
+                .filter-box { flex: 1 1 180px; }
+            }
+            @media (max-width: 640px) {
+                .search-box, .filter-box { flex: 1 1 100%; }
+                .toolbar-actions { width: 100%; }
+                .toolbar-btn { flex: 1; justify-content: center; }
+                .form-row { flex-direction: column; }
+            }
+
+            .loans-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
+            .loan-card { padding: 1.5rem; transition: all 0.2s; text-decoration: none; display: flex; flex-direction: column; color: inherit; }
+            .loan-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); border-color: #cbd5e1; }
+            
+            .loan-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; }
+            .emp-name { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 0.25rem; }
+            .loan-date { font-size: 0.8rem; color: #64748b; }
+            
+            .loan-amounts { display: flex; justify-content: space-between; padding: 1rem; background: #f8fafc; border-radius: 6px; margin-bottom: 1.5rem; }
+            .amount-block { display: flex; flex-direction: column; gap: 0.25rem; }
+            .amount-block .label { font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; }
+            .amount-block .value { font-size: 1.1rem; font-weight: 700; color: #0f172a; }
+            .text-danger { color: #e11d48 !important; }
+            .text-success { color: #10b981 !important; }
+            
+            .loan-progress { margin-bottom: 1.5rem; }
+            .progress-bar { height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; margin-bottom: 0.5rem; }
+            .progress-fill { height: 100%; background: #4f46e5; border-radius: 3px; transition: width 0.3s ease; }
+            .progress-text { font-size: 0.75rem; color: #64748b; text-align: right; font-weight: 600; }
+
+            .loan-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; border-top: 1px solid #f1f5f9; margin-top: auto; }
+
+            .loading-state, .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; text-align: center; grid-column: 1 / -1; }
+            :global(.empty-icon) { color: #cbd5e1; margin-bottom: 1rem; }
+            .empty-state h3 { font-size: 1.25rem; color: #1e293b; margin-bottom: 0.5rem; }
+
+            .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+            .modal-content { background: white; border-radius: 6px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.2); }
+            .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid #f1f5f9; }
+            .modal-header h3 { font-size: 1.25rem; color: #0f172a; margin: 0; }
+            .close-btn { background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; width: 32px; height: 32px; border-radius: 50%; transition: background 0.2s; }
+            .close-btn:hover { background: #f1f5f9; color: #0f172a; }
+            
+            .modal-form { padding: 1.5rem; }
+            .form-group { margin-bottom: 1.25rem; }
+            .form-group label { display: block; font-size: 0.875rem; font-weight: 600; color: #475569; margin-bottom: 0.5rem; }
+            .form-row { display: flex; gap: 1rem; }
+            .form-row .form-group { flex: 1; }
+            
+            .modal-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #f1f5f9; }
+            
+            .alert { padding: 1rem; border-radius: 6px; margin: 1rem 1.5rem 0; font-size: 0.875rem; font-weight: 500; }
+            .alert-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5; }
+
+            :global(.spinner) { animation: spin 1s linear infinite; }
+            @keyframes spin { 100% { transform: rotate(360deg); } }
+            
+            /* Utils */
+            .flex { display: flex; }
+            .items-center { align-items: center; }
+            .gap-2 { gap: 0.5rem; }
+            .text-sm { font-size: 0.875rem; }
+            .text-xs { font-size: 0.75rem; }
+        `}</style>
+    </DashboardLayout>
+  );
+}

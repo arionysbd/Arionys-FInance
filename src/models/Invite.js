@@ -15,7 +15,7 @@ const inviteSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['admin', 'ceo', 'cfo', 'csuit', 'accountant'],
+    enum: ['admin', 'ceo', 'cfo', 'csuit', 'accountant', 'viewer'],
     required: true,
   },
   companyId: {

@@ -25,7 +25,7 @@ export default function CreateTransactionPage() {
       </div>
       <style jsx>{`
         .create-tx-layout {
-          max-width: 800px;
+          max-width: var(--form-max-width);
           margin: 0 auto;
           padding: 1rem 0 3rem;
         }

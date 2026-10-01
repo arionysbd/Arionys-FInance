@@ -329,14 +329,14 @@ export default function InvitePage() {
           justify-content: center;
           margin-bottom: 2.5rem;
         }
-        .brand-logo { width: 36px; height: 36px; border-radius: 10px; object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .brand-logo { width: 36px; height: 36px; border-radius: 6px; object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
         .brand-name { font-size: 1.125rem; font-weight: 800; color: #0f172a; letter-spacing: -0.02em; }
 
         /* Card */
         .invite-card {
           background: #ffffff;
           border: 1px solid rgba(226, 232, 240, 0.8);
-          border-radius: 16px;
+          border-radius: 8px;
           overflow: hidden;
           box-shadow: 0 20px 40px -10px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.02);
           text-align: center;
@@ -384,7 +384,7 @@ export default function InvitePage() {
           color: #64748b;
           background: #f1f5f9;
           padding: 0.4rem 0.75rem;
-          border-radius: 20px;
+          border-radius: 8px;
           flex-shrink: 0;
         }
 
@@ -418,7 +418,7 @@ export default function InvitePage() {
           gap: 0.75rem;
           padding-left: 0.75rem;
           border: 1px solid #e2e8f0;
-          border-radius: 10px;
+          border-radius: 6px;
           background: #f8fafc;
           transition: all 0.2s ease;
           overflow: hidden;
@@ -451,7 +451,7 @@ export default function InvitePage() {
           color: #64748b;
           background: #e2e8f0;
           padding: 0.3rem 0.6rem;
-          border-radius: 6px;
+          border-radius: 4px;
           margin-right: 0.5rem;
           flex-shrink: 0;
         }
@@ -486,7 +486,7 @@ export default function InvitePage() {
           padding: 0.85rem 1rem;
           background: #fef2f2;
           border: 1px solid #fca5a5;
-          border-radius: 10px;
+          border-radius: 6px;
           font-size: 0.85rem;
           font-weight: 600;
           color: #ef4444;
@@ -504,7 +504,7 @@ export default function InvitePage() {
           background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
           color: #ffffff;
           border: none;
-          border-radius: 10px;
+          border-radius: 6px;
           font-size: 0.95rem;
           font-weight: 800;
           cursor: pointer;

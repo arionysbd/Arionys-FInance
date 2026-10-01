@@ -14,7 +14,7 @@ export default function Home() {
       <div className="placeholder shim"></div>
       <style jsx>{`
         .redirect-screen { height: 100vh; width: 100vw; display: flex; align-items: center; justify-content: center; background: #ffffff; }
-        .placeholder { width: 120px; height: 40px; border-radius: 6px; }
+        .placeholder { width: 120px; height: 40px; border-radius: 4px; }
         .shim {
           background: linear-gradient(90deg, #f1f5f9 25%, #f8fafc 50%, #f1f5f9 75%);
           background-size: 200% 100%;

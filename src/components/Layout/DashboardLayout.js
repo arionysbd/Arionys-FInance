@@ -14,7 +14,7 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getTransactions } from '@/lib/api';
+import { getTransactions, getLoans } from '@/lib/api';
 
 export default function DashboardLayout({ children }) {
   const { user, logout, loading: authLoading } = useAuth();
@@ -27,8 +27,11 @@ export default function DashboardLayout({ children }) {
       if (user && ['owner', 'admin', 'ceo', 'cfo'].includes(user.role?.toLowerCase())) {
         try {
           const params = { status: 'pending', companyId: user.companyId };
-          const data = await getTransactions(params);
-          setPendingCount(data.data.length);
+          const [txRes, loanRes] = await Promise.all([
+            getTransactions(params),
+            getLoans({ status: 'pending_approval' }),
+          ]);
+          setPendingCount(txRes.data.length + (loanRes.success ? loanRes.data.length : 0));
         } catch (err) {
           console.error('Error fetching pending count:', err);
         }
@@ -106,6 +109,7 @@ export default function DashboardLayout({ children }) {
     );
   }
 
+<<<<<<< Updated upstream
   const navItems = [
     { id: 'dashboard',    label: 'Dashboard',          icon: <Home size={22} />,  href: '/dashboard',           roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
     { id: 'create-tx',   label: 'Create Transaction',  icon: <ArrowRightLeft size={22} />,       href: '/transactions/create', roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
@@ -114,6 +118,45 @@ export default function DashboardLayout({ children }) {
     { id: 'accounts',    label: 'Accounts',             icon: <img src="/icons/nav-accounts.png" alt="" className="nav-img-icon" />,  href: '/accounts',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
     { id: 'business-administration', label: 'Business Administration', icon: <SlidersHorizontal size={22} />, href: '/business-administration', roles: ['admin', 'ceo'] },
     { id: 'settings',    label: 'Settings',             icon: < Settings size={22} />,href: '/settings',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+=======
+  const navSections = [
+    {
+      title: 'Overview',
+      items: [
+        { id: 'dashboard',    label: 'Dashboard',          icon: <Home size={20} />,           href: '/dashboard',           roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+      ],
+    },
+    {
+      title: 'Transactions',
+      items: [
+        { id: 'create-tx',    label: 'Create Transaction', icon: <ArrowRightLeft size={20} />, href: '/transactions/create', roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+        { id: 'pending',      label: 'Pending Approvals',  icon: <Clock size={20} />,          href: '/pending',             roles: ['owner', 'admin', 'ceo', 'cfo'], showBadge: true },
+        { id: 'transactions', label: 'Transaction History', icon: <History size={20} />,       href: '/transactions',        roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+      ],
+    },
+    {
+      title: 'Finance',
+      items: [
+        { id: 'accounts',     label: 'Accounts',           icon: <Landmark size={20} />,       href: '/accounts',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+        { id: 'loans',        label: 'Loans',              icon: <Banknote size={20} />,       href: '/loans',               roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant', 'viewer'] },
+        { id: 'reports',      label: 'Financial Reports',  icon: <PieChart size={20} />,       href: '/reports',             roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit'] },
+      ],
+    },
+    {
+      title: 'Organization',
+      items: [
+        { id: 'employees',    label: 'Employees',          icon: <UserIcon size={20} />,       href: '/employees',           roles: ['owner', 'admin', 'ceo', 'cfo'] },
+        { id: 'business-administration', label: 'Business Admin', icon: <SlidersHorizontal size={20} />, href: '/business-administration', roles: ['owner', 'admin'] },
+        { id: 'audit-log',    label: 'Audit Log',          icon: <ClipboardList size={20} />,  href: '/audit-log',           roles: ['owner', 'admin'] },
+      ],
+    },
+    {
+      title: 'Account',
+      items: [
+        { id: 'settings',     label: 'Profile Settings',   icon: <Settings size={20} />,       href: '/settings',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+      ],
+    },
+>>>>>>> Stashed changes
   ];
 
   const getPageTitle = () => {
@@ -149,10 +192,14 @@ export default function DashboardLayout({ children }) {
         </div>
 
         <nav className="side-nav">
-          {navItems.map((item) => {
-            if (item.roles && !item.roles.includes(user.role?.toLowerCase())) return null;
-            
+          {navSections.map((section) => {
+            const visibleItems = section.items.filter(
+              (item) => !item.roles || item.roles.includes(user.role?.toLowerCase())
+            );
+            if (visibleItems.length === 0) return null;
+
             return (
+<<<<<<< Updated upstream
               <Link 
                 key={item.id}
                 href={item.href}
@@ -164,6 +211,26 @@ export default function DashboardLayout({ children }) {
                 </div>
                 {item.label}
               </Link>
+=======
+              <div key={section.title} className="nav-section">
+                <p className="nav-section-title">{section.title}</p>
+                {visibleItems.map((item) => (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    className={`nav-item ${pathname === item.href ? 'active' : ''}`}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    title={item.label}
+                  >
+                    <div className="nav-icon-wrapper">
+                      {item.icon}
+                      {item.showBadge && pendingCount > 0 && <span className="notification-badge">{pendingCount}</span>}
+                    </div>
+                    <span className="nav-label">{item.label}</span>
+                  </Link>
+                ))}
+              </div>
+>>>>>>> Stashed changes
             );
           })}
         </nav>
@@ -223,7 +290,7 @@ export default function DashboardLayout({ children }) {
       <main className="main-content">
         <header className="top-header">
           <div className="breadcrumb">
-            <span>Pages</span>
+            <span>{user.companyName || 'Company'}</span>
             <ChevronRight size={14} />
             <span className="current">{getBreadcrumb()}</span>
           </div>
@@ -289,13 +356,24 @@ export default function DashboardLayout({ children }) {
         .logo-icon { width: 140px; display: flex; align-items: center; justify-content: center; }
         .logo-icon img { width: 100%; height: auto; object-fit: contain; }
 
-        .side-nav { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; margin-top: 1rem; }
+        .side-nav { display: flex; flex-direction: column; gap: 1.25rem; flex: 1; margin-top: 1rem; overflow-y: auto; }
+        .nav-section { display: flex; flex-direction: column; gap: 0.25rem; }
+        .nav-section-title {
+          margin: 0 0 0.25rem;
+          padding: 0 1rem;
+          font-size: 0.6875rem;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: #94a3b8;
+        }
+        .nav-label { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         :global(.nav-item) {
           display: flex;
           align-items: center;
-          gap: 1rem;
-          padding: 0.875rem 1rem;
-          border-radius: 8px;
+          gap: 0.875rem;
+          padding: 0.7rem 1rem;
+          border-radius: 6px;
           color: #64748b;
           font-weight: 600;
           font-size: 0.9375rem;
@@ -305,7 +383,9 @@ export default function DashboardLayout({ children }) {
         :global(.nav-item:hover) { background: rgba(255,255,255,0.8); color: var(--foreground); box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
         :global(.nav-item.active) { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: #ffffff; box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.39); }
 
-        .nav-icon-wrapper { position: relative; display: flex; align-items: center; justify-content: center; }
+        .nav-icon-wrapper { position: relative; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
+        :global(.nav-item:hover) .nav-icon-wrapper { transform: scale(1.1); }
+        :global(.nav-item.active) .nav-icon-wrapper { transform: scale(1); }
         :global(.nav-img-icon) { width: 22px; height: 22px; object-fit: contain; display: block; }
         .notification-badge {
           position: absolute;
@@ -316,7 +396,7 @@ export default function DashboardLayout({ children }) {
           font-size: 0.65rem;
           font-weight: 800;
           padding: 0.125rem 0.375rem;
-          border-radius: 6px;
+          border-radius: 4px;
           border: 2px solid #ffffff;
           box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
         }
@@ -324,10 +404,10 @@ export default function DashboardLayout({ children }) {
 
         .sidebar-footer { border-top: 1px solid #f1f5f9; padding-top: 1.5rem; margin-top: auto; }
         .user-info { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; padding: 0 0.5rem; }
-        .avatar { width: 36px; height: 36px; border-radius: 6px; background: #f1f5f9; color: #0f172a; display: flex; align-items: center; justify-content: center; }
+        .avatar { width: 36px; height: 36px; border-radius: 4px; background: #f1f5f9; color: #0f172a; display: flex; align-items: center; justify-content: center; }
         .details .name { font-size: 0.875rem; font-weight: 700; color: #0f172a; margin: 0; }
         .details .role { font-size: 0.75rem; color: #64748b; margin: 0; text-transform: capitalize; }
-        .logout-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.75rem; padding: 0.75rem; border-radius: 6px; background: #fef2f2; color: #ef4444; border: none; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .logout-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.75rem; padding: 0.75rem; border-radius: 4px; background: #fef2f2; color: #ef4444; border: none; font-weight: 700; cursor: pointer; transition: all 0.2s; }
         .logout-btn:hover { background: #fee2e2; }
 
         .mobile-header { display: none; }
@@ -335,26 +415,71 @@ export default function DashboardLayout({ children }) {
 
         .main-content { flex: 1; margin-left: 260px; padding: 2rem 3rem; min-height: 100vh; background: #fcfcfc; max-width: 100vw; overflow-x: hidden; }
         .top-header { margin-bottom: 2.5rem; }
-        .breadcrumb { display: flex; align-items: center; gap: 0.5rem; color: #94a3b8; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; }
+        .breadcrumb { display: flex; align-items: center; gap: 0.5rem; color: #94a3b8; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; }
         .breadcrumb .current { color: #0f172a; }
         .header-flex { display: flex; justify-content: space-between; align-items: center; }
         .header-flex h1 { font-size: 1.875rem; font-weight: 900; color: #0f172a; letter-spacing: -0.02em; }
-        .role-tag { padding: 0.4rem 0.875rem; border-radius: 6px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.025em; margin-right: 0.5rem; }
-        .role-owner { background: #4f46e5; color: white; }
-        .role-admin { background: #0f172a; color: white; }
-        .role-ceo { background: #0f172a; color: white; }
-        .role-cfo { background: #0f172a; color: white; }
-        .role-accountant { background: #f1f5f9; color: #475569; }
+        .role-tag { padding: 0.35rem 0.875rem; border-radius: 8px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-right: 0.5rem; border: 1px solid transparent; }
+        .role-owner { background: #eef2ff; color: #4338ca; border-color: #c7d2fe; }
+        .role-admin { background: #f8fafc; color: #0f172a; border-color: #cbd5e1; }
+        .role-ceo { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
+        .role-cfo { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+        .role-accountant { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
         .mobile-role { display: none; }
+<<<<<<< Updated upstream
+=======
+        
+        .header-actions { display: flex; align-items: center; gap: 1rem; }
+        :global(.notification-bell) { position: relative; color: #64748b; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #f8fafc; transition: all 0.2s; text-decoration: none; border: 1px solid #e2e8f0; }
+        :global(.notification-bell:hover) { color: #0f172a; background: white; border-color: #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        :global(.bell-badge) { position: absolute; top: -4px; right: -4px; background: #ef4444; color: white; font-size: 0.65rem; font-weight: 800; min-width: 18px; height: 18px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: 2px solid white; padding: 0 4px; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2); }
+>>>>>>> Stashed changes
 
         .loading-screen { height: 100vh; width: 100vw; display: flex; align-items: center; justify-content: center; background: #ffffff; }
         .spinner { width: 40px; height: 40px; border: 3px solid #f1f5f9; border-top-color: #0f172a; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
         @media (max-width: 1024px) {
+<<<<<<< Updated upstream
           .sidebar { display: none; }
           .main-content { margin-left: 0; padding: 6rem 5vw 7rem; }
           .mobile-header { position: fixed; top: 0; left: 0; right: 0; height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 0 5vw 0 4vw; z-index: 1000; border-bottom: 1px solid #f1f5f9; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
+=======
+          .sidebar {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            /* Solid panel on mobile so page content does not show through the menu */
+            background: #ffffff;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            border-right: 1px solid #e2e8f0;
+            padding-top: calc(70px + 0.5rem);
+            overflow-y: auto;
+          }
+          .sidebar.open {
+            transform: translateX(0);
+            box-shadow: 8px 0 30px -10px rgba(15, 23, 42, 0.3);
+          }
+          .sidebar .logo-area { display: none; }
+          .mobile-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(4px);
+            z-index: 90;
+          }
+          .main-content { margin-left: 0; padding: 6rem 5vw 3rem; }
+          .mobile-header { 
+            position: fixed; top: 0; left: 0; right: 0; height: 70px; 
+            display: flex; align-items: center; justify-content: space-between; 
+            padding: 0 5vw 0 4vw; z-index: 9999; 
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+          }
+>>>>>>> Stashed changes
           .mobile-header .logo-area { padding: 0; border: none; margin: 0; display: flex; flex-direction: row; align-items: center; justify-content: flex-start; }
           .mobile-header .logo-icon { width: 110px; transform: translateY(-1px); display: flex; align-items: center; justify-content: flex-start; }
           .mobile-header-right { display: flex; align-items: center; gap: 0.75rem; }
