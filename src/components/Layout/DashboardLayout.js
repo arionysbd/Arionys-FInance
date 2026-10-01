@@ -372,9 +372,9 @@ export default function DashboardLayout({ children }) {
         .mobile-role { display: none; }
         
         .header-actions { display: flex; align-items: center; gap: 1rem; }
-        .notification-bell { position: relative; color: #64748b; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #f8fafc; transition: all 0.2s; text-decoration: none; border: 1px solid #e2e8f0; }
-        .notification-bell:hover { color: #0f172a; background: white; border-color: #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .bell-badge { position: absolute; top: -4px; right: -4px; background: #ef4444; color: white; font-size: 0.65rem; font-weight: 800; min-width: 18px; height: 18px; border-radius: 9px; display: flex; align-items: center; justify-content: center; border: 2px solid white; padding: 0 4px; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2); }
+        :global(.notification-bell) { position: relative; color: #64748b; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #f8fafc; transition: all 0.2s; text-decoration: none; border: 1px solid #e2e8f0; }
+        :global(.notification-bell:hover) { color: #0f172a; background: white; border-color: #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        :global(.bell-badge) { position: absolute; top: -4px; right: -4px; background: #ef4444; color: white; font-size: 0.65rem; font-weight: 800; min-width: 18px; height: 18px; border-radius: 9px; display: flex; align-items: center; justify-content: center; border: 2px solid white; padding: 0 4px; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2); }
 
         .loading-screen { height: 100vh; width: 100vw; display: flex; align-items: center; justify-content: center; background: #ffffff; }
         .spinner { width: 40px; height: 40px; border: 3px solid #f1f5f9; border-top-color: #0f172a; border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -405,8 +405,8 @@ export default function DashboardLayout({ children }) {
           .mobile-header-right { display: flex; align-items: center; gap: 0.75rem; }
           .mobile-user-name { font-size: 0.8125rem; font-weight: 800; color: #0f172a; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
           .mobile-menu-btn { background: transparent; border: none; color: #0f172a; display: flex; align-items: center; justify-content: center; padding: 0.25rem; cursor: pointer; }
-          .desktop-bell { display: none; }
-          .notification-bell { background: transparent; border: none; }
+          :global(.desktop-bell) { display: none !important; }
+          :global(.notification-bell) { background: transparent; border: none; }
           .header-flex h1 { font-size: clamp(1.25rem, 5vw, 1.5rem); }
           .desktop-role { display: none; }
           .mobile-role { display: inline; }
