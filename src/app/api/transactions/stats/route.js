@@ -61,6 +61,14 @@ export async function GET(req) {
     stats.netBalance = Object.values(accountBalances).reduce((sum, acc) => sum + acc.balance, 0);
     stats.accountBalances = Object.values(accountBalances);
 
+    // Fetch total outstanding loans
+    const EmployeeLoan = (await import('@/models/EmployeeLoan')).default;
+    const activeLoans = await EmployeeLoan.find({ 
+        companyId, 
+        status: { $in: ['active', 'partially_repaid', 'overdue'] } 
+    });
+    stats.totalOutstandingLoans = activeLoans.reduce((sum, loan) => sum + loan.outstandingAmount, 0);
+
     return NextResponse.json({ success: true, data: stats });
   } catch (error) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });

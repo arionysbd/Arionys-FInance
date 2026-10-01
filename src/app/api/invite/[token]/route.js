@@ -97,6 +97,13 @@ export async function POST(req, { params }) {
     invite.usedAt = new Date();
     await invite.save();
 
+    // If an Employee record exists for this email, link it!
+    const Employee = (await import('@/models/Employee')).default;
+    await Employee.findOneAndUpdate(
+      { email: invite.email, companyId: invite.companyId },
+      { $set: { userId: user._id, status: 'active' } }
+    );
+
     // Issue a JWT so the user is logged in immediately
     const jwtToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 

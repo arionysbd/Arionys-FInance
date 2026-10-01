@@ -72,23 +72,15 @@ export default function PendingApprovalsPage() {
             <div className="skeleton skeleton-badge"></div>
           </div>
           
-          <div className="tx-grid">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="tx-card">
-                <div className="tx-card-top">
-                  <div className="skeleton skeleton-pill"></div>
-                  <div className="skeleton skeleton-amount"></div>
-                </div>
-                <div className="skeleton skeleton-line long"></div>
-                <div className="skeleton skeleton-line"></div>
-                <div className="tx-card-meta">
-                  <div className="skeleton skeleton-chip"></div>
-                  <div className="skeleton skeleton-chip"></div>
-                </div>
-                <div className="tx-card-actions">
-                  <div className="skeleton skeleton-btn"></div>
-                  <div className="skeleton skeleton-btn"></div>
-                </div>
+          <div className="table-card" style={{ padding: '2rem' }}>
+            <div className="skeleton skeleton-line long" style={{ marginBottom: '1.5rem' }}></div>
+            {[...Array(5)].map((_, i) => (
+              <div key={i} style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', alignItems: 'center' }}>
+                <div className="skeleton skeleton-pill"></div>
+                <div className="skeleton skeleton-line" style={{ flex: 1 }}></div>
+                <div className="skeleton skeleton-amount"></div>
+                <div className="skeleton skeleton-btn" style={{ width: '80px', flex: 'none' }}></div>
+                <div className="skeleton skeleton-btn" style={{ width: '80px', flex: 'none' }}></div>
               </div>
             ))}
           </div>
@@ -125,63 +117,80 @@ export default function PendingApprovalsPage() {
             <p>There are no pending transactions waiting for your approval right now.</p>
           </div>
         ) : (
-          <div className="tx-grid">
-            {transactions.map(tx => {
-              const meta = TYPE_META[tx.type] || TYPE_META.revenue;
-              const TypeIcon = meta.icon;
-              return (
-              <div key={tx._id} className={`tx-card accent-${tx.type}`}>
-                <div className="tx-card-top">
-                  <div className={`type-pill-minimal type-${tx.type}`}>
-                    <TypeIcon size={13} />
-                    <span>{meta.label}</span>
-                  </div>
-                  <div className={`amount-cell amount-${tx.type}`}>
-                    <span className="amount-currency">BDT</span> {tx.amount.toLocaleString()}
-                  </div>
-                </div>
-
-                <div className="tx-card-body">
-                  <h4 className="tx-main-desc">{tx.description}</h4>
-                  <p className="tx-account">
-                    {tx.type === 'transfer'
-                      ? `From: ${tx.account?.bankName || 'N/A'} → To: ${tx.toAccount?.bankName || 'N/A'}`
-                      : `Account: ${tx.account?.bankName || 'N/A'}`}
-                  </p>
-                </div>
-
-                <div className="tx-card-meta">
-                  <div className="meta-item">
-                    <span className="meta-label">Date</span>
-                    <span className="meta-value">{new Date(tx.date).toLocaleDateString()}</span>
-                  </div>
-                  <div className="meta-item">
-                    <span className="meta-label">Submitted by</span>
-                    <span className="creator-badge">{tx.createdBy?.name || tx.performedBy || 'System'}</span>
-                  </div>
-                </div>
-
-                <div className="tx-card-actions">
-                  <button
-                    className="btn-action approve"
-                    disabled={processingId === tx._id}
-                    onClick={() => initiateAction(tx._id, 'approved')}
-                  >
-                    {processingId === tx._id ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-                    Approve
-                  </button>
-                  <button
-                    className="btn-action reject"
-                    disabled={processingId === tx._id}
-                    onClick={() => initiateAction(tx._id, 'rejected')}
-                  >
-                    {processingId === tx._id ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />}
-                    Reject
-                  </button>
-                </div>
-              </div>
-              );
-            })}
+          <div className="table-card">
+            <div className="table-responsive">
+              <table className="tx-table">
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Description</th>
+                    <th>Account Info</th>
+                    <th>Amount (BDT)</th>
+                    <th>Date & User</th>
+                    <th className="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {transactions.map(tx => {
+                    const meta = TYPE_META[tx.type] || TYPE_META.revenue;
+                    const TypeIcon = meta.icon;
+                    return (
+                      <tr key={tx._id} className="tx-row">
+                        <td>
+                          <div className={`type-pill-minimal type-${tx.type}`}>
+                            <TypeIcon size={13} />
+                            <span>{meta.label}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span className="tx-main-desc">{tx.description}</span>
+                        </td>
+                        <td>
+                          <span className="tx-account">
+                            {tx.type === 'transfer'
+                              ? `From: ${tx.account?.bankName || 'N/A'} → To: ${tx.toAccount?.bankName || 'N/A'}`
+                              : tx.account?.bankName || 'N/A'}
+                          </span>
+                        </td>
+                        <td>
+                          <div className={`amount-cell amount-${tx.type}`}>
+                            {tx.amount.toLocaleString()}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="meta-stack">
+                            <span className="meta-value">{new Date(tx.date).toLocaleDateString()}</span>
+                            <span className="creator-badge">{tx.createdBy?.name || tx.performedBy || 'System'}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="action-cell">
+                            <button
+                              className="btn-action approve"
+                              disabled={processingId === tx._id}
+                              onClick={() => initiateAction(tx._id, 'approved')}
+                              title="Approve"
+                            >
+                              {processingId === tx._id ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                              Approve
+                            </button>
+                            <button
+                              className="btn-action reject"
+                              disabled={processingId === tx._id}
+                              onClick={() => initiateAction(tx._id, 'rejected')}
+                              title="Reject"
+                            >
+                              {processingId === tx._id ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />}
+                              Reject
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -293,52 +302,53 @@ export default function PendingApprovalsPage() {
           box-shadow: 0 2px 8px -2px rgba(217, 119, 6, 0.2);
           white-space: nowrap;
         }
-        /* Card grid */
-        .tx-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-          gap: 1.25rem;
-        }
-        .tx-card {
-          position: relative;
+        /* Table styling */
+        .table-card {
           background: #fff;
           border: 1px solid #e8edf3;
           border-radius: 16px;
-          padding: 1.5rem;
-          padding-top: 1.625rem;
-          display: flex;
-          flex-direction: column;
-          gap: 1.125rem;
-          box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
-          transition: box-shadow 0.25s, transform 0.25s, border-color 0.25s;
+          box-shadow: 0 4px 20px -8px rgba(15, 23, 42, 0.05);
           overflow: hidden;
         }
-        .tx-card::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 4px;
+        .table-responsive {
+          width: 100%;
+          overflow-x: auto;
         }
-        .tx-card.accent-revenue::before { background: linear-gradient(90deg, #34d399, #10b981); }
-        .tx-card.accent-expense::before { background: linear-gradient(90deg, #fb7185, #ef4444); }
-        .tx-card.accent-investment::before { background: linear-gradient(90deg, #818cf8, #6366f1); }
-        .tx-card.accent-transfer::before { background: linear-gradient(90deg, #c084fc, #a855f7); }
-        .tx-card:hover {
-          box-shadow: 0 16px 30px -12px rgba(15, 23, 42, 0.18);
-          transform: translateY(-3px);
-          border-color: #dbe3ec;
+        .tx-table {
+          width: 100%;
+          border-collapse: collapse;
+          min-width: 800px;
         }
-        .tx-card-top {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 0.75rem;
+        .tx-table th {
+          background: #f8fafc;
+          padding: 1rem 1.5rem;
+          font-size: 0.75rem;
+          font-weight: 800;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          text-align: left;
+          border-bottom: 1px solid #e2e8f0;
         }
+        .tx-table th.text-right { text-align: right; }
+        .tx-table td {
+          padding: 1.25rem 1.5rem;
+          border-bottom: 1px solid #f1f5f9;
+          vertical-align: middle;
+        }
+        .tx-row:hover { background: #f8fafc; }
+        .tx-row:last-child td { border-bottom: none; }
+        
+        .tx-main-desc { font-weight: 700; color: #0f172a; font-size: 0.9375rem; display: block; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .tx-account { font-size: 0.8125rem; font-weight: 600; color: #64748b; display: block; }
+        .meta-stack { display: flex; flex-direction: column; gap: 0.25rem; }
+        .meta-value { font-size: 0.8125rem; font-weight: 600; color: #475569; }
+        .creator-badge { font-size: 0.75rem; font-weight: 700; color: #94a3b8; }
+        .action-cell { display: flex; justify-content: flex-end; gap: 0.5rem; }
+        
         .amount-cell {
           font-weight: 800;
-          font-size: 1.25rem;
+          font-size: 1.0625rem;
           color: #0f172a;
           white-space: nowrap;
           letter-spacing: -0.02em;
@@ -349,43 +359,6 @@ export default function PendingApprovalsPage() {
         .amount-expense { color: #dc2626; }
         .amount-investment { color: #4f46e5; }
         .amount-transfer { color: #9333ea; }
-        .tx-card-body { display: flex; flex-direction: column; gap: 0.375rem; }
-        .tx-main-desc {
-          font-weight: 700;
-          color: #0f172a;
-          font-size: 1rem;
-          margin: 0;
-          word-break: break-word;
-        }
-        .tx-account { font-size: 0.8125rem; font-weight: 600; color: #64748b; margin: 0; word-break: break-word; }
-
-        .tx-card-meta {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 1.5rem;
-          padding: 0.875rem 0;
-          border-top: 1px solid #f1f5f9;
-          border-bottom: 1px solid #f1f5f9;
-        }
-        .meta-item { display: flex; flex-direction: column; gap: 0.375rem; }
-        .meta-item + .meta-item {
-          padding-left: 1.5rem;
-          border-left: 1px solid #e2e8f0;
-        }
-        .meta-label {
-          font-size: 0.6875rem;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          font-weight: 800;
-          color: #94a3b8;
-        }
-        .meta-value { font-size: 0.875rem; font-weight: 600; color: #475569; }
-        .creator-badge {
-          font-size: 0.875rem;
-          font-weight: 700;
-          color: #334155;
-        }
-        .tx-card-actions { display: flex; gap: 0.75rem; }
 
         .type-pill-minimal {
           display: inline-flex;
@@ -404,14 +377,13 @@ export default function PendingApprovalsPage() {
         .type-transfer { background: #f3e8ff; color: #6b21a8; }
         
         .btn-action {
-          flex: 1;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          gap: 0.5rem;
-          padding: 0.6875rem 0.875rem;
-          border-radius: 10px;
-          font-size: 0.8125rem;
+          gap: 0.375rem;
+          padding: 0.5rem 0.75rem;
+          border-radius: 8px;
+          font-size: 0.75rem;
           font-weight: 800;
           cursor: pointer;
           border: none;
@@ -419,17 +391,15 @@ export default function PendingApprovalsPage() {
         }
         .btn-action:disabled { opacity: 0.6; cursor: not-allowed; }
         .btn-action.approve {
-          background: linear-gradient(135deg, #10b981, #059669);
-          color: white;
-          box-shadow: 0 4px 12px -3px rgba(16, 185, 129, 0.5);
+          background: #dcfce7;
+          color: #059669;
         }
-        .btn-action.approve:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 18px -4px rgba(16, 185, 129, 0.55); }
+        .btn-action.approve:hover:not(:disabled) { background: #bbf7d0; color: #047857; }
         .btn-action.reject {
-          background: #fff;
+          background: #fee2e2;
           color: #dc2626;
-          border: 1.5px solid #fecaca;
         }
-        .btn-action.reject:hover:not(:disabled) { background: #fef2f2; border-color: #f87171; transform: translateY(-2px); }
+        .btn-action.reject:hover:not(:disabled) { background: #fecaca; color: #b91c1c; }
         
         .premium-empty-state {
           display: flex;
@@ -529,10 +499,6 @@ export default function PendingApprovalsPage() {
             align-items: flex-start;
             gap: 1rem;
             padding: 1.25rem;
-          }
-          .tx-grid {
-            grid-template-columns: 1fr;
-            gap: 1rem;
           }
         }
       `}</style>

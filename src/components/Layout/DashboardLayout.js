@@ -10,6 +10,7 @@ import {
   LogOut,
   ChevronRight,
   User as UserIcon,
+  Banknote,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
@@ -112,6 +113,8 @@ export default function DashboardLayout({ children }) {
     { id: 'pending',     label: 'Pending Approvals',   icon: <img src="/icons/nav-pending.png" alt="" className="nav-img-icon" />,   href: '/pending',             roles: ['owner', 'admin', 'ceo', 'cfo'], showBadge: true },
     { id: 'transactions',label: 'Transaction History',  icon: <img src="/icons/nav-history.png" alt="" className="nav-img-icon" />,   href: '/transactions',        roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
     { id: 'accounts',    label: 'Accounts',             icon: <img src="/icons/nav-accounts.png" alt="" className="nav-img-icon" />,  href: '/accounts',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+    { id: 'employees',   label: 'Employees',            icon: <UserIcon size={22} />, href: '/employees', roles: ['owner', 'admin', 'ceo', 'cfo'] },
+    { id: 'loans',       label: 'Loans',                icon: <Banknote size={22} />, href: '/loans',     roles: ['owner', 'admin', 'ceo', 'cfo', 'accountant'] },
     { id: 'business-administration', label: 'Business Administration', icon: <SlidersHorizontal size={22} />, href: '/business-administration', roles: ['admin', 'ceo'] },
     { id: 'settings',    label: 'Settings',             icon: < Settings size={22} />,href: '/settings',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
   ];
@@ -123,6 +126,10 @@ export default function DashboardLayout({ children }) {
     if (pathname === '/transactions/create') return 'Create Transaction';
     if (pathname === '/pending') return 'Pending Approvals';
     if (pathname === '/business-administration') return 'Business Administration';
+    if (pathname === '/employees') return 'Employees';
+    if (pathname.startsWith('/employees/')) return 'Employee Profile';
+    if (pathname === '/loans') return 'Employee Loans';
+    if (pathname.startsWith('/loans/')) return 'Loan Details';
 
     return 'Settings';
   };
@@ -134,12 +141,17 @@ export default function DashboardLayout({ children }) {
     if (pathname === '/transactions/create') return 'Transactions / Create';
     if (pathname === '/pending') return 'Pending Approvals';
     if (pathname === '/business-administration') return 'Business Administration';
+    if (pathname === '/employees') return 'Employees';
+    if (pathname.startsWith('/employees/')) return 'Employees / Profile';
+    if (pathname === '/loans') return 'Loans';
+    if (pathname.startsWith('/loans/')) return 'Loans / Details';
 
     return 'Pages';
   };
 
   return (
     <div className="layout">
+
       {/* Sidebar */}
       <aside className="sidebar glass">
         <div className="logo-area">
