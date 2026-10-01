@@ -3,7 +3,8 @@ import dbConnect from '@/lib/db';
 import Employee from '@/models/Employee';
 import User from '@/models/User';
 import AuditLog from '@/models/AuditLog';
-import { getAuthUser, unauthorized } from '@/lib/auth';
+import { getAuthUser, unauthorized, forbidden } from '@/lib/auth';
+import { getUserPermissions, hasPermission, isOwner, sanitizePermissions, DEFAULT_PERMISSIONS } from '@/lib/permissions';
 
 // GET /api/employees — list all employees for the authenticated user's company
 export async function GET(req) {
@@ -11,6 +12,7 @@ export async function GET(req) {
     await dbConnect();
     const authUser = await getAuthUser(req);
     if (!authUser) return unauthorized();
+    if (!hasPermission(authUser, 'employees', 'loans')) return forbidden('You do not have access to employees.');
 
     const companyId = authUser.companyId;
     if (!companyId) {
@@ -23,7 +25,7 @@ export async function GET(req) {
     const allEmployees = await Employee.find({ companyId });
     
     for (const u of users) {
-      if (['owner', 'admin'].includes(u.role?.toLowerCase())) {
+      if (isOwner(u)) {
         continue;
       }
       if (!allEmployees.some(e => e.email.toLowerCase() === u.email.toLowerCase())) {
@@ -78,30 +80,26 @@ export async function POST(req) {
       return NextResponse.json({ success: false, message: 'Company association required.' }, { status: 400 });
     }
 
-    // Only owners, admins, ceo can create employees
-    const allowedRoles = ['owner', 'admin', 'ceo', 'cfo'];
-    if (!allowedRoles.includes(authUser.role?.toLowerCase())) {
-      return NextResponse.json({ success: false, message: 'Insufficient permissions to create employees.' }, { status: 403 });
+    if (!hasPermission(authUser, 'employees')) {
+      return NextResponse.json({ success: false, message: 'You do not have access to add employees.' }, { status: 403 });
     }
 
     const body = await req.json();
     const {
       fullName, email, phone, employeeId, department,
-      designation, joiningDate, notes, role = 'viewer',
+      designation, joiningDate, notes,
       salary, loanLimit
     } = body;
+    const permissions = sanitizePermissions(body.permissions ?? DEFAULT_PERMISSIONS);
 
     if (!fullName?.trim() || !email?.trim() || !phone?.trim() || !department?.trim() || !designation?.trim()) {
       return NextResponse.json({ success: false, message: 'Full name, email, phone number, department and designation are required.' }, { status: 400 });
     }
 
-    // Power check if adding role
-    const ROLE_POWER = { owner: 6, admin: 5, ceo: 4, cfo: 3, csuit: 2, accountant: 1, viewer: 0 };
-    const actorPower = ROLE_POWER[authUser.role?.toLowerCase()] ?? 0;
-    const rolePower = ROLE_POWER[role] ?? 0;
-
-    if (rolePower >= actorPower) {
-      return NextResponse.json({ success: false, message: `Cannot assign role "${role}" as it equals or exceeds your authority.` }, { status: 403 });
+    // Users may only hand out pages they can open themselves
+    const actorPermissions = getUserPermissions(authUser);
+    if (permissions.some(k => !actorPermissions.includes(k))) {
+      return NextResponse.json({ success: false, message: 'You can only give access to pages you have access to yourself.' }, { status: 403 });
     }
 
     const User = (await import('@/models/User')).default;
@@ -138,7 +136,7 @@ export async function POST(req) {
         await Invite.deleteMany({ email: email.toLowerCase(), companyId });
         token = crypto.randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000); // 72 hours
-        await Invite.create({ token, email: email.toLowerCase(), role, companyId, invitedBy: authUser._id, expiresAt });
+        await Invite.create({ token, email: email.toLowerCase(), role: 'member', permissions, companyId, invitedBy: authUser._id, expiresAt });
       } catch (inviteError) {
         await Employee.deleteOne({ _id: employee._id });
         throw inviteError;
@@ -165,7 +163,7 @@ export async function POST(req) {
       entity: 'employee',
       entityId: employee._id,
       entityLabel: `${fullName} (${email})`,
-      newValue: { fullName, email, department, designation, role },
+      newValue: { fullName, email, department, designation, permissions },
     });
 
     return NextResponse.json({ success: true, data: employee, message: existingUser ? 'Employee added.' : 'Employee added and invite sent.' }, { status: 201 });

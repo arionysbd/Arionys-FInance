@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
+import { hasPermission } from '@/lib/permissions';
+import CustomSelect from '@/components/UI/CustomSelect';
 import { ClipboardList, Search, Filter, Loader2, ArrowRight, Clock, User as UserIcon, Settings, Banknote, Users, Building, ShieldCheck, Activity } from 'lucide-react';
 import axios from 'axios';
 
@@ -16,7 +18,7 @@ export default function AuditLogPage() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
 
-  const canView = ['owner', 'admin'].includes(user?.role?.toLowerCase());
+  const canView = hasPermission(user, 'audit_log');
 
   useEffect(() => {
     if (authLoading || !canView) return;
@@ -98,30 +100,42 @@ export default function AuditLogPage() {
 
         <div className="card controls-card">
             <div className="filter-box">
-                <Filter size={18} className="text-muted-foreground" />
-                <select className="input-field" value={entityFilter} onChange={(e) => setEntityFilter(e.target.value)}>
-                    <option value="">All Entities</option>
-                    <option value="transaction">Transactions</option>
-                    <option value="loan">Loans</option>
-                    <option value="repayment">Repayments</option>
-                    <option value="account">Accounts</option>
-                    <option value="employee">Employees</option>
-                    <option value="user">Users</option>
-                    <option value="company">Company</option>
-                </select>
+                <CustomSelect
+                    size="sm"
+                    icon={<Filter size={16} />}
+                    ariaLabel="Filter by entity"
+                    value={entityFilter}
+                    onChange={setEntityFilter}
+                    options={[
+                        { value: '', label: 'All Entities' },
+                        { value: 'transaction', label: 'Transactions' },
+                        { value: 'loan', label: 'Loans' },
+                        { value: 'repayment', label: 'Repayments' },
+                        { value: 'account', label: 'Accounts' },
+                        { value: 'employee', label: 'Employees' },
+                        { value: 'user', label: 'Users' },
+                        { value: 'company', label: 'Company' },
+                    ]}
+                />
             </div>
             <div className="filter-box">
-                <Activity size={18} className="text-muted-foreground" />
-                <select className="input-field" value={actionFilter} onChange={(e) => setActionFilter(e.target.value)}>
-                    <option value="">All Actions</option>
-                    <option value="created">Created</option>
-                    <option value="updated">Updated</option>
-                    <option value="deleted">Deleted</option>
-                    <option value="approved">Approved</option>
-                    <option value="rejected">Rejected</option>
-                    <option value="role_changed">Role Changed</option>
-                    <option value="status_changed">Status Changed</option>
-                </select>
+                <CustomSelect
+                    size="sm"
+                    icon={<Activity size={16} />}
+                    ariaLabel="Filter by action"
+                    value={actionFilter}
+                    onChange={setActionFilter}
+                    options={[
+                        { value: '', label: 'All Actions' },
+                        { value: 'created', label: 'Created' },
+                        { value: 'updated', label: 'Updated' },
+                        { value: 'deleted', label: 'Deleted' },
+                        { value: 'approved', label: 'Approved' },
+                        { value: 'rejected', label: 'Rejected' },
+                        { value: 'role_changed', label: 'Role Changed' },
+                        { value: 'status_changed', label: 'Status Changed' },
+                    ]}
+                />
             </div>
         </div>
 
@@ -180,7 +194,7 @@ export default function AuditLogPage() {
             .header-icon-box { background: #f8fafc; padding: 1rem; border-radius: 6px; border: 1px solid #e2e8f0; color: #0f172a; }
             
             .controls-card { padding: 1.25rem; margin-bottom: 1.5rem; display: flex; gap: 1rem; align-items: center; background: white; border-radius: 6px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
-            .filter-box { display: flex; align-items: center; gap: 0.75rem; flex: 1; }
+            .filter-box { flex: 0 1 260px; min-width: 180px; }
             .filter-box .input-field { width: 100%; padding: 0.625rem 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; color: #0f172a; font-size: 0.875rem; font-weight: 600; outline: none; transition: all 0.2s; }
             .filter-box .input-field:focus { border-color: #64748b; background: white; }
             

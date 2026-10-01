@@ -3,7 +3,8 @@ import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import AuditLog from '@/models/AuditLog';
 import { sendEmail } from '@/lib/mail';
-import { getAuthUser, unauthorized } from '@/lib/auth';
+import { getAuthUser, unauthorized, forbidden } from '@/lib/auth';
+import { getUserPermissions, hasPermission, isOwner, sanitizePermissions, DEFAULT_PERMISSIONS } from '@/lib/permissions';
 
 export async function GET(req) {
   try {
@@ -11,6 +12,7 @@ export async function GET(req) {
 
     const authUser = await getAuthUser(req);
     if (!authUser) return unauthorized();
+    if (!hasPermission(authUser, 'employees')) return forbidden('You do not have access to employees.');
 
     const companyId = authUser.companyId;
     if (!companyId) {
@@ -18,6 +20,8 @@ export async function GET(req) {
     }
 
     const Employee = (await import('@/models/Employee')).default;
+    const Invite = (await import('@/models/Invite')).default;
+    const pendingInvites = await Invite.find({ companyId, usedAt: null }).lean();
     const users = await User.find({ companyId }).select('-password').lean();
     const employees = await Employee.find({ companyId }).lean();
     
@@ -25,7 +29,8 @@ export async function GET(req) {
     const handledEmails = new Set();
 
     for (const u of users) {
-      if (['owner', 'admin'].includes(u.role?.toLowerCase())) {
+      // The company owner is not listed or managed here
+      if (isOwner(u)) {
         continue;
       }
       const emp = employees.find(e => e.email.toLowerCase() === u.email.toLowerCase());
@@ -44,6 +49,7 @@ export async function GET(req) {
         loanLimit: emp?.loanLimit || 0,
         joiningDate: emp?.joiningDate || null,
         profilePhoto: emp?.profilePhoto || '',
+        permissions: getUserPermissions(u),
       });
       handledEmails.add(u.email.toLowerCase());
     }
@@ -66,6 +72,9 @@ export async function GET(req) {
           loanLimit: emp.loanLimit || 0,
           joiningDate: emp.joiningDate || null,
           profilePhoto: emp.profilePhoto || '',
+          permissions: sanitizePermissions(
+            pendingInvites.find(i => i.email === emp.email.toLowerCase())?.permissions || DEFAULT_PERMISSIONS
+          ),
           role: 'pending_invite',
           isActive: false,
         });
@@ -78,32 +87,69 @@ export async function GET(req) {
   }
 }
 
-// Power hierarchy: higher number = more authority
-const ROLE_POWER = {
-  owner:     6,
-  admin:     5,
-  ceo:       4,
-  cfo:       3,
-  csuit:     2,
-  accountant: 1,
-};
+// Shared rules for changing another member:
+// the actor needs the Employees page, the owner can never be changed, and nobody can change themselves.
+function checkCanManage(actor, target) {
+  if (!hasPermission(actor, 'employees')) return 'You do not have access to manage employees.';
+  if (String(target.companyId) !== String(actor.companyId)) return 'You can only manage members of your own company.';
+  if (isOwner(target)) return 'The company owner cannot be changed.';
+  if (String(target._id) === String(actor._id)) return 'You cannot change your own access.';
+  return null;
+}
 
-const getPower = (role) => ROLE_POWER[role?.toLowerCase()] ?? 0;
+// Users may only hand out pages they can open themselves (the owner can hand out everything)
+function checkGrantable(actor, permissions) {
+  const own = getUserPermissions(actor);
+  const notAllowed = permissions.filter(k => !own.includes(k));
+  return notAllowed.length ? 'You can only give access to pages you have access to yourself.' : null;
+}
 
+// PATCH /api/members — change a member's page access and/or account status.
+// Body: { userId, permissions?, isActive? } or { employeeId, permissions } for a pending invite.
 export async function PATCH(req) {
   try {
     await dbConnect();
 
     const actor = await getAuthUser(req);
     if (!actor) return unauthorized();
+    if (!hasPermission(actor, 'employees')) return forbidden('You do not have access to manage employees.');
 
-    const { userId, role, isActive } = await req.json();
+    const body = await req.json();
+    const { userId, employeeId, isActive } = body;
+    const permissions = body.permissions !== undefined ? sanitizePermissions(body.permissions) : undefined;
 
-    const actorPower = getPower(actor.role);
+    if (permissions) {
+      const grantError = checkGrantable(actor, permissions);
+      if (grantError) return forbidden(grantError);
+    }
 
-    // Must have at least accountant-level power to do anything
-    if (actorPower < 1) {
-      return NextResponse.json({ success: false, message: 'Insufficient authority to manage members.' }, { status: 403 });
+    // Pending invite: update the access the person will get when they accept
+    if (!userId && employeeId) {
+      if (!permissions) {
+        return NextResponse.json({ success: false, message: 'Nothing to update.' }, { status: 400 });
+      }
+      const Employee = (await import('@/models/Employee')).default;
+      const Invite = (await import('@/models/Invite')).default;
+      const employee = await Employee.findOne({ _id: employeeId, companyId: actor.companyId });
+      if (!employee) {
+        return NextResponse.json({ success: false, message: 'Employee not found' }, { status: 404 });
+      }
+      await Invite.updateMany({ email: employee.email, companyId: actor.companyId, usedAt: null }, { $set: { permissions } });
+
+      await AuditLog.create({
+        companyId: actor.companyId,
+        userId: actor._id,
+        actorName: actor.name,
+        action: 'access_changed',
+        entity: 'employee',
+        entityId: employee._id,
+        entityLabel: `Updated invite access for ${employee.fullName} (${employee.email})`,
+        newValue: { permissions },
+        ipAddress: req.headers.get('x-forwarded-for') || req.ip || '',
+        userAgent: req.headers.get('user-agent') || ''
+      });
+
+      return NextResponse.json({ success: true, data: { permissions } });
     }
 
     const target = await User.findById(userId);
@@ -111,74 +157,41 @@ export async function PATCH(req) {
       return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
     }
 
-    // Tenant isolation
-    if (String(target.companyId) !== String(actor.companyId)) {
-      return NextResponse.json({ success: false, message: 'You can only manage members of your own company.' }, { status: 403 });
-    }
+    const manageError = checkCanManage(actor, target);
+    if (manageError) return forbidden(manageError);
 
-    const targetPower = getPower(target.role);
-
-    // Cannot modify anyone with equal or higher power
-    if (actorPower <= targetPower) {
-      return NextResponse.json({
-        success: false,
-        message: `You cannot modify a ${target.role} — they have equal or higher authority than you.`
-      }, { status: 403 });
-    }
-
-    // If assigning a new role, cannot assign a role >= your own power
-    if (role) {
-      const newRolePower = getPower(role);
-      if (newRolePower >= actorPower) {
-        return NextResponse.json({
-          success: false,
-          message: `You cannot assign the "${role}" role — it equals or exceeds your own authority.`
-        }, { status: 403 });
-      }
-      target.role = role.toLowerCase();
-    }
-
-    // Check if user is being approved
+    const oldValue = { permissions: getUserPermissions(target), isActive: target.isActive };
     const isBeingApproved = isActive === true && target.isActive === false;
 
+    if (permissions) target.permissions = permissions;
     if (isActive !== undefined) target.isActive = isActive;
-
     await target.save();
 
     await AuditLog.create({
       companyId: actor.companyId,
       userId: actor._id,
       actorName: actor.name,
-      action: role ? 'role_changed' : 'status_changed',
+      action: permissions ? 'access_changed' : 'status_changed',
       entity: 'user',
       entityId: target._id,
       entityLabel: `Updated ${target.name} (${target.email})`,
-      newValue: { role: target.role, isActive: target.isActive },
+      oldValue,
+      newValue: { permissions: getUserPermissions(target), isActive: target.isActive },
       ipAddress: req.headers.get('x-forwarded-for') || req.ip || '',
       userAgent: req.headers.get('user-agent') || ''
     });
 
     if (isBeingApproved) {
       try {
-        const roleLabelMap = {
-          admin: 'Administrator',
-          ceo: 'Chief Executive Officer',
-          cfo: 'Chief Financial Officer',
-          csuit: 'Executive Board',
-          accountant: 'Accounts Manager',
-        };
-        const roleLabel = roleLabelMap[target.role?.toLowerCase()] || target.role;
-
         await sendEmail({
           to: target.email,
           subject: 'Your Arionys Finance Account is Approved',
-          text: `Hello ${target.name},\n\nYour account has been approved. You can now log in with the role: ${roleLabel}.`,
+          text: `Hello ${target.name},\n\nYour account has been approved. You can now log in.`,
           html: `
             <div style="font-family: sans-serif; padding: 20px;">
               <h2 style="color: #10b981;">Account Approved</h2>
               <p>Hello <strong>${target.name}</strong>,</p>
-              <p>Great news! Your account has been approved.</p>
-              <p>You now have full access with the role of <strong>${roleLabel}</strong>.</p>
+              <p>Great news! Your account has been approved and you can now log in.</p>
               <div style="margin-top: 30px;">
                 <a href="${process.env.NEXT_PUBLIC_APP_URL || req.nextUrl?.origin}/login"
                    style="background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
@@ -193,7 +206,10 @@ export async function PATCH(req) {
       }
     }
 
-    return NextResponse.json({ success: true, data: target });
+    return NextResponse.json({
+      success: true,
+      data: { _id: target._id, isActive: target.isActive, permissions: getUserPermissions(target) },
+    });
   } catch (error) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
@@ -208,11 +224,7 @@ export async function DELETE(req) {
 
     const { userId, employeeId } = await req.json();
 
-    const actorPower = getPower(actor.role);
-
-    if (actorPower < 1) {
-      return NextResponse.json({ success: false, message: 'Insufficient authority to delete members.' }, { status: 403 });
-    }
+    if (!hasPermission(actor, 'employees')) return forbidden('You do not have access to delete employees.');
 
     const Employee = (await import('@/models/Employee')).default;
     const Invite = (await import('@/models/Invite')).default;
@@ -223,19 +235,8 @@ export async function DELETE(req) {
         return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
       }
 
-      if (String(target.companyId) !== String(actor.companyId)) {
-        return NextResponse.json({ success: false, message: 'You can only manage members of your own company.' }, { status: 403 });
-      }
-
-      const targetPower = getPower(target.role);
-
-      // Cannot delete anyone with equal or higher power
-      if (actorPower <= targetPower) {
-        return NextResponse.json({
-          success: false,
-          message: `You cannot delete a ${target.role} — they have equal or higher authority than you.`
-        }, { status: 403 });
-      }
+      const manageError = checkCanManage(actor, target);
+      if (manageError) return forbidden(manageError);
 
       await User.findByIdAndDelete(userId);
       await Employee.findOneAndDelete({ userId });

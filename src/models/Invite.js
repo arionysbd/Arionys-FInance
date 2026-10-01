@@ -15,8 +15,13 @@ const inviteSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['admin', 'ceo', 'cfo', 'csuit', 'accountant', 'viewer'],
-    required: true,
+    enum: ['admin', 'ceo', 'cfo', 'csuit', 'accountant', 'viewer', 'member'],
+    default: 'member',
+  },
+  // Page keys the invited person will be able to open
+  permissions: {
+    type: [String],
+    default: undefined,
   },
   companyId: {
     type: mongoose.Schema.Types.ObjectId,

@@ -5,6 +5,7 @@ import User from '@/models/User';
 import AuditLog from '@/models/AuditLog';
 import { sendEmail } from '@/lib/mail';
 import { getAuthUser, unauthorized } from '@/lib/auth';
+import { hasPermission } from '@/lib/permissions';
 
 export async function POST(req) {
   try {
@@ -16,9 +17,8 @@ export async function POST(req) {
     const { transactionId, status } = await req.json();
     const userId = user._id;
 
-    const authorizedRoles = ['owner', 'admin', 'ceo', 'cfo'];
-    if (!authorizedRoles.includes(user.role)) {
-      return NextResponse.json({ success: false, message: 'Unauthorized. Only Owner, Admin, CEO, or CFO can approve.' }, { status: 403 });
+    if (!hasPermission(user, 'pending_approvals')) {
+      return NextResponse.json({ success: false, message: 'You do not have access to approve transactions.' }, { status: 403 });
     }
 
     const transaction = await Transaction.findById(transactionId).populate('createdBy', 'name');
@@ -52,7 +52,9 @@ export async function POST(req) {
     // Notify Admin and CEO upon approval
     if (status === 'approved') {
       try {
-        const notifiables = await User.find({ role: { $in: ['admin', 'ceo'] }, companyId: transaction.companyId });
+        // Everyone else who can approve transactions
+        const companyUsers = await User.find({ companyId: transaction.companyId, isActive: true });
+        const notifiables = companyUsers.filter(u => hasPermission(u, 'pending_approvals') && String(u._id) !== String(userId));
         for (const notifiable of notifiables) {
           await sendEmail({
             to: notifiable.email,

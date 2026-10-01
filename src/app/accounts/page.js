@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { getAccounts, addAccount, getStats, getTransactions } from '@/lib/api';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
+import { hasPermission } from '@/lib/permissions';
 import { Wallet, Plus, Copy, Check, X, Landmark, TrendingUp, TrendingDown, MoreVertical, Download } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -298,7 +299,7 @@ export default function AccountsPage() {
               </p>
             </div>
           </div>
-          {['ceo', 'cfo', 'admin'].includes(user?.role) && (
+          {hasPermission(user, 'accounts') && (
             <button className="btn-primary" onClick={() => setShowForm(true)}>
               <Plus size={16} />
               New Account
@@ -526,23 +527,7 @@ export default function AccountsPage() {
         .btn-icon:hover { background: var(--border); color: var(--foreground); }
 
         /* ─── Modal ─── */
-        .overlay {
-          position: fixed; inset: 0; z-index: 10000;
-          background: rgba(15,23,42,0.25);
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
-          display: flex; align-items: center; justify-content: center;
-          padding: 1rem;
-        }
-        .modal {
-          background: var(--card); border-radius: 6px;
-          padding: 2rem; width: 100%; max-width: 620px;
-          box-shadow: none;
-          max-height: 90vh; overflow-y: auto; border: 1px solid var(--border);
-        }
-        .modal-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; gap: 1rem; }
-        .modal-title { font-size: 1.25rem; font-weight: 800; color: var(--foreground); margin: 0 0 0.2rem; }
-        .modal-sub { font-size: 0.875rem; color: var(--muted-foreground); margin: 0; }
+        .modal { max-width: 620px; }
 
         .form-section-label {
           font-size: 0.75rem; font-weight: 800;
@@ -571,7 +556,6 @@ export default function AccountsPage() {
         .input-prefix-wrap { position: relative; }
         .inp-prefix { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); font-size: 0.875rem; font-weight: 700; color: var(--muted-foreground); pointer-events: none; }
 
-        .modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.75rem; }
 
         /* ─── Cards Grid ─── */
         .cards-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; }

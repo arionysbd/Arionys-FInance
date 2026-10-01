@@ -4,6 +4,7 @@ import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import { sendEmail } from '@/lib/mail';
 import { getAuthUser, unauthorized } from '@/lib/auth';
+import { hasPermission, DEFAULT_PERMISSIONS } from '@/lib/permissions';
 
 export async function POST(req) {
   try {
@@ -13,11 +14,12 @@ export async function POST(req) {
     const admin = await getAuthUser(req);
     if (!admin) return unauthorized();
 
-    const { name, email, role } = await req.json();
+    const { name, email } = await req.json();
+    const permissions = DEFAULT_PERMISSIONS;
 
-    if (admin.role !== 'admin') {
+    if (!hasPermission(admin, 'employees')) {
       return NextResponse.json(
-        { success: false, message: 'Only administrators can invite users.' },
+        { success: false, message: 'You do not have access to invite users.' },
         { status: 403 }
       );
     }
@@ -39,7 +41,8 @@ export async function POST(req) {
     const user = await User.create({
       name,
       email,
-      role: role || 'accountant',
+      role: 'member',
+      permissions,
       isActive: false,
       companyId: admin.companyId,
       inviteToken,

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getUserPermissions } from '@/lib/permissions';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import Company from '@/models/Company';
@@ -67,6 +68,7 @@ export async function POST(req) {
         name: user.name,
         email: user.email,
         role: user.role,
+        permissions: getUserPermissions(user),
         isActive: user.isActive,
         companyId: user.companyId,
         token

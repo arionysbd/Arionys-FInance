@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getUserPermissions } from '@/lib/permissions';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import jwt from 'jsonwebtoken';
@@ -26,6 +27,7 @@ export async function GET(req) {
         name: user.name,
         email: user.email,
         role: user.role,
+        permissions: getUserPermissions(user),
         isActive: user.isActive,
         phone: user.phone,
         position: user.position,

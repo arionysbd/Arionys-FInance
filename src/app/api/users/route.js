@@ -3,6 +3,7 @@ import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import { sendEmail } from '@/lib/mail';
 import { getAuthUser, unauthorized } from '@/lib/auth';
+import { getUserPermissions, hasPermission, isOwner, sanitizePermissions, DEFAULT_PERMISSIONS } from '@/lib/permissions';
 
 export async function GET(req) {
   try {
@@ -31,10 +32,10 @@ export async function PATCH(req) {
     const admin = await getAuthUser(req);
     if (!admin) return unauthorized();
 
-    const { userId, role, isActive } = await req.json();
+    const { userId, permissions, isActive } = await req.json();
 
-    if (admin.role !== 'admin') {
-      return NextResponse.json({ success: false, message: 'Only admins can change roles or statuses' }, { status: 403 });
+    if (!hasPermission(admin, 'employees')) {
+      return NextResponse.json({ success: false, message: 'You do not have access to manage users.' }, { status: 403 });
     }
 
     const user = await User.findById(userId);
@@ -47,17 +48,19 @@ export async function PATCH(req) {
       return NextResponse.json({ success: false, message: 'You can only manage users of your own company.' }, { status: 403 });
     }
 
-    // Protection for Admin accounts
-    if (user.role === 'admin') {
-      if (role && role !== 'admin') {
-        return NextResponse.json({ success: false, message: 'Administrator role cannot be changed' }, { status: 400 });
-      }
-      if (isActive === false) {
-        return NextResponse.json({ success: false, message: 'Administrator account cannot be deactivated' }, { status: 400 });
-      }
+    // The company owner and the caller's own account cannot be changed here
+    if (isOwner(user) || String(user._id) === String(admin._id)) {
+      return NextResponse.json({ success: false, message: 'This account cannot be changed.' }, { status: 400 });
     }
 
-    if (role) user.role = role.toLowerCase();
+    if (permissions !== undefined) {
+      const next = sanitizePermissions(permissions);
+      const own = getUserPermissions(admin);
+      if (next.some(k => !own.includes(k))) {
+        return NextResponse.json({ success: false, message: 'You can only give access to pages you have access to yourself.' }, { status: 403 });
+      }
+      user.permissions = next;
+    }
     
     // Check if user is being approved
     const isBeingApproved = isActive === true && user.isActive === false;
@@ -68,25 +71,16 @@ export async function PATCH(req) {
 
     if (isBeingApproved) {
       try {
-        const roleLabelMap = {
-          admin: 'Administrator',
-          ceo: 'Chief Executive Officer',
-          cfo: 'Chief Financial Officer',
-          csuit: 'Executive Board',
-          accountant: 'Accounts Manager',
-        };
-        const roleLabel = roleLabelMap[user.role?.toLowerCase()] || user.role;
-
         await sendEmail({
           to: user.email,
           subject: 'Your Arionys Finance Account is Approved',
-          text: `Hello ${user.name},\n\nYour account has been approved by an administrator. You can now log in and access the dashboard. Your role: ${roleLabel}.`,
+          text: `Hello ${user.name},\n\nYour account has been approved by an administrator. You can now log in and access the dashboard.`,
           html: `
             <div style="font-family: sans-serif; padding: 20px;">
               <h2 style="color: #10b981;">Account Approved</h2>
               <p>Hello <strong>${user.name}</strong>,</p>
               <p>Great news! Your account has been approved by an administrator.</p>
-              <p>You now have full access to the Arionys Finance platform with the role of <strong>${roleLabel}</strong>.</p>
+              <p>You now have full access to the Arionys Finance platform.</p>
               <div style="margin-top: 30px;">
                 <a href="${process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin}/login" 
                    style="background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
@@ -116,8 +110,8 @@ export async function DELETE(req) {
 
     const { userId } = await req.json();
 
-    if (admin.role !== 'admin') {
-      return NextResponse.json({ success: false, message: 'Only admins can delete accounts' }, { status: 403 });
+    if (!hasPermission(admin, 'employees')) {
+      return NextResponse.json({ success: false, message: 'You do not have access to delete accounts.' }, { status: 403 });
     }
 
     const targetUser = await User.findById(userId);
@@ -127,8 +121,8 @@ export async function DELETE(req) {
     if (String(targetUser.companyId) !== String(admin.companyId)) {
       return NextResponse.json({ success: false, message: 'You can only manage users of your own company.' }, { status: 403 });
     }
-    if (targetUser.role === 'admin') {
-      return NextResponse.json({ success: false, message: 'Administrator accounts cannot be deleted' }, { status: 400 });
+    if (isOwner(targetUser) || String(targetUser._id) === String(admin._id)) {
+      return NextResponse.json({ success: false, message: 'This account cannot be deleted.' }, { status: 400 });
     }
 
     await User.findByIdAndDelete(userId);

@@ -4,6 +4,9 @@ import { Shield, User as UserIcon, Mail, ShieldCheck, Briefcase, Calculator, Use
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
+import CustomSelect from '@/components/UI/CustomSelect';
+import AccessPicker from '@/components/UI/AccessPicker';
+import { PERMISSIONS, DEFAULT_PERMISSIONS, getUserPermissions, hasPermission } from '@/lib/permissions';
 import Link from 'next/link';
 
 export default function CompanyMembers() {
@@ -17,7 +20,10 @@ export default function CompanyMembers() {
   const selectRef = useRef(null);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [pendingRoleChange, setPendingRoleChange] = useState(null);
+  // Page-access editor: { member, permissions } while open
+  const [accessEditor, setAccessEditor] = useState(null);
+  const [savingAccess, setSavingAccess] = useState(false);
+  const [accessError, setAccessError] = useState('');
   const [companySettings, setCompanySettings] = useState({ departments: [], designations: [] });
   
   // Add Employee Form State
@@ -32,7 +38,7 @@ export default function CompanyMembers() {
     joiningDate: today(),
     salary: '',
     loanLimit: '',
-    role: 'viewer',
+    permissions: DEFAULT_PERMISSIONS,
   });
   const [formData, setFormData] = useState(emptyEmployeeForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -130,20 +136,29 @@ export default function CompanyMembers() {
     }
   };
 
-  const updateRole = async () => {
-    if (!pendingRoleChange) return;
-    const { userId, role } = pendingRoleChange;
+  const openAccess = (member) => {
+    setAccessError('');
+    setAccessEditor({ member, permissions: member.permissions || [] });
+    setOpenActionMenu(null);
+  };
+
+  const saveAccess = async () => {
+    if (!accessEditor) return;
+    const { member, permissions } = accessEditor;
+    setSavingAccess(true);
+    setAccessError('');
     try {
-      await axios.patch('/api/members', {
-        userId,
-        role: role,
-        adminId: currentUser._id
-      });
-      setUsers(users.map(u => u._id === userId ? { ...u, role } : u));
-      setPendingRoleChange(null);
-      setOpenUserSelect(null);
+      const payload = member.isUser
+        ? { userId: member._id, permissions }
+        : { employeeId: member.employeeDocId, permissions };
+      const { data } = await axios.patch('/api/members', payload);
+      const saved = data.data?.permissions || permissions;
+      setUsers(users.map(u => u._id === member._id ? { ...u, permissions: saved } : u));
+      setAccessEditor(null);
     } catch (err) {
-      alert(err.response?.data?.message || 'Update failed');
+      setAccessError(err.response?.data?.message || 'Could not update access');
+    } finally {
+      setSavingAccess(false);
     }
   };
 
@@ -182,26 +197,15 @@ export default function CompanyMembers() {
     }
   };
 
-  // Power hierarchy — must match the server-side ROLE_POWER map
-  const ROLE_POWER = { owner: 6, admin: 5, ceo: 4, cfo: 3, csuit: 2, accountant: 1 };
-  const getPower = (role) => ROLE_POWER[role?.toLowerCase()] ?? 0;
-  const myPower = getPower(currentUser?.role);
+  // Anyone with the Employees page can manage other members, but never their own account
+  // (the owner is not listed here at all). The API enforces the same rules.
+  const canManage = (member) => Boolean(member) && member._id !== currentUser?._id;
 
-  // Returns true if current user can manage (change role / toggle status / delete) the target
-  const canManage = (targetRole) => myPower > getPower(targetRole);
+  // Pages the current user may hand out: only the ones they can open themselves
+  const grantable = getUserPermissions(currentUser);
 
-  // Returns role options that are strictly below the current user's power level
-  const assignableRoles = (baseOptions) => baseOptions.filter(o => getPower(o.value) < myPower);
-
-  const roleOptions = [
-    { value: 'admin',      label: 'Administrator',           icon: <ShieldCheck size={14} />, desc: 'Full system control & user oversight.', accesses: ['Full system control & configuration', 'Manage all users & permissions', 'View & edit all company data'] },
-    { value: 'ceo',        label: 'Chief Executive Officer',  icon: <Briefcase size={14} />,   desc: 'Strategic oversight & executive approvals.', accesses: ['Strategic oversight & executive approvals', 'View all financial data', 'Manage board members & staff'] },
-    { value: 'cfo',        label: 'Chief Financial Officer',  icon: <Calculator size={14} />,  desc: 'Fiscal monitoring & transaction verification.', accesses: ['Fiscal monitoring & reporting', 'Verify & approve transactions', 'Manage accounting staff'] },
-    { value: 'csuit',      label: 'Board Member',             icon: <Briefcase size={14} />,   desc: 'Analytical view of organizational health.', accesses: ['View high-level organizational health', 'Read-only access to financial reports', 'Participate in board votes'] },
-    { value: 'accountant', label: 'Accounts Manager',         icon: <Calculator size={14} />,  desc: 'Transactional data entry & ledger management.', accesses: ['Transactional data entry', 'Ledger management', 'Prepare draft financial reports'] },
-  ];
-
-  const getRoleInfo = (role) => roleOptions.find(o => o.value === role?.toLowerCase()) || { label: role, icon: <ShieldCheck size={14} />, desc: '', accesses: [] };
+  const accessSummary = (keys = []) =>
+    PERMISSIONS.filter(p => keys.includes(p.key)).map(p => p.label).join(', ') || 'No pages';
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -260,7 +264,7 @@ export default function CompanyMembers() {
             </div>
           </div>
           <span className="m-count">{users.length} {users.length === 1 ? 'member' : 'members'}</span>
-          {['owner', 'admin', 'ceo', 'cfo'].includes(currentUser?.role?.toLowerCase()) && (
+          {hasPermission(currentUser, 'employees') && (
             <div className="page-actions">
               <button className="btn-create-user" onClick={() => setShowCreateModal(true)}>
                 <UserPlus size={16} />
@@ -284,7 +288,7 @@ export default function CompanyMembers() {
                       <th>Email</th>
                       <th>Phone No</th>
                       <th>Department</th>
-                      <th>Role</th>
+                      <th>Access</th>
                       <th>Limit</th>
                       <th>Status</th>
                       <th className="th-actions">Actions</th>
@@ -301,42 +305,17 @@ export default function CompanyMembers() {
                         <td><span className="cell-text">{u.phone || '—'}</span></td>
                         <td><span className="cell-text">{u.department || '—'}</span></td>
                         <td>
-                          {u.isUser ? (
-                            <div className="custom-select-wrapper">
-                              <div 
-                                className={`role-trigger ${openUserSelect === u._id ? 'active' : ''} ${!canManage(u.role) ? 'disabled' : ''}`}
-                                onClick={() => canManage(u.role) && setOpenUserSelect(openUserSelect === u._id ? null : u._id)}
-                              >
-                                <div className="role-current">
-                                  {getRoleInfo(u.role).icon}
-                                  <span>{getRoleInfo(u.role).label}</span>
-                                </div>
-                                {canManage(u.role) && <ChevronDown size={14} className={`arrow ${openUserSelect === u._id ? 'rotate' : ''}`} />}
-                              </div>
-                              {openUserSelect === u._id && (
-                                <div className="role-dropdown animate-pop-in">
-                                  {assignableRoles(roleOptions).map((option) => (
-                                    <div 
-                                      key={option.value}
-                                      className={`role-option ${u.role === option.value ? 'selected' : ''}`}
-                                      onClick={() => {
-                                        setPendingRoleChange({ userId: u._id, role: option.value, userName: u.fullName || u.name });
-                                        setOpenUserSelect(null);
-                                      }}
-                                    >
-                                      <div className="option-icon">{option.icon}</div>
-                                      <div className="option-text">
-                                        <span className="option-label">{option.label}</span>
-                                      </div>
-                                      {u.role === option.value && <Check size={14} className="check-icon" />}
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="pending-role-badge">Pending Invite ({u.role})</span>
-                          )}
+                          <button
+                            type="button"
+                            className="access-cell"
+                            onClick={() => canManage(u) && openAccess(u)}
+                            disabled={!canManage(u)}
+                            title={accessSummary(u.permissions)}
+                          >
+                            <span className="access-count">{u.permissions?.length || 0}</span>
+                            <span>{(u.permissions?.length || 0) === 1 ? 'page' : 'pages'}</span>
+                            {canManage(u) && <Pencil size={12} className="access-edit" />}
+                            </button>
                         </td>
                         <td>
                           <span className="cell-text cell-strong">{u.loanLimit > 0 ? u.loanLimit.toLocaleString() : '—'}</span>
@@ -344,8 +323,8 @@ export default function CompanyMembers() {
                         <td>
                           {u.isUser ? (
                             <div 
-                              className={`status-toggle ${u.isActive ? 'active' : ''} ${!canManage(u.role) ? 'disabled' : ''}`}
-                              onClick={() => canManage(u.role) && updateStatus(u._id, !u.isActive)}
+                              className={`status-toggle ${u.isActive ? 'active' : ''} ${!canManage(u) ? 'disabled' : ''}`}
+                              onClick={() => canManage(u) && updateStatus(u._id, !u.isActive)}
                             >
                               <div className="toggle-knob"></div>
                               <span className="status-label">{u.isActive ? 'Active' : 'Revoked'}</span>
@@ -355,7 +334,7 @@ export default function CompanyMembers() {
                           )}
                         </td>
                         <td>
-                          {(u.employeeDocId || canManage(u.role) || !u.isUser) && (
+                          {(u.employeeDocId || canManage(u) || !u.isUser) && (
                             <div className="action-menu">
                               <button
                                 type="button"
@@ -375,7 +354,13 @@ export default function CompanyMembers() {
                                       <span>View Profile</span>
                                     </Link>
                                   )}
-                                  {(canManage(u.role) || !u.isUser) && (
+                                  {canManage(u) && (
+                                    <button type="button" className="action-menu-item" role="menuitem" onClick={() => openAccess(u)}>
+                                      <ShieldCheck size={14} />
+                                      <span>Manage Access</span>
+                                    </button>
+                                  )}
+                                  {(canManage(u) || !u.isUser) && (
                                     <button
                                       type="button"
                                       className="action-menu-item danger"
@@ -405,7 +390,7 @@ export default function CompanyMembers() {
                   {users.map((u) => {
                     const displayName = u.fullName || u.name;
                     const isSelf = u._id === currentUser._id;
-                    const showMenu = u.employeeDocId || canManage(u.role) || !u.isUser;
+                    const showMenu = u.employeeDocId || canManage(u) || !u.isUser;
                     return (
                       <article key={u._id} className="m-card">
                         <header className="m-head">
@@ -441,7 +426,13 @@ export default function CompanyMembers() {
                                       <span>View Profile</span>
                                     </Link>
                                   )}
-                                  {(canManage(u.role) || !u.isUser) && (
+                                  {canManage(u) && (
+                                    <button type="button" className="action-menu-item" role="menuitem" onClick={() => openAccess(u)}>
+                                      <ShieldCheck size={14} />
+                                      <span>Manage Access</span>
+                                    </button>
+                                  )}
+                                  {(canManage(u) || !u.isUser) && (
                                     <button
                                       type="button"
                                       className="action-menu-item danger"
@@ -484,52 +475,31 @@ export default function CompanyMembers() {
                           {u.isUser ? (
                             <>
                               <div className="m-foot-row">
-                                <span className="m-foot-label">Role</span>
-                                <div className="custom-select-wrapper m-role-select">
-                                  <div
-                                    className={`role-trigger ${openUserSelect === u._id ? 'active' : ''} ${!canManage(u.role) ? 'disabled' : ''}`}
-                                    onClick={() => canManage(u.role) && setOpenUserSelect(openUserSelect === u._id ? null : u._id)}
-                                  >
-                                    <div className="role-current">
-                                      {getRoleInfo(u.role).icon}
-                                      <span>{getRoleInfo(u.role).label}</span>
-                                    </div>
-                                    {canManage(u.role) && <ChevronDown size={14} className={`arrow ${openUserSelect === u._id ? 'rotate' : ''}`} />}
-                                  </div>
-                                  {openUserSelect === u._id && (
-                                    <div className="role-dropdown animate-pop-in">
-                                      {assignableRoles(roleOptions).map((option) => (
-                                        <div
-                                          key={option.value}
-                                          className={`role-option ${u.role === option.value ? 'selected' : ''}`}
-                                          onClick={() => {
-                                            setPendingRoleChange({ userId: u._id, role: option.value, userName: displayName });
-                                            setOpenUserSelect(null);
-                                          }}
-                                        >
-                                          <div className="option-icon">{option.icon}</div>
-                                          <div className="option-text">
-                                            <span className="option-label">{option.label}</span>
-                                          </div>
-                                          {u.role === option.value && <Check size={14} className="check-icon" />}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
+                                <span className="m-foot-label">Pages</span>
+                                <button
+                                  type="button"
+                                  className="access-cell"
+                                  onClick={() => canManage(u) && openAccess(u)}
+                                  disabled={!canManage(u)}
+                                  title={accessSummary(u.permissions)}
+                                >
+                                  <span className="access-count">{u.permissions?.length || 0}</span>
+                                  <span>{(u.permissions?.length || 0) === 1 ? 'page' : 'pages'}</span>
+                                  {canManage(u) && <Pencil size={12} className="access-edit" />}
+                            </button>
                               </div>
 
-                              {canManage(u.role) && !u.isActive ? (
+                              {canManage(u) && !u.isActive ? (
                                 <div className="m-approval-grid">
                                   <button className="m-btn-reject" onClick={() => deleteUser(u._id, u.employeeDocId, displayName)}>Reject</button>
                                   <button className="m-btn-approve" onClick={() => updateStatus(u._id, true)}>Approve Access</button>
                                 </div>
                               ) : (
                                 <div className="m-foot-row">
-                                  <span className="m-foot-label">Access</span>
+                                  <span className="m-foot-label">Account</span>
                                   <div
-                                    className={`status-toggle ${u.isActive ? 'active' : ''} ${!canManage(u.role) ? 'disabled' : ''}`}
-                                    onClick={() => canManage(u.role) && updateStatus(u._id, !u.isActive)}
+                                    className={`status-toggle ${u.isActive ? 'active' : ''} ${!canManage(u) ? 'disabled' : ''}`}
+                                    onClick={() => canManage(u) && updateStatus(u._id, !u.isActive)}
                                   >
                                     <div className="toggle-knob"></div>
                                     <span className="status-label">{u.isActive ? 'Active' : 'Revoked'}</span>
@@ -538,10 +508,26 @@ export default function CompanyMembers() {
                               )}
                             </>
                           ) : (
-                            <div className="m-foot-row">
-                              <span className="m-foot-label">Status</span>
-                              <span className="m-invite-badge">Invite pending</span>
-                            </div>
+                            <>
+                              <div className="m-foot-row">
+                                <span className="m-foot-label">Pages</span>
+                                <button
+                                  type="button"
+                                  className="access-cell"
+                                  onClick={() => canManage(u) && openAccess(u)}
+                                  disabled={!canManage(u)}
+                                  title={accessSummary(u.permissions)}
+                                >
+                                  <span className="access-count">{u.permissions?.length || 0}</span>
+                                  <span>{(u.permissions?.length || 0) === 1 ? 'page' : 'pages'}</span>
+                                  {canManage(u) && <Pencil size={12} className="access-edit" />}
+                            </button>
+                              </div>
+                              <div className="m-foot-row">
+                                <span className="m-foot-label">Status</span>
+                                <span className="m-invite-badge">Invite pending</span>
+                              </div>
+                            </>
                           )}
                         </footer>
                       </article>
@@ -553,48 +539,36 @@ export default function CompanyMembers() {
           )}
         </div>
 
-        {pendingRoleChange && (
-          <div className="modal-overlay" onClick={() => setPendingRoleChange(null)}>
-            <div className="modal-card animate-pop-in alert-modal" onClick={(e) => e.stopPropagation()}>
+        {accessEditor && (
+          <div className="modal-overlay" onClick={() => !savingAccess && setAccessEditor(null)}>
+            <div className="modal-card access-modal" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
                 <div>
-                  <h3>Confirm Role Change</h3>
-                  <p>Are you sure you want to change authority levels?</p>
+                  <h3>Page Access</h3>
+                  <p>{accessEditor.member.fullName || accessEditor.member.name} will only see the pages selected below.</p>
                 </div>
-                <button className="modal-close" onClick={() => setPendingRoleChange(null)}>
+                <button className="modal-close" onClick={() => setAccessEditor(null)} disabled={savingAccess}>
                   <X size={18} />
                 </button>
               </div>
               <div className="modal-body">
-                <div className="role-change-preview">
-                  <div className="user-preview">
-                    <span className="label">Target User:</span>
-                    <span className="value">{pendingRoleChange.userName}</span>
+                {accessError && (
+                  <div className="form-error" style={{ marginBottom: '1rem' }}>
+                    <AlertCircle size={14} />
+                    <span>{accessError}</span>
                   </div>
-                  <div className="role-preview">
-                    <span className="label">New Authority:</span>
-                    <div className="role-pill">
-                      {getRoleInfo(pendingRoleChange.role).icon}
-                      <span>{getRoleInfo(pendingRoleChange.role).label}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="access-list-container">
-                  <p className="access-title">Granted Access & Permissions</p>
-                  <ul className="access-list">
-                    {getRoleInfo(pendingRoleChange.role).accesses?.map((access, idx) => (
-                      <li key={idx}>
-                        <Check size={14} className="access-check" />
-                        <span>{access}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                )}
+                <AccessPicker
+                  value={accessEditor.permissions}
+                  onChange={(keys) => setAccessEditor(prev => ({ ...prev, permissions: keys }))}
+                  grantable={grantable}
+                />
               </div>
               <div className="modal-footer">
-                <button className="btn-cancel" onClick={() => setPendingRoleChange(null)}>Cancel</button>
-                <button className="btn-confirm" onClick={updateRole}>Confirm Authority</button>
+                <button className="btn-cancel" onClick={() => setAccessEditor(null)} disabled={savingAccess}>Cancel</button>
+                <button className="btn-confirm" onClick={saveAccess} disabled={savingAccess}>
+                  {savingAccess ? 'Saving...' : 'Save Access'}
+                </button>
               </div>
             </div>
           </div>
@@ -638,20 +612,6 @@ export default function CompanyMembers() {
                     </div>
                   </div>
 
-                  <div className="modal-field ec-full">
-                    <label>System Access Role</label>
-                    <div className="modal-input-wrap" style={{ padding: 0 }}>
-                      <select name="role" className="native-select" value={formData.role} onChange={handleInputChange} style={{ width: '100%', padding: '0.625rem 1rem', border: 'none', background: 'transparent', outline: 'none', fontWeight: 600, color: '#0f172a' }}>
-                          <option value="viewer">Standard Employee (Viewer)</option>
-                          <option value="accountant">Accounts Manager</option>
-                          <option value="csuit">Board Member</option>
-                          <option value="cfo">Chief Financial Officer (CFO)</option>
-                          <option value="ceo">Chief Executive Officer (CEO)</option>
-                          <option value="admin">Administrator</option>
-                      </select>
-                    </div>
-                  </div>
-
                   <div className="modal-field">
                     <label>Phone No *</label>
                     <div className="modal-input-wrap">
@@ -686,22 +646,28 @@ export default function CompanyMembers() {
 
                   <div className="modal-field">
                     <label>Department *</label>
-                    <div className="modal-input-wrap" style={{ padding: 0 }}>
-                      <select name="department" required className="native-select" value={formData.department} onChange={handleInputChange} style={{ width: '100%', padding: '0.625rem 1rem', border: 'none', background: 'transparent', outline: 'none', fontWeight: 600, color: '#0f172a' }}>
-                        <option value="">Select Department</option>
-                        {companySettings.departments.map(d => <option key={d} value={d}>{d}</option>)}
-                      </select>
-                    </div>
+                    <CustomSelect
+                      name="department"
+                      required
+                      icon={<Building2 size={16} />}
+                      placeholder="Select department"
+                      value={formData.department}
+                      onChange={(val) => handleInputChange({ target: { name: 'department', value: val } })}
+                      options={companySettings.departments.map(d => ({ value: d, label: d }))}
+                    />
                   </div>
 
                   <div className="modal-field">
                     <label>Designation *</label>
-                    <div className="modal-input-wrap" style={{ padding: 0 }}>
-                      <select name="designation" required className="native-select" value={formData.designation} onChange={handleInputChange} style={{ width: '100%', padding: '0.625rem 1rem', border: 'none', background: 'transparent', outline: 'none', fontWeight: 600, color: '#0f172a' }}>
-                        <option value="">Select Designation</option>
-                        {companySettings.designations.map(d => <option key={d} value={d}>{d}</option>)}
-                      </select>
-                    </div>
+                    <CustomSelect
+                      name="designation"
+                      required
+                      icon={<Briefcase size={16} />}
+                      placeholder="Select designation"
+                      value={formData.designation}
+                      onChange={(val) => handleInputChange({ target: { name: 'designation', value: val } })}
+                      options={companySettings.designations.map(d => ({ value: d, label: d }))}
+                    />
                   </div>
 
                   {(companySettings.departments.length === 0 || companySettings.designations.length === 0) && (
@@ -711,7 +677,7 @@ export default function CompanyMembers() {
                         No {companySettings.departments.length === 0 ? 'departments' : ''}
                         {companySettings.departments.length === 0 && companySettings.designations.length === 0 ? ' or ' : ''}
                         {companySettings.designations.length === 0 ? 'designations' : ''} configured yet.{' '}
-                        {['owner', 'admin'].includes(currentUser?.role?.toLowerCase())
+                        {hasPermission(currentUser, 'business_admin')
                           ? <><Link href="/business-administration">Add them in Business Administration</Link>.</>
                           : 'Ask an administrator to add them in Business Administration.'}
                       </span>
@@ -725,6 +691,16 @@ export default function CompanyMembers() {
                       <input type="date" name="joiningDate" value={formData.joiningDate} onChange={handleInputChange} style={{ padding: '0 1rem' }} />
                     </div>
                   </div>
+                </div>
+
+                <div className="modal-field access-field">
+                  <label>Page Access</label>
+                  <p className="field-help">The employee will only see the pages you select.</p>
+                  <AccessPicker
+                    value={formData.permissions}
+                    onChange={(keys) => setFormData(prev => ({ ...prev, permissions: keys }))}
+                    grantable={grantable}
+                  />
                 </div>
 
                 <div className="modal-footer" style={{ marginTop: '2rem' }}>
@@ -741,6 +717,14 @@ export default function CompanyMembers() {
 
         <style jsx>{`
           .users-container { max-width: var(--page-max-width); margin: 0 auto; }
+          .access-cell { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.3125rem 0.625rem; border: 1px solid #e2e8f0; border-radius: 6px; background: #ffffff; font-family: inherit; font-size: 0.8125rem; font-weight: 600; color: #334155; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+          .access-cell:hover:not(:disabled) { border-color: #a5b4fc; background: #f5f7ff; }
+          .access-cell:disabled { cursor: default; opacity: 0.75; }
+          .access-count { min-width: 20px; height: 20px; padding: 0 0.3rem; display: inline-grid; place-items: center; border-radius: 4px; background: #eef2ff; color: #4338ca; font-size: 0.75rem; font-weight: 800; }
+          .access-cell :global(.access-edit) { color: #94a3b8; }
+          .access-modal { max-width: 640px; }
+          .access-field { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid #f1f5f9; }
+          .field-help { margin: -0.125rem 0 0.875rem; font-size: 0.8125rem; color: #64748b; }
           .form-hint { display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.625rem 0.875rem; border: 1px solid #fde68a; border-radius: 6px; background: #fffbeb; color: #92400e; font-size: 0.8125rem; font-weight: 600; }
           .form-hint :global(a) { color: #4f46e5; text-decoration: underline; }
           .cell-text { font-size: 0.8125rem; font-weight: 600; color: #334155; word-break: break-word; }
@@ -904,10 +888,10 @@ export default function CompanyMembers() {
           .option-label { font-size: 0.85rem; font-weight: 700; color: #0f172a; }
           .check-icon { color: #0f172a; }
 
-          .modal-form { padding: 1.5rem 1.75rem 2rem; }
+          .modal-form { padding: 1.5rem; }
           .modal-field { margin-bottom: 1.25rem; }
-          .modal-field label { display: block; font-size: 0.75rem; font-weight: 800; color: #334155; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
-          .modal-input-wrap { display: flex; align-items: center; gap: 0.75rem; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem 1rem; background: #f8fafc; transition: all 0.2s; }
+          .modal-field label { display: block; font-size: 0.8125rem; font-weight: 600; color: #334155; margin-bottom: 0.375rem; }
+          .modal-input-wrap { display: flex; align-items: center; gap: 0.625rem; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.625rem 0.875rem; background: #ffffff; transition: all 0.2s; }
           .modal-input-wrap:focus-within { border-color: #6366f1; background: #ffffff; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
           .modal-input-wrap svg { color: #94a3b8; flex-shrink: 0; }
           .modal-input-wrap input { border: none; outline: none; background: transparent; flex: 1; font-size: 0.9rem; color: #0f172a; font-weight: 500; }
@@ -993,13 +977,7 @@ export default function CompanyMembers() {
           .m-email { font-size: 0.75rem; color: #64748b; }
           .m-role-section { margin-bottom: 1.25rem; }
           .m-actions-footer { display: flex; justify-content: space-between; align-items: center; }
-          .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 20px; }
-          .modal-card { background: #ffffff; border-radius: 6px; border: 1px solid #e2e8f0; width: 100%; max-width: 440px; box-shadow: 0 30px 100px -20px rgba(0, 0, 0, 0.25), 0 10px 40px -10px rgba(0, 0, 0, 0.1); }
-          .modal-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 1.5rem 1.75rem; border-bottom: 1px solid #f1f5f9; }
-          .modal-header h3 { font-size: 1.125rem; font-weight: 800; color: #0f172a; margin: 0 0 0.25rem; }
-          .modal-header p { font-size: 0.8125rem; color: #64748b; margin: 0; }
-          .modal-close { background: none; border: none; color: #94a3b8; cursor: pointer; padding: 4px; border-radius: 4px; transition: all 0.15s; }
-          .modal-close:hover { color: #0f172a; background: #f1f5f9; }
+          .modal-card { max-width: 440px; }
           .animate-pop-in { animation: popIn 0.2s ease-out; }
           @keyframes popIn { from { opacity: 0; transform: scale(0.95) translateY(-10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
           
@@ -1036,7 +1014,6 @@ export default function CompanyMembers() {
           .access-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; }
           .access-list li { display: flex; align-items: flex-start; gap: 0.625rem; font-size: 0.85rem; color: #334155; line-height: 1.4; font-weight: 600; }
           .access-check { color: #10b981; flex-shrink: 0; margin-top: 1px; }
-          .modal-footer { padding: 1.5rem 1.75rem; background: #f8fafc; border-top: 1px solid #f1f5f9; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
           .btn-cancel { padding: 0.875rem; border: 1.5px solid #e2e8f0; background: white; border-radius: 4px; font-weight: 800; font-size: 0.875rem; color: #64748b; cursor: pointer; transition: all 0.2s; }
           .btn-cancel:hover { background: #f1f5f9; color: #0f172a; border-color: #cbd5e1; }
           .btn-confirm { padding: 0.875rem; background: #0f172a; color: white; border: none; border-radius: 4px; font-weight: 800; font-size: 0.875rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1); }

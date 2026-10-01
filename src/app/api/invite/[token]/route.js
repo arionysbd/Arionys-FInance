@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getUserPermissions, sanitizePermissions, DEFAULT_PERMISSIONS, PERMISSIONS } from '@/lib/permissions';
 import dbConnect from '@/lib/db';
 import Invite from '@/models/Invite';
 import User from '@/models/User';
@@ -29,18 +30,13 @@ export async function GET(req, { params }) {
 
     const company = await Company.findById(invite.companyId).select('name').lean();
 
-    const roleLabelMap = {
-      admin: 'Administrator', ceo: 'Chief Executive Officer',
-      cfo: 'Chief Financial Officer', csuit: 'Board Member', accountant: 'Accounts Manager',
-      viewer: 'Standard Employee',
-    };
+    const grantedKeys = sanitizePermissions(invite.permissions?.length ? invite.permissions : DEFAULT_PERMISSIONS);
 
     return NextResponse.json({
       success: true,
       data: {
         email: invite.email,
-        role: invite.role,
-        roleLabel: roleLabelMap[invite.role] || invite.role,
+        accessLabels: PERMISSIONS.filter(p => grantedKeys.includes(p.key)).map(p => p.label),
         companyName: company?.name || 'Arionys Finance',
         expiresAt: invite.expiresAt,
       }
@@ -89,7 +85,8 @@ export async function POST(req, { params }) {
       password,               // hashed by pre-save hook
       phone: phone?.trim() || '',
       position: position?.trim() || '',
-      role: invite.role,
+      role: 'member',
+      permissions: sanitizePermissions(invite.permissions?.length ? invite.permissions : DEFAULT_PERMISSIONS),
       companyId: invite.companyId,
       isActive: true,
     });
@@ -118,6 +115,7 @@ export async function POST(req, { params }) {
           name: user.name,
           email: user.email,
           role: user.role,
+          permissions: getUserPermissions(user),
           companyId: user.companyId,
           isActive: user.isActive,
           phone: user.phone,

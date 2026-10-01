@@ -4,6 +4,7 @@ import EmployeeLoan from '@/models/EmployeeLoan';
 import Transaction from '@/models/Transaction';
 import AuditLog from '@/models/AuditLog';
 import { getAuthUser, unauthorized } from '@/lib/auth';
+import { hasPermission } from '@/lib/permissions';
 import mongoose from 'mongoose';
 
 // GET /api/loans/[id]
@@ -26,6 +27,16 @@ export async function GET(req, { params }) {
       return NextResponse.json({ success: false, message: 'Loan not found.' }, { status: 404 });
     }
 
+    // Without Loans / Pending Approvals access, a user may only open their own loan
+    if (!hasPermission(authUser, 'loans', 'pending_approvals')) {
+      const ownerUserId = loan.employeeId?.userId || null;
+      const isOwnLoan = (ownerUserId && String(ownerUserId) === String(authUser._id))
+        || loan.employeeEmail?.toLowerCase() === authUser.email?.toLowerCase();
+      if (!isOwnLoan) {
+        return NextResponse.json({ success: false, message: 'Loan not found.' }, { status: 404 });
+      }
+    }
+
     return NextResponse.json({ success: true, data: loan });
   } catch (error) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
@@ -39,8 +50,7 @@ export async function PATCH(req, { params }) {
     const authUser = await getAuthUser(req);
     if (!authUser) return unauthorized();
 
-    const allowedRoles = ['owner', 'admin', 'ceo', 'cfo'];
-    if (!allowedRoles.includes(authUser.role?.toLowerCase())) {
+    if (!hasPermission(authUser, 'loans')) {
       return NextResponse.json({ success: false, message: 'Insufficient permissions.' }, { status: 403 });
     }
 

@@ -13,6 +13,7 @@ import {
   PieChart,
   ClipboardList,
   Banknote,
+  HandCoins,
   Menu,
   X,
   Bell,
@@ -24,6 +25,7 @@ import { useAuth } from '@/context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getTransactions, getLoans } from '@/lib/api';
+import { hasPermission, canAccessPath, getHomePath, isOwner } from '@/lib/permissions';
 
 export default function DashboardLayout({ children }) {
   const { user, logout, loading: authLoading } = useAuth();
@@ -32,9 +34,19 @@ export default function DashboardLayout({ children }) {
   const [pendingCount, setPendingCount] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  const canApprove = hasPermission(user, 'pending_approvals');
+  const pathAllowed = !user || canAccessPath(user, pathname);
+
+  // Send users away from pages they were not given access to
+  useEffect(() => {
+    if (!authLoading && user && user.isActive !== false && !pathAllowed) {
+      router.replace(getHomePath(user));
+    }
+  }, [authLoading, user, pathAllowed, router]);
+
   useEffect(() => {
     const fetchPending = async () => {
-      if (user && ['owner', 'admin', 'ceo', 'cfo'].includes(user.role?.toLowerCase())) {
+      if (user && hasPermission(user, 'pending_approvals')) {
         try {
           const params = { status: 'pending', companyId: user.companyId };
           const [txRes, loanRes] = await Promise.all([
@@ -123,37 +135,38 @@ export default function DashboardLayout({ children }) {
     {
       title: 'Overview',
       items: [
-        { id: 'dashboard',    label: 'Dashboard',          icon: <Home size={20} />,           href: '/dashboard',           roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+        { id: 'dashboard',    label: 'Dashboard',          icon: <Home size={20} />,           href: '/dashboard', permission: 'dashboard' },
       ],
     },
     {
       title: 'Transactions',
       items: [
-        { id: 'create-tx',    label: 'Create Transaction', icon: <ArrowRightLeft size={20} />, href: '/transactions/create', roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
-        { id: 'pending',      label: 'Pending Approvals',  icon: <Clock size={20} />,          href: '/pending',             roles: ['owner', 'admin', 'ceo', 'cfo'], showBadge: true },
-        { id: 'transactions', label: 'Transaction History', icon: <History size={20} />,       href: '/transactions',        roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+        { id: 'create-tx',    label: 'Create Transaction', icon: <ArrowRightLeft size={20} />, href: '/transactions/create', permission: 'create_transaction' },
+        { id: 'pending',      label: 'Pending Approvals',  icon: <Clock size={20} />,          href: '/pending', permission: 'pending_approvals', showBadge: true },
+        { id: 'transactions', label: 'Transaction History', icon: <History size={20} />,       href: '/transactions', permission: 'transactions' },
       ],
     },
     {
       title: 'Finance',
       items: [
-        { id: 'accounts',     label: 'Accounts',           icon: <Landmark size={20} />,       href: '/accounts',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
-        { id: 'loans',        label: 'Loans',              icon: <Banknote size={20} />,       href: '/loans',               roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant', 'viewer'] },
-        { id: 'reports',      label: 'Financial Reports',  icon: <PieChart size={20} />,       href: '/reports',             roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit'] },
+        { id: 'accounts',     label: 'Accounts',           icon: <Landmark size={20} />,       href: '/accounts', permission: 'accounts' },
+        { id: 'loans',        label: 'Loans',              icon: <Banknote size={20} />,       href: '/loans', permission: 'loans' },
+        { id: 'loan-request', label: 'Request Loan',       icon: <HandCoins size={20} />,      href: '/loans/request', permission: 'loan_request' },
+        { id: 'reports',      label: 'Financial Reports',  icon: <PieChart size={20} />,       href: '/reports', permission: 'reports' },
       ],
     },
     {
       title: 'Organization',
       items: [
-        { id: 'employees',    label: 'Employees',          icon: <UserIcon size={20} />,       href: '/employees',           roles: ['owner', 'admin', 'ceo', 'cfo'] },
-        { id: 'business-administration', label: 'Business Admin', icon: <SlidersHorizontal size={20} />, href: '/business-administration', roles: ['owner', 'admin'] },
-        { id: 'audit-log',    label: 'Audit Log',          icon: <ClipboardList size={20} />,  href: '/audit-log',           roles: ['owner', 'admin'] },
+        { id: 'employees',    label: 'Employees',          icon: <UserIcon size={20} />,       href: '/employees', permission: 'employees' },
+        { id: 'business-administration', label: 'Business Admin', icon: <SlidersHorizontal size={20} />, href: '/business-administration', permission: 'business_admin' },
+        { id: 'audit-log',    label: 'Audit Log',          icon: <ClipboardList size={20} />,  href: '/audit-log', permission: 'audit_log' },
       ],
     },
     {
       title: 'Account',
       items: [
-        { id: 'settings',     label: 'Profile Settings',   icon: <Settings size={20} />,       href: '/settings',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+        { id: 'settings',     label: 'Profile Settings',   icon: <Settings size={20} />,       href: '/settings' },
       ],
     },
   ];
@@ -169,6 +182,7 @@ export default function DashboardLayout({ children }) {
     if (pathname === '/reports') return 'Financial Reports';
     if (pathname === '/audit-log') return 'Audit Log';
     if (pathname === '/loans') return 'Employee Loans';
+    if (pathname === '/loans/request') return 'Request a Loan';
     if (pathname.startsWith('/loans/')) return 'Loan Details';
 
     return 'Settings';
@@ -185,6 +199,7 @@ export default function DashboardLayout({ children }) {
     if (pathname === '/reports') return 'Reports';
     if (pathname === '/audit-log') return 'Audit Log';
     if (pathname === '/loans') return 'Loans';
+    if (pathname === '/loans/request') return 'Loans / Request';
     if (pathname.startsWith('/loans/')) return 'Loans / Details';
 
     return 'Pages';
@@ -209,7 +224,7 @@ export default function DashboardLayout({ children }) {
         <nav className="side-nav">
           {navSections.map((section) => {
             const visibleItems = section.items.filter(
-              (item) => !item.roles || item.roles.includes(user.role?.toLowerCase())
+              (item) => !item.permission || hasPermission(user, item.permission)
             );
             if (visibleItems.length === 0) return null;
 
@@ -259,7 +274,7 @@ export default function DashboardLayout({ children }) {
           </div>
         </div>
         <div className="mobile-header-right">
-          {['owner', 'admin', 'ceo', 'cfo'].includes(user.role?.toLowerCase()) && (
+          {canApprove && (
             <Link href="/pending" className="notification-bell">
               <Bell size={20} />
               {pendingCount > 0 && <span className="bell-badge">{pendingCount}</span>}
@@ -283,40 +298,32 @@ export default function DashboardLayout({ children }) {
           <div className="header-flex">
             <h1>{getPageTitle()}</h1>
             <div className="header-actions">
-              {['owner', 'admin', 'ceo', 'cfo'].includes(user.role?.toLowerCase()) && (
+              {canApprove && (
                 <Link href="/pending" className="notification-bell desktop-bell">
                   <Bell size={20} />
                   {pendingCount > 0 && <span className="bell-badge">{pendingCount}</span>}
                 </Link>
               )}
-              <div className="current-user-badge">
-                <span className={`role-tag role-${user.role?.toLowerCase()}`}>
-                <span className="desktop-role">
-                  {user.role?.toLowerCase() === 'owner' ? 'Company Owner' :
-                   user.role?.toLowerCase() === 'admin' ? 'Administrator' :
-                   user.role?.toLowerCase() === 'ceo' ? 'Chief Executive Officer' :
-                   user.role?.toLowerCase() === 'cfo' ? 'Chief Financial Officer' :
-                   user.role?.toLowerCase() === 'csuit' ? 'Executive Board' :
-                   user.role?.toLowerCase() === 'accountant' ? 'Accounts Manager' : 
-                   user.role}
-                </span>
-                <span className="mobile-role">
-                  {user.role?.toLowerCase() === 'owner' ? 'OWNR' :
-                   user.role?.toLowerCase() === 'admin' ? 'ADMIN' :
-                   user.role?.toLowerCase() === 'ceo' ? 'CEO' :
-                   user.role?.toLowerCase() === 'cfo' ? 'CFO' :
-                   user.role?.toLowerCase() === 'csuit' ? 'EXEC' :
-                   user.role?.toLowerCase() === 'accountant' ? 'ACC' : 
-                   user.role?.toUpperCase()}
-                </span>
-              </span>
-            </div>
+              {isOwner(user) && (
+                <div className="current-user-badge">
+                  <span className="role-tag role-owner">
+                    <span className="desktop-role">Company Owner</span>
+                    <span className="mobile-role">OWNER</span>
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </header>
 
         <div className="content-area">
-          {children}
+          {pathAllowed ? children : (
+            <div className="no-access">
+              <Shield size={36} />
+              <h3>No access to this page</h3>
+              <p>You have not been given access to this page. Redirecting you…</p>
+            </div>
+          )}
         </div>
       </main>
 
@@ -413,6 +420,9 @@ export default function DashboardLayout({ children }) {
         .breadcrumb .current { color: #0f172a; }
         .header-flex { display: flex; justify-content: space-between; align-items: center; }
         .header-flex h1 { font-size: 1.875rem; font-weight: 900; color: #0f172a; letter-spacing: -0.02em; }
+.no-access { max-width: 420px; margin: 4rem auto; padding: 2.5rem 2rem; text-align: center; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; color: #94a3b8; }
+        .no-access h3 { margin: 1rem 0 0.5rem; font-size: 1.125rem; font-weight: 800; color: #0f172a; }
+        .no-access p { margin: 0; font-size: 0.875rem; color: #64748b; }
         .role-tag { padding: 0.35rem 0.875rem; border-radius: 8px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-right: 0.5rem; border: 1px solid transparent; }
         .role-owner { background: #eef2ff; color: #4338ca; border-color: #c7d2fe; }
         .role-admin { background: #f8fafc; color: #0f172a; border-color: #cbd5e1; }

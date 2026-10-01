@@ -71,14 +71,6 @@ export default function InvitePage() {
     }
   };
 
-  const roleLabelMap = {
-    admin: 'Administrator', ceo: 'Chief Executive Officer',
-    cfo: 'Chief Financial Officer', csuit: 'Board Member', accountant: 'Accounts Manager',
-  };
-  const roleColors = {
-    admin: '#6366f1', ceo: '#0ea5e9', cfo: '#10b981', csuit: '#f59e0b', accountant: '#8b5cf6',
-  };
-
   const passwordStrength = (p) => {
     if (p.length === 0) return null;
     if (p.length < 6) return { label: 'Weak', color: '#ef4444', width: '25%' };
@@ -137,11 +129,11 @@ export default function InvitePage() {
         {status === 'valid' && invite && (
           <div className="invite-card form-card">
             {/* Role banner */}
-            <div className="role-banner" style={{ borderColor: roleColors[invite.role] || '#6366f1' }}>
-              <div className="role-dot" style={{ background: roleColors[invite.role] || '#6366f1' }} />
+            <div className="role-banner">
+              <div className="role-dot" />
               <div>
                 <span className="role-company">{invite.companyName}</span>
-                <span className="role-title">{invite.roleLabel}</span>
+                <span className="role-title">Team invitation</span>
               </div>
               <div className="expire-badge">
                 <Clock size={11} />
@@ -152,9 +144,16 @@ export default function InvitePage() {
             <div className="form-header">
               <h1>Create Your Account</h1>
               <p>
-                You've been invited to join <strong>{invite.companyName}</strong> as{' '}
-                <strong style={{ color: roleColors[invite.role] }}>{invite.roleLabel}</strong>.
+                You&apos;ve been invited to join <strong>{invite.companyName}</strong>.
               </p>
+              {invite.accessLabels?.length > 0 && (
+                <div className="access-preview">
+                  <span className="access-preview-label">You will have access to</span>
+                  <div className="access-chips">
+                    {invite.accessLabels.map(label => <span key={label} className="access-chip">{label}</span>)}
+                  </div>
+                </div>
+              )}
             </div>
 
             <form onSubmit={handleSubmit} className="reg-form">
@@ -371,7 +370,12 @@ export default function InvitePage() {
           border-bottom: 1px solid #f1f5f9;
           border-left: 4px solid #6366f1;
         }
-        .role-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 0 4px rgba(99,102,241,0.1); }
+        .access-preview { margin-top: 1rem; }
+        .access-preview-label { display: block; margin-bottom: 0.5rem; font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+        .access-chips { display: flex; flex-wrap: wrap; gap: 0.375rem; }
+        .access-chip { padding: 0.25rem 0.625rem; border-radius: 4px; background: #eef2ff; color: #4338ca; font-size: 0.75rem; font-weight: 600; }
+        .role-banner { border-color: #6366f1; }
+        .role-dot { background: #6366f1;  width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 0 4px rgba(99,102,241,0.1); }
         .role-company { display: block; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 2px; }
         .role-title { display: block; font-size: 1rem; font-weight: 800; color: #0f172a; letter-spacing: -0.01em; }
         .expire-badge {

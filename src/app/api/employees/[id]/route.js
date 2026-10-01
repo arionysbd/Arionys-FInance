@@ -3,7 +3,8 @@ import dbConnect from '@/lib/db';
 import Employee from '@/models/Employee';
 import User from '@/models/User';
 import AuditLog from '@/models/AuditLog';
-import { getAuthUser, unauthorized } from '@/lib/auth';
+import { getAuthUser, unauthorized, forbidden } from '@/lib/auth';
+import { getUserPermissions, hasPermission, isOwner } from '@/lib/permissions';
 
 // GET /api/employees/[id]
 export async function GET(req, { params }) {
@@ -11,6 +12,7 @@ export async function GET(req, { params }) {
     await dbConnect();
     const authUser = await getAuthUser(req);
     if (!authUser) return unauthorized();
+    if (!hasPermission(authUser, 'employees')) return forbidden('You do not have access to employees.');
 
     const { id } = await params;
     const employee = await Employee.findOne({ _id: id, companyId: authUser.companyId })
@@ -25,13 +27,15 @@ export async function GET(req, { params }) {
     const accountQuery = employee.userId
       ? { _id: employee.userId }
       : { email: employee.email, companyId: authUser.companyId };
-    const account = await User.findOne(accountQuery).select('role isActive createdAt').lean();
+    const account = await User.findOne(accountQuery).select('role permissions isActive createdAt').lean();
 
     return NextResponse.json({
       success: true,
       data: {
         ...employee,
-        account: account ? { role: account.role, isActive: account.isActive, createdAt: account.createdAt } : null,
+        account: account
+          ? { isOwner: isOwner(account), permissions: getUserPermissions(account), isActive: account.isActive, createdAt: account.createdAt }
+          : null,
       },
     });
   } catch (error) {
@@ -46,8 +50,7 @@ export async function PATCH(req, { params }) {
     const authUser = await getAuthUser(req);
     if (!authUser) return unauthorized();
 
-    const allowedRoles = ['owner', 'admin', 'ceo', 'cfo'];
-    if (!allowedRoles.includes(authUser.role?.toLowerCase())) {
+    if (!hasPermission(authUser, 'employees')) {
       return NextResponse.json({ success: false, message: 'Insufficient permissions.' }, { status: 403 });
     }
 
@@ -106,8 +109,7 @@ export async function DELETE(req, { params }) {
     const authUser = await getAuthUser(req);
     if (!authUser) return unauthorized();
 
-    const allowedRoles = ['owner', 'admin', 'ceo'];
-    if (!allowedRoles.includes(authUser.role?.toLowerCase())) {
+    if (!hasPermission(authUser, 'employees')) {
       return NextResponse.json({ success: false, message: 'Insufficient permissions.' }, { status: 403 });
     }
 

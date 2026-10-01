@@ -22,7 +22,6 @@ ChartJS.register(
 );
 
 export default function Dashboard({ stats, recentTransactions, user }) {
-  const isAccountant = user?.role?.toLowerCase() === 'accountant';
   const chartData = {
     labels: ['Revenue', 'Expenses', 'Investments'],
     datasets: [
@@ -88,8 +87,6 @@ export default function Dashboard({ stats, recentTransactions, user }) {
           </div>
         </div>
 
-        {!isAccountant && (
-          <>
             <div className="card stat-card">
               <div className="stat-icon-bg" style={{ backgroundColor: '#ecfdf5' }}>
                 <TrendingUp style={{ color: '#10b981' }} size={20} />
@@ -125,8 +122,6 @@ export default function Dashboard({ stats, recentTransactions, user }) {
                 </div>
               </div>
             </div>
-          </>
-        )}
       </div>
 
       {stats.accountBalances && stats.accountBalances.length > 0 && (

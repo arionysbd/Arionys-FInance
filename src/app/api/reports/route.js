@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Transaction from '@/models/Transaction';
 import { getAuthUser, unauthorized } from '@/lib/auth';
+import { hasPermission } from '@/lib/permissions';
 
 export async function GET(req) {
   try {
@@ -12,8 +13,7 @@ export async function GET(req) {
     const companyId = authUser.companyId;
     if (!companyId) return NextResponse.json({ success: false, message: 'Company required.' }, { status: 400 });
 
-    const allowedRoles = ['owner', 'admin', 'ceo', 'cfo', 'csuit'];
-    if (!allowedRoles.includes(authUser.role?.toLowerCase())) {
+    if (!hasPermission(authUser, 'reports')) {
         return NextResponse.json({ success: false, message: 'Insufficient permissions for reports.' }, { status: 403 });
     }
 

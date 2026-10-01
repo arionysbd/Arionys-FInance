@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Transaction from '@/models/Transaction';
-import { getAuthUser, unauthorized } from '@/lib/auth';
+import { getAuthUser, unauthorized, forbidden } from '@/lib/auth';
+import { hasPermission } from '@/lib/permissions';
 
 export async function GET(req) {
   try {
@@ -9,6 +10,7 @@ export async function GET(req) {
 
     const authUser = await getAuthUser(req);
     if (!authUser) return unauthorized();
+    if (!hasPermission(authUser, 'transactions')) return forbidden('You do not have access to export transactions.');
 
     const companyId = authUser.companyId;
     if (!companyId) {

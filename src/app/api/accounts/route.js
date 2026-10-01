@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Account from '@/models/Account';
-import { getAuthUser, unauthorized } from '@/lib/auth';
+import { getAuthUser, unauthorized, forbidden } from '@/lib/auth';
+import { hasPermission } from '@/lib/permissions';
 
 export async function GET(req) {
   try {
@@ -9,6 +10,7 @@ export async function GET(req) {
 
     const authUser = await getAuthUser(req);
     if (!authUser) return unauthorized();
+    if (!hasPermission(authUser, 'accounts', 'create_transaction', 'transactions', 'loans', 'pending_approvals', 'dashboard')) return forbidden('You do not have access to accounts.');
 
     const companyId = authUser.companyId;
     if (!companyId) {
@@ -28,6 +30,7 @@ export async function POST(req) {
 
     const authUser = await getAuthUser(req);
     if (!authUser) return unauthorized();
+    if (!hasPermission(authUser, 'accounts')) return forbidden('You do not have access to manage accounts.');
 
     const body = await req.json();
     const { accountNo, acName, bankName, branch, routingNo } = body;

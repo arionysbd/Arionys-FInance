@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
+import { hasPermission } from '@/lib/permissions';
 import CustomSelect from '@/components/UI/CustomSelect';
 import { getLoans, createLoan, getEmployees, getAccounts } from '@/lib/api';
 import { Banknote, Plus, Search, Filter, Loader2, ArrowRight, HandCoins } from 'lucide-react';
@@ -14,8 +15,8 @@ export default function LoansPage() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   
-  // null | 'request' (any member, for themselves) | 'create' (CEO/CFO/Admin, for an employee)
-  const [modalMode, setModalMode] = useState(null);
+  // Create Loan modal (CEO/CFO/Admin). Loan requests live on their own page: /loans/request
+  const [showCreate, setShowCreate] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   
@@ -31,8 +32,7 @@ export default function LoansPage() {
     notes: '',
   }));
 
-  const canCreateLoan = ['owner', 'admin', 'ceo', 'cfo'].includes(user?.role?.toLowerCase());
-  const isCreateMode = modalMode === 'create';
+  const canCreateLoan = hasPermission(user, 'loans');
 
   const emptyLoanForm = () => ({
     employeeId: '',
@@ -43,13 +43,13 @@ export default function LoansPage() {
     notes: '',
   });
 
-  const openModal = (mode) => {
+  const openModal = () => {
     setFormData(emptyLoanForm());
     setError('');
-    setModalMode(mode);
+    setShowCreate(true);
   };
 
-  const closeModal = () => setModalMode(null);
+  const closeModal = () => setShowCreate(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -57,10 +57,10 @@ export default function LoansPage() {
   }, [user, authLoading, search, filterStatus]);
 
   useEffect(() => {
-    if (modalMode === 'create') {
+    if (showCreate) {
         fetchFormData();
     }
-  }, [modalMode]);
+  }, [showCreate]);
 
   const fetchLoans = async () => {
     try {
@@ -101,10 +101,7 @@ export default function LoansPage() {
     setIsSubmitting(true);
     try {
       // Empty employeeId = request for myself
-      const payload = isCreateMode
-        ? { ...formData, type: 'create' }
-        : { amount: formData.amount, startDate: formData.startDate, endDate: formData.endDate, notes: formData.notes, type: 'request' };
-      const res = await createLoan(payload);
+      const res = await createLoan(formData);
       if (res.success) {
         closeModal();
         setFormData(emptyLoanForm());
@@ -142,23 +139,29 @@ export default function LoansPage() {
                 />
             </div>
             <div className="filter-box">
-                <Filter size={16} className="filter-icon" />
-                <select className="input-field" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-                    <option value="">All Statuses</option>
-                    <option value="pending_approval">Pending Approval</option>
-                    <option value="approved">Approved</option>
-                    <option value="active,partially_repaid">Active & Disbursed</option>
-                    <option value="overdue">Overdue</option>
-                    <option value="completed">Completed</option>
-                    <option value="rejected">Rejected</option>
-                </select>
+                <CustomSelect
+                    size="sm"
+                    icon={<Filter size={16} />}
+                    ariaLabel="Filter by status"
+                    value={filterStatus}
+                    onChange={setFilterStatus}
+                    options={[
+                        { value: '', label: 'All Statuses' },
+                        { value: 'pending_approval', label: 'Pending Approval' },
+                        { value: 'approved', label: 'Approved' },
+                        { value: 'active,partially_repaid', label: 'Active & Disbursed' },
+                        { value: 'overdue', label: 'Overdue' },
+                        { value: 'completed', label: 'Completed' },
+                        { value: 'rejected', label: 'Rejected' },
+                    ]}
+                />
             </div>
             <div className="toolbar-actions">
-                <button className={`btn ${canCreateLoan ? 'btn-secondary' : 'btn-primary'} toolbar-btn`} onClick={() => openModal('request')}>
+                <Link href="/loans/request" className={`btn ${canCreateLoan ? 'btn-secondary' : 'btn-primary'} toolbar-btn`}>
                     <HandCoins size={18} /> Request Loan
-                </button>
+                </Link>
                 {canCreateLoan && (
-                    <button className="btn btn-primary toolbar-btn" onClick={() => openModal('create')}>
+                    <button className="btn btn-primary toolbar-btn" onClick={openModal}>
                         <Plus size={18} /> Create Loan
                     </button>
                 )}
@@ -227,76 +230,67 @@ export default function LoansPage() {
                         <Banknote size={48} className="empty-icon" />
                         <h3>No loans found</h3>
                         <p className="text-muted">{canCreateLoan ? "No employee loans or requests yet." : "You haven't requested any loans yet."}</p>
-                        <button className="btn btn-primary" style={{marginTop: '1rem'}} onClick={() => openModal(canCreateLoan ? 'create' : 'request')}>
-                            <Plus size={18} /> {canCreateLoan ? 'Create First Loan' : 'Request a Loan'}
-                        </button>
+                        {canCreateLoan ? (
+                            <button className="btn btn-primary" style={{marginTop: '1rem'}} onClick={openModal}>
+                                <Plus size={18} /> Create First Loan
+                            </button>
+                        ) : (
+                            <Link href="/loans/request" className="btn btn-primary" style={{marginTop: '1rem'}}>
+                                <HandCoins size={18} /> Request a Loan
+                            </Link>
+                        )}
                     </div>
                 )}
             </div>
         )}
       </div>
 
-      {modalMode && (
+      {showCreate && canCreateLoan && (
           <div className="modal-overlay animate-fade-in">
               <div className="modal-content animate-slide-up">
                   <div className="modal-header">
                       <div>
-                          <h3>{isCreateMode ? 'Create Employee Loan' : 'Request a Loan'}</h3>
-                          <p className="modal-sub">
-                              {isCreateMode
-                                  ? 'Issue a loan to an employee. It will be sent for approval.'
-                                  : 'Ask for a loan for yourself. An approver will review it.'}
-                          </p>
+                          <h3>Create Employee Loan</h3>
+                          <p className="modal-sub">Issue a loan to an employee. It will be sent for approval.</p>
                       </div>
                       <button className="close-btn" onClick={closeModal}>&times;</button>
                   </div>
                   {error && <div className="alert alert-danger">{error}</div>}
                     <form onSubmit={handleSubmit} className="modal-form">
-                      {!isCreateMode && (
-                          <div className="requester-box">
-                              <span className="requester-label">Requesting as</span>
-                              <span className="requester-name">{user?.name}</span>
-                              <span className="requester-email">{user?.email}</span>
-                          </div>
-                      )}
-                      {isCreateMode && (
-                          <div className="form-group">
-                              <label>Employee *</label>
-                              <CustomSelect 
-                                  required
-                                  value={formData.employeeId} 
-                                  onChange={(val) => handleInputChange({ target: { name: 'employeeId', value: val } })}
-                                  placeholder="Select Employee..."
-                                  options={employees.map(emp => ({
-                                      value: emp._id,
-                                      label: `${emp.fullName} ${emp.designation ? `(${emp.designation})` : ''}`,
-                                      subtext: emp.email
-                                  }))}
-                              />
-                              {formData.employeeId && (
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                      Limit: {formatCurrency(employees.find(e => e._id === formData.employeeId)?.loanLimit || 0)} 
-                                      (Salary: {formatCurrency(employees.find(e => e._id === formData.employeeId)?.salary || 0)})
-                                  </p>
-                              )}
-                          </div>
-                      )}
-                      {isCreateMode && (
-                          <div className="form-group">
-                              <label>Source Account (For Disbursement)</label>
-                              <CustomSelect 
-                                  value={formData.paidFromAccount} 
-                                  onChange={(val) => handleInputChange({ target: { name: 'paidFromAccount', value: val } })}
-                                  placeholder="Select Account..."
-                                  options={accounts.map(acc => ({
-                                      value: acc._id,
-                                      label: `${acc.bankName} - ${acc.acName || 'Cash'}`,
-                                      subtext: `Balance: ${formatCurrency(acc.balance)}`
-                                  }))}
-                              />
-                              <p className="text-xs text-muted-foreground mt-1">Optional. Can also be chosen at disbursement. Funds are deducted only when the loan is disbursed.</p>
-                          </div>
-                      )}
+                      <div className="form-group">
+                          <label>Employee *</label>
+                          <CustomSelect 
+                              required
+                              value={formData.employeeId} 
+                              onChange={(val) => handleInputChange({ target: { name: 'employeeId', value: val } })}
+                              placeholder="Select Employee..."
+                              options={employees.map(emp => ({
+                                  value: emp._id,
+                                  label: `${emp.fullName} ${emp.designation ? `(${emp.designation})` : ''}`,
+                                  subtext: emp.email
+                              }))}
+                          />
+                          {formData.employeeId && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                  Limit: {formatCurrency(employees.find(e => e._id === formData.employeeId)?.loanLimit || 0)} 
+                                  (Salary: {formatCurrency(employees.find(e => e._id === formData.employeeId)?.salary || 0)})
+                              </p>
+                          )}
+                      </div>
+                      <div className="form-group">
+                          <label>Source Account (For Disbursement)</label>
+                          <CustomSelect 
+                              value={formData.paidFromAccount} 
+                              onChange={(val) => handleInputChange({ target: { name: 'paidFromAccount', value: val } })}
+                              placeholder="Select Account..."
+                              options={accounts.map(acc => ({
+                                  value: acc._id,
+                                  label: `${acc.bankName} - ${acc.acName || 'Cash'}`,
+                                  subtext: `Balance: ${formatCurrency(acc.balance)}`
+                              }))}
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">Optional. Can also be chosen at disbursement. Funds are deducted only when the loan is disbursed.</p>
+                      </div>
                       <div className="form-group">
                           <label>Loan Amount *</label>
                           <input type="number" step="0.01" min="1" name="amount" className="input-field" required value={formData.amount} onChange={handleInputChange} />
@@ -319,21 +313,20 @@ export default function LoansPage() {
                           </div>
                       </div>
                       <div className="form-group">
-                          <label>{isCreateMode ? 'Notes' : 'Reason *'}</label>
+                          <label>Notes</label>
                           <textarea
                               name="notes"
                               className="input-field"
                               rows="3"
-                              required={!isCreateMode}
                               value={formData.notes}
                               onChange={handleInputChange}
-                              placeholder={isCreateMode ? 'Terms, repayment plan, etc.' : 'Why do you need this loan?'}
+                              placeholder="Terms, repayment plan, etc."
                           ></textarea>
                       </div>
                       <div className="modal-actions">
                           <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
-                          <button type="submit" className="btn btn-primary" disabled={isSubmitting || (isCreateMode && !formData.employeeId)}>
-                              {isSubmitting ? <Loader2 size={18} className="spinner" /> : (isCreateMode ? 'Create Loan' : 'Submit Request')}
+                          <button type="submit" className="btn btn-primary" disabled={isSubmitting || !formData.employeeId}>
+                              {isSubmitting ? <Loader2 size={18} className="spinner" /> : 'Create Loan'}
                           </button>
                       </div>
                   </form>
@@ -350,15 +343,8 @@ export default function LoansPage() {
             :global(.search-icon) { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
             .search-box .input-field { padding-left: 2.5rem; width: 100%; }
             .filter-box { position: relative; flex: 0 0 210px; }
-            .filter-box :global(.filter-icon) { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
-            .filter-box .input-field { padding-left: 2.25rem; width: 100%; }
             .toolbar-btn { flex-shrink: 0; white-space: nowrap; }
             .toolbar-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
-            .modal-sub { margin: 0.25rem 0 0; font-size: 0.8125rem; color: #64748b; }
-            .requester-box { display: flex; flex-direction: column; gap: 0.125rem; margin-bottom: 1.25rem; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; }
-            .requester-label { font-size: 0.6875rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; }
-            .requester-name { font-size: 0.9375rem; font-weight: 700; color: #0f172a; }
-            .requester-email { font-size: 0.8125rem; color: #64748b; }
             .emp-name { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
             .origin-tag { padding: 0.0625rem 0.4375rem; border-radius: 4px; font-size: 0.625rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
             .origin-tag.is-request { background: #fef3c7; color: #92400e; }
@@ -402,12 +388,7 @@ export default function LoansPage() {
             :global(.empty-icon) { color: #cbd5e1; margin-bottom: 1rem; }
             .empty-state h3 { font-size: 1.25rem; color: #1e293b; margin-bottom: 0.5rem; }
 
-            .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
-            .modal-content { background: white; border-radius: 6px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.2); }
-            .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid #f1f5f9; }
-            .modal-header h3 { font-size: 1.25rem; color: #0f172a; margin: 0; }
-            .close-btn { background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; width: 32px; height: 32px; border-radius: 50%; transition: background 0.2s; }
-            .close-btn:hover { background: #f1f5f9; color: #0f172a; }
+            .modal-content { max-width: 600px; }
             
             .modal-form { padding: 1.5rem; }
             .form-group { margin-bottom: 1.25rem; }
@@ -415,7 +396,6 @@ export default function LoansPage() {
             .form-row { display: flex; gap: 1rem; }
             .form-row .form-group { flex: 1; }
             
-            .modal-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #f1f5f9; }
             
             .alert { padding: 1rem; border-radius: 6px; margin: 1rem 1.5rem 0; font-size: 0.875rem; font-weight: 500; }
             .alert-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5; }

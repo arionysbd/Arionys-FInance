@@ -5,7 +5,8 @@ import User from '@/models/User';
 import Account from '@/models/Account';
 import AuditLog from '@/models/AuditLog';
 import { sendEmail } from '@/lib/mail';
-import { getAuthUser, unauthorized } from '@/lib/auth';
+import { getAuthUser, unauthorized, forbidden } from '@/lib/auth';
+import { hasPermission } from '@/lib/permissions';
 
 export async function GET(req) {
   try {
@@ -13,6 +14,7 @@ export async function GET(req) {
 
     const authUser = await getAuthUser(req);
     if (!authUser) return unauthorized();
+    if (!hasPermission(authUser, 'dashboard', 'transactions', 'pending_approvals')) return forbidden('You do not have access to transactions.');
 
     const { searchParams } = new URL(req.url);
     const statusParam = searchParams.get('status') || 'approved';
@@ -60,6 +62,7 @@ export async function POST(req) {
 
     const authUser = await getAuthUser(req);
     if (!authUser) return unauthorized();
+    if (!hasPermission(authUser, 'create_transaction')) return forbidden('You do not have access to create transactions.');
 
     const body = await req.json();
     const { type, amount, description, performedBy, account, toAccount } = body;
@@ -110,7 +113,9 @@ export async function POST(req) {
 
     // Notify CFOs
     try {
-      const cfos = await User.find({ role: 'cfo', companyId });
+      // Everyone who can approve transactions
+      const companyUsers = await User.find({ companyId, isActive: true });
+      const cfos = companyUsers.filter(u => hasPermission(u, 'pending_approvals') && String(u._id) !== String(userId));
       const creator = await User.findById(userId);
       
       for (const cfo of cfos) {

@@ -39,3 +39,8 @@ export function unauthorized() {
     { status: 401 }
   );
 }
+
+/** Standard 403 response for users without access to a page/action. */
+export function forbidden(message = 'You do not have access to this action.') {
+  return NextResponse.json({ success: false, message }, { status: 403 });
+}

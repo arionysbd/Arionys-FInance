@@ -7,6 +7,7 @@ import Account from '@/models/Account';
 import AuditLog from '@/models/AuditLog';
 import Notification from '@/models/Notification';
 import { getAuthUser, unauthorized } from '@/lib/auth';
+import { hasPermission } from '@/lib/permissions';
 import mongoose from 'mongoose';
 
 // GET /api/loans/[id]/repayments - Get repayments for a loan
@@ -19,9 +20,19 @@ export async function GET(req, { params }) {
     const { id } = await params;
     
     // Verify loan exists and belongs to company
-    const loan = await EmployeeLoan.findOne({ _id: id, companyId: authUser.companyId });
+    const loan = await EmployeeLoan.findOne({ _id: id, companyId: authUser.companyId }).populate('employeeId', 'userId');
     if (!loan) {
         return NextResponse.json({ success: false, message: 'Loan not found.' }, { status: 404 });
+    }
+
+    // Without Loans / Pending Approvals access, a user may only open their own loan
+    if (!hasPermission(authUser, 'loans', 'pending_approvals')) {
+      const ownerUserId = loan.employeeId?.userId || null;
+      const isOwnLoan = (ownerUserId && String(ownerUserId) === String(authUser._id))
+        || loan.employeeEmail?.toLowerCase() === authUser.email?.toLowerCase();
+      if (!isOwnLoan) {
+        return NextResponse.json({ success: false, message: 'Loan not found.' }, { status: 404 });
+      }
     }
 
     const repayments = await LoanRepayment.find({ loanId: id, companyId: authUser.companyId })
@@ -46,8 +57,7 @@ export async function POST(req, { params }) {
     const authUser = await getAuthUser(req);
     if (!authUser) return unauthorized();
 
-    const allowedRoles = ['owner', 'admin', 'ceo', 'cfo', 'accountant'];
-    if (!allowedRoles.includes(authUser.role?.toLowerCase())) {
+    if (!hasPermission(authUser, 'loans')) {
       return NextResponse.json({ success: false, message: 'Insufficient permissions to add repayments.' }, { status: 403 });
     }
 

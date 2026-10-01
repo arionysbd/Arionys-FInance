@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
+import { hasPermission } from '@/lib/permissions';
+import CustomSelect from '@/components/UI/CustomSelect';
 import { getLoan, getLoanRepayments, addLoanRepayment, approveLoan, disburseLoan, getAccounts } from '@/lib/api';
 import { useParams, useRouter } from 'next/navigation';
 import { Banknote, Calendar, CheckCircle, Clock, CheckCircle2, ArrowRightLeft, User, FileText, Loader2, ArrowLeft, ShieldCheck, ShieldAlert, Plus, DollarSign } from 'lucide-react';
@@ -33,8 +35,8 @@ export default function LoanDetailsPage() {
       notes: ''
   });
 
-  const canManage = ['owner', 'admin', 'ceo', 'cfo', 'accountant'].includes(user?.role?.toLowerCase());
-  const canApprove = ['owner', 'admin', 'ceo', 'cfo'].includes(user?.role?.toLowerCase());
+  const canManage = hasPermission(user, 'loans');
+  const canApprove = hasPermission(user, 'pending_approvals');
   // Requesters cannot review their own loan; the API enforces the same rule
   const isOwnRequest = loan && String(loan.createdBy?._id || loan.createdBy) === String(user?._id);
 
@@ -183,17 +185,16 @@ export default function LoanDetailsPage() {
                 {loan.status === 'approved' && canApprove && (
                     <div className="flex gap-2 items-center">
                         {!loan.paidFromAccount && (
-                            <select 
-                                className="input-field" 
-                                style={{ padding: '0.4rem', height: 'auto', minWidth: '150px' }} 
-                                value={disburseAccount} 
-                                onChange={(e) => setDisburseAccount(e.target.value)}
-                            >
-                                <option value="">Select Account...</option>
-                                {accounts.map(acc => (
-                                    <option key={acc._id} value={acc._id}>{acc.bankName} - {acc.acName || 'Cash'}</option>
-                                ))}
-                            </select>
+                            <div style={{ minWidth: '220px' }}>
+                                <CustomSelect
+                                    size="sm"
+                                    ariaLabel="Disburse from account"
+                                    placeholder="Select account..."
+                                    value={disburseAccount}
+                                    onChange={setDisburseAccount}
+                                    options={accounts.map(acc => ({ value: acc._id, label: `${acc.bankName} - ${acc.acName || 'Cash'}` }))}
+                                />
+                            </div>
                         )}
                         <button onClick={handleDisburse} disabled={isDisbursing} className="btn btn-primary">
                             {isDisbursing ? <Loader2 size={16} className="spinner" /> : <><ArrowRightLeft size={16}/> Disburse Loan</>}
@@ -390,12 +391,14 @@ export default function LoanDetailsPage() {
                         </div>
                         <div className="form-group">
                             <label>Receive Into Account *</label>
-                            <select name="receivedIntoAccount" className="input-field" required value={repayForm.receivedIntoAccount} onChange={handleRepayChange}>
-                                <option value="">Select Account...</option>
-                                {accounts.map(acc => (
-                                    <option key={acc._id} value={acc._id}>{acc.bankName} - {acc.acName || 'Cash'}</option>
-                                ))}
-                            </select>
+                            <CustomSelect
+                                name="receivedIntoAccount"
+                                required
+                                placeholder="Select account..."
+                                value={repayForm.receivedIntoAccount}
+                                onChange={(val) => handleRepayChange({ target: { name: 'receivedIntoAccount', value: val } })}
+                                options={accounts.map(acc => ({ value: acc._id, label: `${acc.bankName} - ${acc.acName || 'Cash'}` }))}
+                            />
                         </div>
                         <div className="form-row">
                             <div className="form-group">
@@ -404,12 +407,17 @@ export default function LoanDetailsPage() {
                             </div>
                             <div className="form-group">
                                 <label>Method</label>
-                                <select name="paymentMethod" className="input-field" value={repayForm.paymentMethod} onChange={handleRepayChange}>
-                                    <option value="cash">Cash</option>
-                                    <option value="bank_transfer">Bank Transfer</option>
-                                    <option value="mobile_banking">Mobile Banking</option>
-                                    <option value="cheque">Cheque</option>
-                                </select>
+                                <CustomSelect
+                                    name="paymentMethod"
+                                    value={repayForm.paymentMethod}
+                                    onChange={(val) => handleRepayChange({ target: { name: 'paymentMethod', value: val } })}
+                                    options={[
+                                        { value: 'cash', label: 'Cash' },
+                                        { value: 'bank_transfer', label: 'Bank Transfer' },
+                                        { value: 'mobile_banking', label: 'Mobile Banking' },
+                                        { value: 'cheque', label: 'Cheque' },
+                                    ]}
+                                />
                             </div>
                         </div>
                         <div className="form-group">
@@ -475,12 +483,7 @@ export default function LoanDetailsPage() {
             .timeline-item .content p { font-size: 0.75rem; color: #64748b; margin: 0; }
             .timeline-item:not(.completed) .content { opacity: 0.5; }
 
-            .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
-            .modal-content { background: white; border-radius: 6px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.2); }
-            .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid #f1f5f9; }
-            .modal-header h3 { font-size: 1.25rem; color: #0f172a; margin: 0; }
-            .close-btn { background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; width: 32px; height: 32px; border-radius: 50%; transition: background 0.2s; }
-            .close-btn:hover { background: #f1f5f9; color: #0f172a; }
+            .modal-content { max-width: 500px; }
             
             .modal-form { padding: 1.5rem; }
             .form-group { margin-bottom: 1.25rem; }
@@ -488,7 +491,6 @@ export default function LoanDetailsPage() {
             .form-row { display: flex; gap: 1rem; }
             .form-row .form-group { flex: 1; }
             
-            .modal-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #f1f5f9; }
             
             .alert { padding: 1rem; border-radius: 6px; margin: 1rem 1.5rem 0; font-size: 0.875rem; font-weight: 500; }
             .alert-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5; }

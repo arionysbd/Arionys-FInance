@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getUserPermissions } from '@/lib/permissions';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import { getAuthUser, unauthorized } from '@/lib/auth';
@@ -52,7 +53,8 @@ export async function PUT(req) {
         email: user.email,
         phone: user.phone,
         position: user.position,
-        role: user.role
+        role: user.role,
+        permissions: getUserPermissions(user)
       }
     });
   } catch (error) {

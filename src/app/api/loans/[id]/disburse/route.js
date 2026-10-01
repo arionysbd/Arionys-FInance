@@ -6,6 +6,7 @@ import Account from '@/models/Account';
 import AuditLog from '@/models/AuditLog';
 import Company from '@/models/Company';
 import { getAuthUser, unauthorized } from '@/lib/auth';
+import { hasPermission } from '@/lib/permissions';
 import { sendEmail } from '@/lib/mail';
 import mongoose from 'mongoose';
 
@@ -18,8 +19,7 @@ export async function PATCH(req, { params }) {
     const authUser = await getAuthUser(req);
     if (!authUser) return unauthorized();
 
-    const allowedRoles = ['owner', 'admin', 'ceo', 'cfo'];
-    if (!allowedRoles.includes(authUser.role?.toLowerCase())) {
+    if (!hasPermission(authUser, 'pending_approvals')) {
       return NextResponse.json({ success: false, message: 'Insufficient permissions to disburse loans.' }, { status: 403 });
     }
 

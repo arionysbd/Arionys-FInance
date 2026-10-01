@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import AuditLog from '@/models/AuditLog';
 import { getAuthUser, unauthorized } from '@/lib/auth';
+import { hasPermission } from '@/lib/permissions';
 
 export async function GET(req) {
   try {
@@ -13,8 +14,7 @@ export async function GET(req) {
     if (!companyId) return NextResponse.json({ success: false, message: 'Company required.' }, { status: 400 });
 
     // Only owners and admins can view audit logs
-    const allowedRoles = ['owner', 'admin'];
-    if (!allowedRoles.includes(authUser.role?.toLowerCase())) {
+    if (!hasPermission(authUser, 'audit_log')) {
         return NextResponse.json({ success: false, message: 'Insufficient permissions to view audit logs.' }, { status: 403 });
     }
 

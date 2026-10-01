@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Company from '@/models/Company';
 import { getAuthUser, unauthorized } from '@/lib/auth';
+import { hasPermission } from '@/lib/permissions';
 
 export async function GET(req) {
   try {
@@ -33,8 +34,8 @@ export async function PATCH(req) {
     const authUser = await getAuthUser(req);
     if (!authUser) return unauthorized();
 
-    // Only admin or owner can update company details
-    if (!['admin', 'owner'].includes(authUser.role?.toLowerCase())) {
+    // Only users with Business Admin access can update company details
+    if (!hasPermission(authUser, 'business_admin')) {
       return NextResponse.json(
         { success: false, message: 'Only administrators can update company details.' },
         { status: 403 }

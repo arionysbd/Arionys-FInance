@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
+import { hasPermission } from '@/lib/permissions';
 import { PieChart, Loader2, Calendar, TrendingUp, TrendingDown, Scale, Wallet, ArrowRight } from 'lucide-react';
 import axios from 'axios';
 import {
@@ -41,7 +42,7 @@ export default function ReportsPage() {
   const [startDate, setStartDate] = useState(defaultStart.toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(defaultEnd.toISOString().split('T')[0]);
 
-  const canView = ['owner', 'admin', 'ceo', 'cfo', 'csuit'].includes(user?.role?.toLowerCase());
+  const canView = hasPermission(user, 'reports');
 
   useEffect(() => {
     if (authLoading || !canView) return;

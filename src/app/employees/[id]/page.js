@@ -5,22 +5,13 @@ import DashboardLayout from '@/components/Layout/DashboardLayout';
 import { useParams, useRouter } from 'next/navigation';
 import axios from 'axios';
 import { getLoans } from '@/lib/api';
+import { PERMISSIONS, hasPermission } from '@/lib/permissions';
 import { 
     ArrowLeft, User, Mail, Phone, Briefcase, Building2, Hash, Calendar, 
     Calculator, Edit, AlertCircle, Banknote, ShieldCheck, Loader2, Save, X, Camera, Trash2,
     KeyRound, Activity, Clock, UserPlus, FileText, Wallet
 } from 'lucide-react';
 import Link from 'next/link';
-
-const ROLE_LABELS = {
-    owner: 'Owner',
-    admin: 'Administrator',
-    ceo: 'Chief Executive Officer',
-    cfo: 'Chief Financial Officer',
-    csuit: 'Board Member',
-    accountant: 'Accounts Manager',
-    viewer: 'Standard Employee',
-};
 
 const formatDate = (value) => value
     ? new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
@@ -192,7 +183,7 @@ export default function EmployeeDetailsPage() {
         return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT' }).format(amount || 0);
     };
 
-    const canEdit = ['owner', 'admin', 'ceo', 'cfo'].includes(user?.role?.toLowerCase());
+    const canEdit = hasPermission(user, 'employees');
 
     // Renders an input in place of a detail value while the profile is in edit mode
     const editInput = (name, props = {}) => (
@@ -359,10 +350,20 @@ export default function EmployeeDetailsPage() {
                             <h3 className="card-title">System Access</h3>
                             <div className="info-list">
                                 <div className="info-row">
-                                    <div className="info-label"><ShieldCheck size={16}/> Role</div>
-                                    <div className={`info-value ${!employee.account ? 'muted' : ''}`}>
-                                        {employee.account ? (ROLE_LABELS[employee.account.role?.toLowerCase()] || employee.account.role) : 'No login account'}
-                                    </div>
+                                    <div className="info-label"><ShieldCheck size={16}/> Pages</div>
+                                    {!employee.account ? (
+                                        <div className="info-value muted">No login account yet</div>
+                                    ) : employee.account.isOwner ? (
+                                        <div className="info-value">Company Owner · all pages</div>
+                                    ) : employee.account.permissions?.length ? (
+                                        <div className="access-chips">
+                                            {PERMISSIONS.filter(p => employee.account.permissions.includes(p.key)).map(p => (
+                                                <span key={p.key} className="access-chip">{p.label}</span>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="info-value muted">No pages</div>
+                                    )}
                                 </div>
                                 <div className="info-row">
                                     <div className="info-label"><KeyRound size={16}/> Account Access</div>
@@ -529,6 +530,8 @@ export default function EmployeeDetailsPage() {
                     .info-label { flex-shrink: 0; }
                     .card-title { display: flex; align-items: center; gap: 0.5rem; }
                     .notes-empty { margin: 0; font-size: 0.875rem; color: #94a3b8; }
+                    .access-chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.375rem; max-width: 70%; }
+                    .access-chip { padding: 0.1875rem 0.5rem; border-radius: 4px; background: #eef2ff; color: #4338ca; font-size: 0.75rem; font-weight: 600; }
                     .edit-actions { display: flex; gap: 0.75rem; flex-shrink: 0; }
                     .edit-error { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1rem; border: 1px solid #fecaca; border-radius: 6px; background: #fef2f2; color: #b91c1c; font-size: 0.8125rem; font-weight: 600; }
                     .left-col.editing .info-card { border-color: #c7d2fe; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08); }

@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
+import { hasPermission } from '@/lib/permissions';
+import CustomSelect from '@/components/UI/CustomSelect';
 import axios from 'axios';
 import { 
   Building2, Save, Plus, X, Loader2, Mail, Phone, Globe, MapPin, AlertCircle, CheckCircle, Factory, ShieldCheck, Flag, Coins, Clock
@@ -115,7 +117,7 @@ export default function BusinessAdministration() {
     );
   }
 
-  const isManager = ['owner', 'admin'].includes(user?.role?.toLowerCase());
+  const isManager = hasPermission(user, 'business_admin');
 
   // Business Administration is restricted to administrator accounts
   if (!isManager) {
@@ -224,15 +226,19 @@ export default function BusinessAdministration() {
                 </div>
                 <div className="form-field">
                   <label>Currency</label>
-                  <div className="input-with-icon">
-                    <Coins size={16} className="field-icon" />
-                    <select name="currency" value={formData.currency} onChange={handleInputChange} disabled={!isManager}>
-                      <option value="BDT">BDT - Bangladeshi Taka</option>
-                      <option value="USD">USD - US Dollar</option>
-                      <option value="EUR">EUR - Euro</option>
-                      <option value="GBP">GBP - British Pound</option>
-                    </select>
-                  </div>
+                  <CustomSelect
+                    name="currency"
+                    icon={<Coins size={16} />}
+                    disabled={!isManager}
+                    value={formData.currency}
+                    onChange={(val) => handleInputChange({ target: { name: 'currency', value: val } })}
+                    options={[
+                      { value: 'BDT', label: 'BDT - Bangladeshi Taka' },
+                      { value: 'USD', label: 'USD - US Dollar' },
+                      { value: 'EUR', label: 'EUR - Euro' },
+                      { value: 'GBP', label: 'GBP - British Pound' },
+                    ]}
+                  />
                 </div>
                 <div className="form-field">
                   <label>Registration Number</label>

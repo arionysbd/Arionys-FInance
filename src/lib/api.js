@@ -115,6 +115,17 @@ export const createLoan = async (loanData) => {
   return data;
 };
 
+// Loan requests: any member asks for a loan for themselves
+export const getMyLoanRequests = async () => {
+  const { data } = await api.get('/loans/request');
+  return data;
+};
+
+export const requestLoan = async (requestData) => {
+  const { data } = await api.post('/loans/request', requestData);
+  return data;
+};
+
 export const approveLoan = async (id, status = 'approved') => {
   const { data } = await api.patch(`/loans/${id}/approve`, { status });
   return data;

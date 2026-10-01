@@ -333,8 +333,8 @@ export default function PendingApprovalsPage() {
         }
         .skeleton-title { width: 220px; height: 28px; margin-bottom: 0.5rem; max-width: 100%; }
         .skeleton-subtitle { width: 380px; height: 16px; max-width: 100%; }
-        .skeleton-badge { width: 110px; height: 34px; border-radius: 999px; }
-        .skeleton-pill { width: 90px; height: 24px; border-radius: 999px; }
+        .skeleton-badge { width: 110px; height: 34px; border-radius: 4px; }
+        .skeleton-pill { width: 90px; height: 24px; border-radius: 4px; }
         .skeleton-amount { width: 100px; height: 22px; }
         .skeleton-line { width: 100%; height: 16px; }
         .skeleton-line.long { width: 70%; height: 20px; }
@@ -399,7 +399,7 @@ export default function PendingApprovalsPage() {
           background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
           color: #b45309;
           padding: 0.5rem 1rem;
-          border-radius: 999px;
+          border-radius: 4px;
           font-weight: 800;
           font-size: 0.8125rem;
           border: 1px solid #fde68a;
@@ -502,7 +502,7 @@ export default function PendingApprovalsPage() {
           align-items: center;
           gap: 0.375rem;
           padding: 0.3125rem 0.75rem;
-          border-radius: 999px;
+          border-radius: 4px;
           font-size: 0.7rem;
           font-weight: 800;
           text-transform: uppercase;
@@ -567,24 +567,7 @@ export default function PendingApprovalsPage() {
         .premium-empty-state h4 { font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0 0 0.5rem 0; }
         .premium-empty-state p { font-size: 0.9375rem; color: #64748b; margin: 0; max-width: 400px; }
 
-        .modal-overlay {
-          position: fixed;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background: rgba(15, 23, 42, 0.4);
-          backdrop-filter: blur(4px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 9999;
-        }
-        .modal-content {
-          background: white;
-          padding: 2rem;
-          border-radius: 6px;
-          width: 90%;
-          max-width: 400px;
-          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        }
+        .modal-content { max-width: 400px; padding: 2rem; }
         .animate-scale {
           animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
@@ -592,22 +575,11 @@ export default function PendingApprovalsPage() {
           from { opacity: 0; transform: scale(0.95); }
           to { opacity: 1; transform: scale(1); }
         }
-        .modal-title {
-          font-size: 1.25rem;
-          font-weight: 800;
-          color: #0f172a;
-          margin: 0 0 1rem 0;
-        }
         .modal-message {
           color: #475569;
           font-size: 0.9375rem;
           line-height: 1.5;
           margin: 0 0 1.5rem 0;
-        }
-        .modal-actions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 1rem;
         }
         .btn-cancel {
           padding: 0.625rem 1rem;

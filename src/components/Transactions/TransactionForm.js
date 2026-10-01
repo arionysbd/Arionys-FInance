@@ -530,14 +530,6 @@ export default function TransactionForm({ onTransactionAdded }) {
           color: #64748b;
         }
 
-        .overlay {
-          position: fixed; inset: 0; z-index: 10000;
-          background: rgba(15,23,42,0.25);
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
-          display: flex; align-items: center; justify-content: center;
-          padding: 1rem;
-        }
 
         .amount-input { padding-left: 3.25rem; font-weight: 700; font-size: 1.125rem; }
 

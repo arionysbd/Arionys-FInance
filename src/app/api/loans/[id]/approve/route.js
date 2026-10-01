@@ -4,6 +4,7 @@ import EmployeeLoan from '@/models/EmployeeLoan';
 import AuditLog from '@/models/AuditLog';
 import Notification from '@/models/Notification';
 import { getAuthUser, unauthorized } from '@/lib/auth';
+import { hasPermission } from '@/lib/permissions';
 
 export async function PATCH(req, { params }) {
   try {
@@ -11,8 +12,7 @@ export async function PATCH(req, { params }) {
     const authUser = await getAuthUser(req);
     if (!authUser) return unauthorized();
 
-    const allowedRoles = ['owner', 'admin', 'ceo', 'cfo'];
-    if (!allowedRoles.includes(authUser.role?.toLowerCase())) {
+    if (!hasPermission(authUser, 'pending_approvals')) {
       return NextResponse.json({ success: false, message: 'Insufficient permissions to approve loans.' }, { status: 403 });
     }
 

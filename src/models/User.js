@@ -30,9 +30,15 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['owner', 'admin', 'ceo', 'csuit', 'cfo', 'accountant', 'viewer'],
+    // Only 'owner' still matters (full access). Everyone else's access comes from `permissions`.
+    enum: ['owner', 'admin', 'ceo', 'csuit', 'cfo', 'accountant', 'viewer', 'member'],
     default: 'accountant',
     lowercase: true,
+  },
+  // Page keys this user may open (see src/lib/permissions.js). Undefined = legacy account, derived from role.
+  permissions: {
+    type: [String],
+    default: undefined,
   },
   isActive: {
     type: Boolean,

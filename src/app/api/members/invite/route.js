@@ -6,10 +6,7 @@ import Invite from '@/models/Invite';
 import Company from '@/models/Company';
 import { sendEmail } from '@/lib/mail';
 import { getAuthUser, unauthorized } from '@/lib/auth';
-
-// Power hierarchy — CEO and above can invite
-const ROLE_POWER = { owner: 6, admin: 5, ceo: 4, cfo: 3, csuit: 2, accountant: 1 };
-const getPower = (role) => ROLE_POWER[role?.toLowerCase()] ?? 0;
+import { getUserPermissions, hasPermission, sanitizePermissions, DEFAULT_PERMISSIONS, PERMISSIONS } from '@/lib/permissions';
 
 export async function POST(req) {
   try {
@@ -18,27 +15,26 @@ export async function POST(req) {
     const actor = await getAuthUser(req);
     if (!actor) return unauthorized();
 
-    const actorPower = getPower(actor.role);
-
-    // CEO (power 4) and above can invite
-    if (actorPower < 4) {
+    if (!hasPermission(actor, 'employees')) {
       return NextResponse.json(
-        { success: false, message: 'Only CEO-level or above can invite members.' },
+        { success: false, message: 'You do not have access to invite members.' },
         { status: 403 }
       );
     }
 
-    const { email, role } = await req.json();
+    const body = await req.json();
+    const email = body.email;
+    const permissions = sanitizePermissions(body.permissions ?? DEFAULT_PERMISSIONS);
 
-    if (!email || !role) {
-      return NextResponse.json({ success: false, message: 'Email and role are required.' }, { status: 400 });
+    if (!email) {
+      return NextResponse.json({ success: false, message: 'Email is required.' }, { status: 400 });
     }
 
-    // Cannot invite to a role >= your own power
-    const rolePower = getPower(role);
-    if (rolePower >= actorPower) {
+    // Users may only hand out pages they can open themselves
+    const own = getUserPermissions(actor);
+    if (permissions.some(k => !own.includes(k))) {
       return NextResponse.json(
-        { success: false, message: `You cannot invite someone to the "${role}" role — it equals or exceeds your authority.` },
+        { success: false, message: 'You can only give access to pages you have access to yourself.' },
         { status: 403 }
       );
     }
@@ -62,7 +58,8 @@ export async function POST(req) {
     await Invite.create({
       token,
       email: email.toLowerCase(),
-      role,
+      role: 'member',
+      permissions,
       companyId: actor.companyId,
       invitedBy: actor._id,
       expiresAt,
@@ -71,11 +68,7 @@ export async function POST(req) {
     const company = await Company.findById(actor.companyId).lean();
     const companyName = company?.name || 'Arionys Finance';
 
-    const roleLabelMap = {
-      admin: 'Administrator', ceo: 'Chief Executive Officer',
-      cfo: 'Chief Financial Officer', csuit: 'Board Member', accountant: 'Accounts Manager',
-    };
-    const roleLabel = roleLabelMap[role] || role;
+    const roleLabel = PERMISSIONS.filter(p => permissions.includes(p.key)).map(p => p.label).join(', ') || 'a team member';
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl?.origin || 'http://localhost:3000';
     const inviteUrl = `${appUrl}/invite/${token}`;
@@ -83,7 +76,7 @@ export async function POST(req) {
     await sendEmail({
       to: email,
       subject: `You've been invited to join ${companyName} on Arionys Finance`,
-      text: `Hello,\n\nYou've been invited by ${actor.name} to join ${companyName} as ${roleLabel}.\n\nClick the link below to create your account (valid for 72 hours):\n${inviteUrl}\n\nIf you did not expect this invitation, you can safely ignore this email.`,
+      text: `Hello,\n\nYou've been invited by ${actor.name} to join ${companyName} with access to: ${roleLabel}.\n\nClick the link below to create your account (valid for 72 hours):\n${inviteUrl}\n\nIf you did not expect this invitation, you can safely ignore this email.`,
       html: `
         <div style="font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 520px; margin: 0 auto;">
           <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden;">
@@ -94,7 +87,7 @@ export async function POST(req) {
             <div style="padding: 36px 32px;">
               <h2 style="margin: 0 0 8px; font-size: 22px; font-weight: 800; color: #0f172a;">You're Invited 🎉</h2>
               <p style="margin: 0 0 28px; font-size: 14px; color: #64748b; line-height: 1.7;">
-                <strong>${actor.name}</strong> has invited you to join <strong>${companyName}</strong> on Arionys Finance as <strong>${roleLabel}</strong>.
+                <strong>${actor.name}</strong> has invited you to join <strong>${companyName}</strong> on Arionys Finance.
               </p>
 
               <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #6366f1; border-radius: 6px; padding: 16px 20px; margin-bottom: 28px;">
