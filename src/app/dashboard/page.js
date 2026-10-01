@@ -55,13 +55,13 @@ export default function DashboardPage() {
           </div>
         </div>
         <style jsx>{`
-          .dashboard-skeleton { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; padding: 1rem; }
+          .dashboard-skeleton { max-width: var(--page-max-width); margin: 0 auto; display: flex; flex-direction: column; gap: 2rem; padding: 1rem; }
           .skeleton-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; }
-          .skeleton-card { height: 140px; border-radius: 6px; }
-          .skeleton-main { height: 300px; border-radius: 6px; }
+          .skeleton-card { height: 140px; border-radius: 4px; }
+          .skeleton-main { height: 300px; border-radius: 4px; }
           .skeleton-table { display: flex; flex-direction: column; gap: 0.75rem; }
-          .skeleton-header { height: 40px; border-radius: 6px; }
-          .skeleton-row { height: 60px; border-radius: 6px; }
+          .skeleton-header { height: 40px; border-radius: 4px; }
+          .skeleton-row { height: 60px; border-radius: 4px; }
           .shim {
             background: linear-gradient(90deg, #f1f5f9 25%, #f8fafc 50%, #f1f5f9 75%);
             background-size: 200% 100%;

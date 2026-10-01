@@ -173,7 +173,7 @@ function InviteConfirmContent() {
         .invite-card {
           background: #ffffff;
           border: 1px solid #e2e8f0;
-          border-radius: 8px;
+          border-radius: 6px;
           width: 100%;
           max-width: 420px;
           padding: 2.5rem 2rem;
@@ -276,7 +276,7 @@ function InviteConfirmContent() {
           padding: 0.75rem 2.75rem 0.75rem 2.75rem;
           background: #f8fafc;
           border: 1px solid #e2e8f0;
-          border-radius: 6px;
+          border-radius: 4px;
           font-size: 0.9375rem;
           color: #0f172a;
           transition: all 0.2s;
@@ -311,7 +311,7 @@ function InviteConfirmContent() {
           background: #0f172a;
           color: white;
           border: none;
-          border-radius: 6px;
+          border-radius: 4px;
           font-size: 0.9375rem;
           font-weight: 800;
           cursor: pointer;

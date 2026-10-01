@@ -32,6 +32,7 @@ export async function GET(req, { params }) {
     const roleLabelMap = {
       admin: 'Administrator', ceo: 'Chief Executive Officer',
       cfo: 'Chief Financial Officer', csuit: 'Board Member', accountant: 'Accounts Manager',
+      viewer: 'Standard Employee',
     };
 
     return NextResponse.json({

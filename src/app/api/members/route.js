@@ -16,8 +16,67 @@ export async function GET(req) {
       return NextResponse.json({ success: false, message: 'Company ID is required' }, { status: 400 });
     }
 
+<<<<<<< Updated upstream
     const users = await User.find({ companyId }).select('-password');
     return NextResponse.json({ success: true, data: users });
+=======
+    const Employee = (await import('@/models/Employee')).default;
+    const users = await User.find({ companyId }).select('-password').lean();
+    const employees = await Employee.find({ companyId }).lean();
+    
+    const merged = [];
+    const handledEmails = new Set();
+
+    for (const u of users) {
+      if (['owner', 'admin'].includes(u.role?.toLowerCase())) {
+        continue;
+      }
+      const emp = employees.find(e => e.email.toLowerCase() === u.email.toLowerCase());
+      merged.push({
+        ...u,
+        _id: u._id,
+        isUser: true,
+        employeeDocId: emp?._id || null,
+        fullName: emp?.fullName || u.name,
+        department: emp?.department || '',
+        designation: emp?.designation || '',
+        empIdString: emp?.employeeId || '',
+        phone: emp?.phone || u.phone || '',
+        empStatus: emp?.status || (u.isActive ? 'active' : 'inactive'),
+        salary: emp?.salary || 0,
+        loanLimit: emp?.loanLimit || 0,
+        joiningDate: emp?.joiningDate || null,
+        profilePhoto: emp?.profilePhoto || '',
+      });
+      handledEmails.add(u.email.toLowerCase());
+    }
+
+    for (const emp of employees) {
+      if (!handledEmails.has(emp.email.toLowerCase())) {
+        merged.push({
+          _id: emp._id, // use employee id as react key
+          isUser: false,
+          employeeDocId: emp._id,
+          name: emp.fullName,
+          fullName: emp.fullName,
+          email: emp.email,
+          department: emp.department,
+          designation: emp.designation,
+          empIdString: emp.employeeId,
+          phone: emp.phone,
+          empStatus: emp.status,
+          salary: emp.salary || 0,
+          loanLimit: emp.loanLimit || 0,
+          joiningDate: emp.joiningDate || null,
+          profilePhoto: emp.profilePhoto || '',
+          role: 'pending_invite',
+          isActive: false,
+        });
+      }
+    }
+
+    return NextResponse.json({ success: true, data: merged });
+>>>>>>> Stashed changes
   } catch (error) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }

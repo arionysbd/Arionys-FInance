@@ -414,7 +414,7 @@ export default function TransactionForm({ onTransactionAdded }) {
 
         .header-text h3 { font-size: clamp(1.1rem, 4vw, 1.25rem); font-weight: 800; color: #0f172a; margin: 0; }
         .header-text p { font-size: clamp(0.75rem, 3vw, 0.875rem); color: #64748b; margin-top: 0.25rem; }
-        .header-icon { background: #f8fafc; padding: clamp(0.5rem, 2vw, 0.75rem); border-radius: 6px; color: #0f172a; border: 1px solid #e2e8f0; }
+        .header-icon { background: #f8fafc; padding: clamp(0.5rem, 2vw, 0.75rem); border-radius: 4px; color: #0f172a; border: 1px solid #e2e8f0; }
 
         .form-grid {
           display: flex;
@@ -443,7 +443,7 @@ export default function TransactionForm({ onTransactionAdded }) {
           padding: clamp(0.5rem, 3vw, 0.75rem) clamp(0.75rem, 4vw, 1rem);
           background: #f8fafc;
           border: 1px solid #e2e8f0;
-          border-radius: 6px;
+          border-radius: 4px;
           cursor: pointer;
           transition: all 0.2s;
           min-height: clamp(40px, 12vw, 46px);
@@ -469,7 +469,7 @@ export default function TransactionForm({ onTransactionAdded }) {
           right: 0;
           background: white;
           border: 1px solid #e2e8f0;
-          border-radius: 6px;
+          border-radius: 4px;
           padding: 0.5rem;
           z-index: 1000;
           box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
@@ -480,7 +480,7 @@ export default function TransactionForm({ onTransactionAdded }) {
           align-items: center;
           justify-content: space-between;
           padding: 0.75rem 1rem;
-          border-radius: 6px;
+          border-radius: 4px;
           cursor: pointer;
           transition: all 0.15s;
         }
@@ -500,7 +500,7 @@ export default function TransactionForm({ onTransactionAdded }) {
           padding: clamp(0.6rem, 3vw, 0.75rem) 1rem clamp(0.6rem, 3vw, 0.75rem) 2.75rem;
           background: #f8fafc;
           border: 1px solid #e2e8f0;
-          border-radius: 6px;
+          border-radius: 4px;
           font-size: clamp(0.85rem, 3.5vw, 0.9375rem);
           color: #0f172a;
           transition: all 0.2s;
@@ -544,7 +544,7 @@ export default function TransactionForm({ onTransactionAdded }) {
           background: #0f172a;
           color: white;
           border: none;
-          border-radius: 6px;
+          border-radius: 4px;
           font-size: clamp(0.85rem, 3.5vw, 0.9375rem);
           font-weight: 800;
           cursor: pointer;
