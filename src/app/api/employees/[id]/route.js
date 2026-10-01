@@ -45,7 +45,7 @@ export async function PATCH(req, { params }) {
     }
 
     const body = await req.json();
-    const allowedFields = ['fullName', 'phone', 'department', 'designation', 'joiningDate', 'status', 'notes', 'employeeId', 'profilePhoto'];
+    const allowedFields = ['fullName', 'phone', 'department', 'designation', 'joiningDate', 'status', 'notes', 'employeeId', 'profilePhoto', 'salary', 'loanLimit'];
     const updates = {};
     for (const field of allowedFields) {
       if (body[field] !== undefined) updates[field] = body[field];

@@ -4,6 +4,7 @@ import { Shield, User as UserIcon, Mail, ShieldCheck, Briefcase, Calculator, Use
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
+import Link from 'next/link';
 
 export default function CompanyMembers() {
   const [users, setUsers] = useState([]);
@@ -435,7 +436,12 @@ export default function CompanyMembers() {
                           )}
                         </td>
                         <td>
-                          <div className="action-row">
+                          <div className="action-row" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'flex-end' }}>
+                            {u.employeeDocId && (
+                              <Link href={`/business-administration/employee/${u.employeeDocId}`} className="btn-icon" title="View Profile" style={{ color: '#4f46e5', background: '#e0e7ff', padding: '0.375rem', borderRadius: '6px', display: 'flex', alignItems: 'center' }}>
+                                <User size={16} />
+                              </Link>
+                            )}
                             {(canManage(u.role) || !u.isUser) && (
                               <button className="icon-btn-delete" onClick={() => deleteUser(u.isUser ? u._id : null, u.employeeDocId, u.fullName || u.name)} title="Delete Account">
                                 <Trash2 size={16} />
@@ -523,11 +529,18 @@ export default function CompanyMembers() {
                                 <div className="toggle-knob"></div>
                                 <span className="status-label">{u.isActive ? 'Active' : 'Revoked'}</span>
                               </div>
-                              {canManage(u.role) && (
-                                <button className="m-delete-btn" onClick={() => deleteUser(u._id, u.employeeDocId, u.fullName || u.name)}>
-                                  <Trash2 size={16} />
-                                </button>
-                              )}
+                              <div style={{ display: 'flex' }}>
+                                {u.employeeDocId && (
+                                  <Link href={`/business-administration/employee/${u.employeeDocId}`} className="m-delete-btn" style={{ color: '#4f46e5', background: '#e0e7ff', marginRight: '0.5rem' }}>
+                                    <User size={16} />
+                                  </Link>
+                                )}
+                                {canManage(u.role) && (
+                                  <button className="m-delete-btn" onClick={() => deleteUser(u._id, u.employeeDocId, u.fullName || u.name)}>
+                                    <Trash2 size={16} />
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           )
                         ) : (
