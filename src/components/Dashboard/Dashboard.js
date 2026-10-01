@@ -272,9 +272,10 @@ export default function Dashboard({ stats, recentTransactions, user }) {
         
         .card-header p { font-size: 0.8125rem; color: #94a3b8; }
         
-        .chart-wrapper { height: 300px; margin-top: 1rem; }
+        .chart-container { overflow: hidden; }
+        .chart-wrapper { height: 300px; margin-top: 1rem; position: relative; width: 100%; }
         @media (max-width: 640px) {
-          .chart-wrapper { height: 220px; }
+          .chart-wrapper { height: 200px; }
         }
         
         .transaction-list {
@@ -289,13 +290,16 @@ export default function Dashboard({ stats, recentTransactions, user }) {
           align-items: center;
           padding: 0.875rem 0;
           border-bottom: 1px solid #f1f5f9;
+          min-width: 0;
+          gap: 0.5rem;
         }
         .transaction-item:last-child { border-bottom: none; }
-        .tx-info { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; flex: 1; }
+        .tx-info { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; flex: 1; overflow: hidden; }
         .tx-desc {
           display: block;
           font-weight: 600; font-size: 0.875rem; color: #334155;
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+          max-width: 100%;
         }
         .tx-date { font-size: 0.75rem; color: #94a3b8; }
         .tx-amount {
