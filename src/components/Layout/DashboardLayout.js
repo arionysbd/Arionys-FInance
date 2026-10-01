@@ -124,7 +124,7 @@ export default function DashboardLayout({ children }) {
     { id: 'accounts',    label: 'Accounts',             icon: <Landmark size={22} />,  href: '/accounts',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
     { id: 'loans',       label: 'Loans',                icon: <Banknote size={22} />, href: '/loans',     roles: ['owner', 'admin', 'ceo', 'cfo', 'accountant'] },
     { id: 'reports',     label: 'Financial Reports',    icon: <PieChart size={22} />, href: '/reports',   roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit'] },
-    { id: 'business-administration', label: 'Business Settings', icon: <SlidersHorizontal size={22} />, href: '/business-administration', roles: ['owner', 'admin'] },
+    { id: 'business-administration', label: 'Business Administration', icon: <SlidersHorizontal size={22} />, href: '/business-administration', roles: ['owner', 'admin', 'ceo', 'cfo'] },
     { id: 'employees',   label: 'Employees Directory',  icon: <UserIcon size={22} />, href: '/employees', roles: ['owner', 'admin', 'ceo', 'cfo'] },
     { id: 'audit-log',   label: 'Audit Log',            icon: <ClipboardList size={22} />, href: '/audit-log', roles: ['owner', 'admin'] },
     { id: 'settings',    label: 'Profile Settings',     icon: < Settings size={22} />,href: '/settings',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
