@@ -311,6 +311,7 @@ export default function PendingApprovalsPage() {
         .table-responsive {
           width: 100%;
           overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
         }
         .tx-table {
           width: 100%;
@@ -512,10 +513,12 @@ export default function PendingApprovalsPage() {
           .title { font-size: 1.35rem; }
           .subtitle { max-width: 280px; }
           
-          /* Table to Card View */
+          /* Table to Card View — remove table scroll constraints */
+          .table-responsive { overflow-x: visible; }
           .tx-table, .tx-table tbody, .tx-table tr, .tx-table td {
             display: block; width: 100%;
           }
+          .tx-table { min-width: 0; }
           .tx-table thead { display: none; }
           
           .tx-row {
