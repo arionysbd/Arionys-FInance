@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
+import AuditLog from '@/models/AuditLog';
 import { sendEmail } from '@/lib/mail';
 import { getAuthUser, unauthorized } from '@/lib/auth';
 
@@ -16,8 +17,51 @@ export async function GET(req) {
       return NextResponse.json({ success: false, message: 'Company ID is required' }, { status: 400 });
     }
 
-    const users = await User.find({ companyId }).select('-password');
-    return NextResponse.json({ success: true, data: users });
+    const Employee = (await import('@/models/Employee')).default;
+    const users = await User.find({ companyId }).select('-password').lean();
+    const employees = await Employee.find({ companyId }).lean();
+    
+    const merged = [];
+    const handledEmails = new Set();
+
+    for (const u of users) {
+      const emp = employees.find(e => e.email.toLowerCase() === u.email.toLowerCase());
+      merged.push({
+        ...u,
+        _id: u._id,
+        isUser: true,
+        employeeDocId: emp?._id || null,
+        fullName: emp?.fullName || u.name,
+        department: emp?.department || '',
+        designation: emp?.designation || '',
+        empIdString: emp?.employeeId || '',
+        phone: emp?.phone || u.phone || '',
+        empStatus: emp?.status || (u.isActive ? 'active' : 'inactive'),
+      });
+      handledEmails.add(u.email.toLowerCase());
+    }
+
+    for (const emp of employees) {
+      if (!handledEmails.has(emp.email.toLowerCase())) {
+        merged.push({
+          _id: emp._id, // use employee id as react key
+          isUser: false,
+          employeeDocId: emp._id,
+          name: emp.fullName,
+          fullName: emp.fullName,
+          email: emp.email,
+          department: emp.department,
+          designation: emp.designation,
+          empIdString: emp.employeeId,
+          phone: emp.phone,
+          empStatus: emp.status,
+          role: 'pending_invite',
+          isActive: false,
+        });
+      }
+    }
+
+    return NextResponse.json({ success: true, data: merged });
   } catch (error) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
@@ -90,6 +134,19 @@ export async function PATCH(req) {
 
     await target.save();
 
+    await AuditLog.create({
+      companyId: actor.companyId,
+      userId: actor._id,
+      actorName: actor.name,
+      action: role ? 'role_changed' : 'status_changed',
+      entity: 'user',
+      entityId: target._id,
+      entityLabel: `Updated ${target.name} (${target.email})`,
+      newValue: { role: target.role, isActive: target.isActive },
+      ipAddress: req.headers.get('x-forwarded-for') || req.ip || '',
+      userAgent: req.headers.get('user-agent') || ''
+    });
+
     if (isBeingApproved) {
       try {
         const roleLabelMap = {
@@ -138,7 +195,7 @@ export async function DELETE(req) {
     const actor = await getAuthUser(req);
     if (!actor) return unauthorized();
 
-    const { userId } = await req.json();
+    const { userId, employeeId } = await req.json();
 
     const actorPower = getPower(actor.role);
 
@@ -146,27 +203,77 @@ export async function DELETE(req) {
       return NextResponse.json({ success: false, message: 'Insufficient authority to delete members.' }, { status: 403 });
     }
 
-    const target = await User.findById(userId);
-    if (!target) {
-      return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+    const Employee = (await import('@/models/Employee')).default;
+    const Invite = (await import('@/models/Invite')).default;
+
+    if (userId) {
+      const target = await User.findById(userId);
+      if (!target) {
+        return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+      }
+
+      if (String(target.companyId) !== String(actor.companyId)) {
+        return NextResponse.json({ success: false, message: 'You can only manage members of your own company.' }, { status: 403 });
+      }
+
+      const targetPower = getPower(target.role);
+
+      // Cannot delete anyone with equal or higher power
+      if (actorPower <= targetPower) {
+        return NextResponse.json({
+          success: false,
+          message: `You cannot delete a ${target.role} — they have equal or higher authority than you.`
+        }, { status: 403 });
+      }
+
+      await User.findByIdAndDelete(userId);
+      await Employee.findOneAndDelete({ userId });
+
+      await AuditLog.create({
+        companyId: actor.companyId,
+        userId: actor._id,
+        actorName: actor.name,
+        action: 'deleted_user',
+        entity: 'user',
+        entityId: target._id,
+        entityLabel: `Deleted user ${target.name} (${target.email})`,
+        ipAddress: req.headers.get('x-forwarded-for') || req.ip || '',
+        userAgent: req.headers.get('user-agent') || ''
+      });
+
+      return NextResponse.json({ success: true, message: 'Account deleted' });
+    } else if (employeeId) {
+      const target = await Employee.findById(employeeId);
+      if (!target) {
+        return NextResponse.json({ success: false, message: 'Employee not found' }, { status: 404 });
+      }
+      
+      if (String(target.companyId) !== String(actor.companyId)) {
+         return NextResponse.json({ success: false, message: 'You can only manage members of your own company.' }, { status: 403 });
+      }
+      
+      await Employee.findByIdAndDelete(employeeId);
+      // also clean up any pending invites
+      if (target.email) {
+        await Invite.deleteMany({ email: target.email, companyId: actor.companyId });
+      }
+
+      await AuditLog.create({
+        companyId: actor.companyId,
+        userId: actor._id,
+        actorName: actor.name,
+        action: 'deleted_employee',
+        entity: 'employee',
+        entityId: target._id,
+        entityLabel: `Deleted employee ${target.fullName} (${target.email})`,
+        ipAddress: req.headers.get('x-forwarded-for') || req.ip || '',
+        userAgent: req.headers.get('user-agent') || ''
+      });
+
+      return NextResponse.json({ success: true, message: 'Employee deleted' });
     }
 
-    if (String(target.companyId) !== String(actor.companyId)) {
-      return NextResponse.json({ success: false, message: 'You can only manage members of your own company.' }, { status: 403 });
-    }
-
-    const targetPower = getPower(target.role);
-
-    // Cannot delete anyone with equal or higher power
-    if (actorPower <= targetPower) {
-      return NextResponse.json({
-        success: false,
-        message: `You cannot delete a ${target.role} — they have equal or higher authority than you.`
-      }, { status: 403 });
-    }
-
-    await User.findByIdAndDelete(userId);
-    return NextResponse.json({ success: true, message: 'Account deleted' });
+    return NextResponse.json({ success: false, message: 'Must provide userId or employeeId' }, { status: 400 });
   } catch (error) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }

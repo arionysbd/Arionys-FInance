@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Transaction from '@/models/Transaction';
 import User from '@/models/User';
+import AuditLog from '@/models/AuditLog';
 import { sendEmail } from '@/lib/mail';
 import { getAuthUser, unauthorized } from '@/lib/auth';
 
@@ -33,6 +34,20 @@ export async function POST(req) {
     transaction.status = status; // approved or rejected
     transaction.approvedBy = userId;
     await transaction.save();
+
+    await AuditLog.create({
+      companyId: user.companyId,
+      userId,
+      actorName: user.name,
+      action: status === 'approved' ? 'approved_transaction' : 'rejected_transaction',
+      entity: 'transaction',
+      entityId: transaction._id,
+      entityLabel: `Transaction of ${transaction.amount} was ${status}`,
+      oldValue: { status: 'pending' },
+      newValue: { status },
+      ipAddress: req.headers.get('x-forwarded-for') || req.ip || '',
+      userAgent: req.headers.get('user-agent') || ''
+    });
 
     // Notify Admin and CEO upon approval
     if (status === 'approved') {

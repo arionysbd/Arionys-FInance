@@ -15,10 +15,21 @@ export default function CompanyMembers() {
   const selectRef = useRef(null);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [openInviteSelect, setOpenInviteSelect] = useState(false);
   const [pendingRoleChange, setPendingRoleChange] = useState(null);
-  const [createForm, setCreateForm] = useState({ name: '', email: '', role: 'accountant' });
-  const [creating, setCreating] = useState(false);
+  
+  // Add Employee Form State
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    employeeId: '',
+    department: '',
+    designation: '',
+    joiningDate: '',
+    role: 'viewer',
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [employeeError, setEmployeeError] = useState('');
 
   const [showEditCompany, setShowEditCompany] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', email: '', phone: '', website: '', industry: '', address: '' });
@@ -127,13 +138,23 @@ export default function CompanyMembers() {
     }
   };
 
-  const deleteUser = async (userId, userName) => {
+  const deleteUser = async (userId, employeeDocId, userName) => {
     if (!window.confirm(`Reject & permanently delete "${userName}"?\n\nThis action cannot be undone.`)) return;
     try {
-      await axios.delete('/api/members', {
-        data: { userId, adminId: currentUser._id }
-      });
-      setUsers(users.filter(u => u._id !== userId));
+      if (userId) {
+        await axios.delete('/api/members', {
+          data: { userId, adminId: currentUser._id }
+        });
+      } else if (employeeDocId) {
+        // If it's a pending invite, maybe we want an endpoint to delete the employee.
+        // For now, if no user ID, it's just an employee without a user. We should delete the employee.
+        // Since we are merging, we should call /api/members DELETE with employeeDocId. Wait, /api/members doesn't handle employee deletion yet.
+        // Let's pass employeeId if userId is null.
+        await axios.delete('/api/members', {
+          data: { employeeId: employeeDocId, adminId: currentUser._id }
+        });
+      }
+      setUsers(users.filter(u => u._id !== userId && u._id !== employeeDocId));
     } catch (err) {
       alert(err.response?.data?.message || 'Delete failed');
     }
@@ -160,26 +181,31 @@ export default function CompanyMembers() {
 
   const getRoleInfo = (role) => roleOptions.find(o => o.value === role?.toLowerCase()) || { label: role, icon: <ShieldCheck size={14} />, desc: '', accesses: [] };
 
-  const [inviteSuccess, setInviteSuccess] = useState('');
-  const [inviteError, setInviteError] = useState('');
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
-  const createUser = async (e) => {
+  const handleAddEmployee = async (e) => {
     e.preventDefault();
-    setCreating(true);
-    setInviteError('');
-    setInviteSuccess('');
+    setEmployeeError('');
+    setIsSubmitting(true);
     try {
-      await axios.post('/api/members/invite', {
-        email: createForm.email,
-        role: createForm.role,
-      });
-      setInviteSuccess(`Invitation sent to ${createForm.email}. They'll receive a link to create their account.`);
-      setCreateForm({ name: '', email: '', role: 'accountant' });
-      setTimeout(() => { setShowCreateModal(false); setInviteSuccess(''); }, 3000);
+      const res = await axios.post('/api/employees', formData);
+      if (res.data.success) {
+        setShowCreateModal(false);
+        setFormData({
+            fullName: '', email: '', phone: '', employeeId: '',
+            department: '', designation: '', joiningDate: '', role: 'viewer'
+        });
+        fetchUsers();
+      } else {
+        setEmployeeError(res.data.message);
+      }
     } catch (err) {
-      setInviteError(err.response?.data?.message || 'Failed to send invitation.');
+      setEmployeeError(err.response?.data?.message || err.message);
     } finally {
-      setCreating(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -217,7 +243,7 @@ export default function CompanyMembers() {
             <div className="page-actions">
               <button className="btn-create-user" onClick={() => setShowCreateModal(true)}>
                 <UserPlus size={16} />
-                <span className="btn-text">Invite Member</span>
+                <span className="btn-text">Add Employee</span>
               </button>
             </div>
           )}
@@ -322,10 +348,11 @@ export default function CompanyMembers() {
                 <table className="users-table">
                   <thead>
                     <tr>
-                      <th>User</th>
+                      <th>Employee Details</th>
+                      <th>Work Info</th>
                       <th>Role</th>
-                      <th>Access</th>
-                      <th>Operations</th>
+                      <th>Status</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -334,12 +361,98 @@ export default function CompanyMembers() {
                         <td>
                           <div className="user-cell">
                             <div className="user-info">
-                              <span className="user-name">{u.name}</span>
+                              <span className="user-name">{u.fullName || u.name}</span>
                               <span className="user-email">{u.email}</span>
                             </div>
                           </div>
                         </td>
                         <td>
+                          <div className="work-info-cell">
+                            {u.designation && <span className="designation">{u.designation}</span>}
+                            {u.department && <span className="department">{u.department}</span>}
+                          </div>
+                        </td>
+                        <td>
+                          {u.isUser ? (
+                            <div className="custom-select-wrapper">
+                              <div 
+                                className={`role-trigger ${openUserSelect === u._id ? 'active' : ''} ${!canManage(u.role) ? 'disabled' : ''}`}
+                                onClick={() => canManage(u.role) && setOpenUserSelect(openUserSelect === u._id ? null : u._id)}
+                              >
+                                <div className="role-current">
+                                  {getRoleInfo(u.role).icon}
+                                  <span>{getRoleInfo(u.role).label}</span>
+                                </div>
+                                {canManage(u.role) && <ChevronDown size={14} className={`arrow ${openUserSelect === u._id ? 'rotate' : ''}`} />}
+                              </div>
+                              {openUserSelect === u._id && (
+                                <div className="role-dropdown animate-pop-in">
+                                  {assignableRoles(roleOptions).map((option) => (
+                                    <div 
+                                      key={option.value}
+                                      className={`role-option ${u.role === option.value ? 'selected' : ''}`}
+                                      onClick={() => {
+                                        setPendingRoleChange({ userId: u._id, role: option.value, userName: u.fullName || u.name });
+                                        setOpenUserSelect(null);
+                                      }}
+                                    >
+                                      <div className="option-icon">{option.icon}</div>
+                                      <div className="option-text">
+                                        <span className="option-label">{option.label}</span>
+                                      </div>
+                                      {u.role === option.value && <Check size={14} className="check-icon" />}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="pending-role-badge">Pending Invite ({u.role})</span>
+                          )}
+                        </td>
+                        <td>
+                          {u.isUser ? (
+                            <div 
+                              className={`status-toggle ${u.isActive ? 'active' : ''} ${!canManage(u.role) ? 'disabled' : ''}`}
+                              onClick={() => canManage(u.role) && updateStatus(u._id, !u.isActive)}
+                            >
+                              <div className="toggle-knob"></div>
+                              <span className="status-label">{u.isActive ? 'Active' : 'Revoked'}</span>
+                            </div>
+                          ) : (
+                            <span className="status-label pending-label">Invite Sent</span>
+                          )}
+                        </td>
+                        <td>
+                          <div className="action-row">
+                            {(canManage(u.role) || !u.isUser) && (
+                              <button className="icon-btn-delete" onClick={() => deleteUser(u.isUser ? u._id : null, u.employeeDocId, u.fullName || u.name)} title="Delete Account">
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mobile-only">
+                <div className="mobile-user-list">
+                  {users.map((u) => (
+                    <div key={u._id} className="mobile-user-card">
+                      <div className="m-card-header">
+                        <div className="m-info">
+                          <span className="m-name">{u.fullName || u.name} {u._id === currentUser._id && <span className="self-badge">YOU</span>}</span>
+                          <span className="m-email">{u.email}</span>
+                          {(u.designation || u.department) && (
+                            <span className="m-work-info">{u.designation} {u.department ? ` • ${u.department}` : ''}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="m-role-section">
+                        {u.isUser ? (
                           <div className="custom-select-wrapper">
                             <div 
                               className={`role-trigger ${openUserSelect === u._id ? 'active' : ''} ${!canManage(u.role) ? 'disabled' : ''}`}
@@ -358,7 +471,7 @@ export default function CompanyMembers() {
                                     key={option.value}
                                     className={`role-option ${u.role === option.value ? 'selected' : ''}`}
                                     onClick={() => {
-                                      setPendingRoleChange({ userId: u._id, role: option.value, userName: u.name });
+                                      setPendingRoleChange({ userId: u._id, role: option.value, userName: u.fullName || u.name });
                                       setOpenUserSelect(null);
                                     }}
                                   >
@@ -372,95 +485,39 @@ export default function CompanyMembers() {
                               </div>
                             )}
                           </div>
-                        </td>
-                        <td>
-                          <div 
-                            className={`status-toggle ${u.isActive ? 'active' : ''} ${!canManage(u.role) ? 'disabled' : ''}`}
-                            onClick={() => canManage(u.role) && updateStatus(u._id, !u.isActive)}
-                          >
-                            <div className="toggle-knob"></div>
-                            <span className="status-label">{u.isActive ? 'Active' : 'Revoked'}</span>
-                          </div>
-                        </td>
-                        <td>
-                          <div className="action-row">
-                            {canManage(u.role) && (
-                              <button className="icon-btn-delete" onClick={() => deleteUser(u._id, u.name)} title="Delete Account">
-                                <Trash2 size={16} />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="mobile-only">
-                <div className="mobile-user-list">
-                  {users.map((u) => (
-                    <div key={u._id} className="mobile-user-card">
-                      <div className="m-card-header">
-                        <div className="m-info">
-                          <span className="m-name">{u.name} {u._id === currentUser._id && <span className="self-badge">YOU</span>}</span>
-                          <span className="m-email">{u.email}</span>
-                        </div>
-                      </div>
-                      <div className="m-role-section">
-                        <div className="custom-select-wrapper">
-                          <div 
-                            className={`role-trigger ${openUserSelect === u._id ? 'active' : ''} ${!canManage(u.role) ? 'disabled' : ''}`}
-                            onClick={() => canManage(u.role) && setOpenUserSelect(openUserSelect === u._id ? null : u._id)}
-                          >
-                            <div className="role-current">
-                              {getRoleInfo(u.role).icon}
-                              <span>{getRoleInfo(u.role).label}</span>
-                            </div>
-                            {canManage(u.role) && <ChevronDown size={14} className={`arrow ${openUserSelect === u._id ? 'rotate' : ''}`} />}
-                          </div>
-                          {openUserSelect === u._id && (
-                            <div className="role-dropdown animate-pop-in">
-                              {assignableRoles(roleOptions).map((option) => (
-                                <div 
-                                  key={option.value}
-                                  className={`role-option ${u.role === option.value ? 'selected' : ''}`}
-                                  onClick={() => {
-                                    setPendingRoleChange({ userId: u._id, role: option.value, userName: u.name });
-                                    setOpenUserSelect(null);
-                                  }}
-                                >
-                                  <div className="option-icon">{option.icon}</div>
-                                  <div className="option-text">
-                                    <span className="option-label">{option.label}</span>
-                                  </div>
-                                  {u.role === option.value && <Check size={14} className="check-icon" />}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                        ) : (
+                          <span className="pending-role-badge">Pending Invite</span>
+                        )}
                       </div>
                       <div className="m-actions-footer">
-                        {canManage(u.role) && !u.isActive ? (
-                          <div className="m-approval-grid">
-                            <button className="m-btn-approve" onClick={() => updateStatus(u._id, true)}>Approve Access</button>
-                            <button className="m-btn-reject" onClick={() => deleteUser(u._id, u.name)}>Reject</button>
-                          </div>
+                        {u.isUser ? (
+                          canManage(u.role) && !u.isActive ? (
+                            <div className="m-approval-grid">
+                              <button className="m-btn-approve" onClick={() => updateStatus(u._id, true)}>Approve Access</button>
+                              <button className="m-btn-reject" onClick={() => deleteUser(u._id, u.employeeDocId, u.fullName || u.name)}>Reject</button>
+                            </div>
+                          ) : (
+                            <div className="m-status-row">
+                              <div 
+                                className={`status-toggle ${u.isActive ? 'active' : ''} ${!canManage(u.role) ? 'disabled' : ''}`}
+                                onClick={() => canManage(u.role) && updateStatus(u._id, !u.isActive)}
+                              >
+                                <div className="toggle-knob"></div>
+                                <span className="status-label">{u.isActive ? 'Active' : 'Revoked'}</span>
+                              </div>
+                              {canManage(u.role) && (
+                                <button className="m-delete-btn" onClick={() => deleteUser(u._id, u.employeeDocId, u.fullName || u.name)}>
+                                  <Trash2 size={16} />
+                                </button>
+                              )}
+                            </div>
+                          )
                         ) : (
                           <div className="m-status-row">
-                            <div 
-                              className={`status-toggle ${u.isActive ? 'active' : ''} ${!canManage(u.role) ? 'disabled' : ''}`}
-                              onClick={() => canManage(u.role) && updateStatus(u._id, !u.isActive)}
-                            >
-                              <div className="toggle-knob"></div>
-                              <span className="status-label">{u.isActive ? 'Active' : 'Revoked'}</span>
-                            </div>
-                            {canManage(u.role) && (
-                              <button className="m-delete-btn" onClick={() => deleteUser(u._id, u.name)}>
-                                <Trash2 size={16} />
-                              </button>
-                            )}
+                             <span className="status-label pending-label">Invite Sent</span>
+                             <button className="m-delete-btn" onClick={() => deleteUser(null, u.employeeDocId, u.fullName || u.name)}>
+                               <Trash2 size={16} />
+                             </button>
                           </div>
                         )}
                       </div>
@@ -521,96 +578,104 @@ export default function CompanyMembers() {
 
         {showCreateModal && (
           <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-            <div className="modal-card animate-pop-in" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-card animate-pop-in" style={{ maxWidth: '600px' }} onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
                 <div>
-                  <h3>Invite New Member</h3>
-                  <p>Send an invitation link to join your organization.</p>
+                  <h3>Add New Employee</h3>
+                  <p>Register a new employee and send an invitation link to set up their account.</p>
                 </div>
                 <button className="modal-close" onClick={() => setShowCreateModal(false)}>
                   <X size={18} />
                 </button>
               </div>
 
-              {inviteSuccess ? (
-                <div className="invite-success-state">
-                  <div className="success-icon-wrap">
-                    <CheckCircle size={32} />
+              <form onSubmit={handleAddEmployee} className="modal-form" style={{ padding: '1.5rem', maxHeight: '70vh', overflowY: 'auto' }}>
+                {employeeError && (
+                  <div className="form-error" style={{ marginBottom: '1.25rem' }}>
+                    <AlertCircle size={14} />
+                    <span>{employeeError}</span>
                   </div>
-                  <h4>Invitation Sent!</h4>
-                  <p>{inviteSuccess}</p>
-                </div>
-              ) : (
-                <form onSubmit={createUser} className="modal-form">
-                  {inviteError && (
-                    <div className="form-error">
-                      <AlertCircle size={14} />
-                      <span>{inviteError}</span>
-                    </div>
-                  )}
+                )}
 
-                  <div className="modal-field">
-                    <label>Email Address</label>
+                <div className="ec-grid" style={{ gap: '1rem', marginBottom: '0' }}>
+                  <div className="modal-field ec-full">
+                    <label>Full Name *</label>
                     <div className="modal-input-wrap">
-                      <Mail size={16} />
-                      <input
-                        type="email"
-                        placeholder="colleague@company.com"
-                        value={createForm.email}
-                        onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
-                        required
-                        autoFocus
-                      />
-                    </div>
-                  </div>
-
-                  <div className="modal-field">
-                    <label>Assign Authority</label>
-                    <div className="modal-custom-select-wrapper">
-                      <div 
-                        className={`modal-select-trigger ${openInviteSelect ? 'active' : ''}`}
-                        onClick={() => setOpenInviteSelect(!openInviteSelect)}
-                      >
-                        <div className="m-trigger-content">
-                          {getRoleInfo(createForm.role).icon}
-                          <span>{getRoleInfo(createForm.role).label}</span>
-                        </div>
-                        <ChevronDown size={14} className={`m-arrow ${openInviteSelect ? 'rotate' : ''}`} />
-                      </div>
-                      
-                      {openInviteSelect && (
-                        <div className="modal-role-dropdown animate-pop-in">
-                          {roleOptions.filter(o => canManage(o.value)).map((opt) => (
-                            <div 
-                              key={opt.value} 
-                              className={`m-role-option ${createForm.role === opt.value ? 'selected' : ''}`}
-                              onClick={() => {
-                                setCreateForm({ ...createForm, role: opt.value });
-                                setOpenInviteSelect(false);
-                              }}
-                            >
-                              <div className="m-opt-icon">{opt.icon}</div>
-                              <div className="m-opt-text">
-                                <span className="m-opt-label">{opt.label}</span>
-                                <span className="m-opt-desc">{opt.desc}</span>
-                              </div>
-                              {createForm.role === opt.value && <Check size={14} className="m-check" />}
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      <UserIcon size={16} />
+                      <input type="text" name="fullName" placeholder="John Doe" required value={formData.fullName} onChange={handleInputChange} />
                     </div>
                   </div>
                   
-                  <button type="submit" className="btn-send-invite" disabled={creating}>
-                    {creating ? (
-                      <><span className="spinner-small" />Sending Invitation...</>
-                    ) : (
-                      <>Send Invitation <ArrowRight size={15} /></>
-                    )}
+                  <div className="modal-field ec-full">
+                    <label>Email Address *</label>
+                    <div className="modal-input-wrap">
+                      <Mail size={16} />
+                      <input type="email" name="email" placeholder="john@company.com" required value={formData.email} onChange={handleInputChange} />
+                    </div>
+                  </div>
+
+                  <div className="modal-field ec-full">
+                    <label>System Access Role</label>
+                    <div className="modal-input-wrap" style={{ padding: 0 }}>
+                      <select name="role" className="native-select" value={formData.role} onChange={handleInputChange} style={{ width: '100%', padding: '0.625rem 1rem', border: 'none', background: 'transparent', outline: 'none', fontWeight: 600, color: '#0f172a' }}>
+                          <option value="viewer">Standard Employee (Viewer)</option>
+                          <option value="accountant">Accounts Manager</option>
+                          <option value="csuit">Board Member</option>
+                          <option value="cfo">Chief Financial Officer (CFO)</option>
+                          <option value="ceo">Chief Executive Officer (CEO)</option>
+                          <option value="admin">Administrator</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="modal-field">
+                    <label>Phone</label>
+                    <div className="modal-input-wrap">
+                      <Phone size={16} />
+                      <input type="text" name="phone" placeholder="+123456789" value={formData.phone} onChange={handleInputChange} />
+                    </div>
+                  </div>
+
+                  <div className="modal-field">
+                    <label>Employee ID</label>
+                    <div className="modal-input-wrap">
+                      <Hash size={16} />
+                      <input type="text" name="employeeId" placeholder="EMP-001" value={formData.employeeId} onChange={handleInputChange} />
+                    </div>
+                  </div>
+
+                  <div className="modal-field">
+                    <label>Department</label>
+                    <div className="modal-input-wrap">
+                      <Building2 size={16} />
+                      <input type="text" name="department" placeholder="Engineering" value={formData.department} onChange={handleInputChange} />
+                    </div>
+                  </div>
+
+                  <div className="modal-field">
+                    <label>Designation</label>
+                    <div className="modal-input-wrap">
+                      <Briefcase size={16} />
+                      <input type="text" name="designation" placeholder="Software Engineer" value={formData.designation} onChange={handleInputChange} />
+                    </div>
+                  </div>
+
+                  <div className="modal-field ec-full">
+                    <label>Joining Date</label>
+                    <div className="modal-input-wrap">
+                      <Calendar size={16} />
+                      <input type="date" name="joiningDate" value={formData.joiningDate} onChange={handleInputChange} style={{ padding: '0 1rem' }} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="modal-footer" style={{ marginTop: '2rem' }}>
+                  <button type="button" className="btn-cancel" onClick={() => setShowCreateModal(false)}>Cancel</button>
+                  <button type="submit" className="btn-confirm" disabled={isSubmitting}>
+                    {isSubmitting ? 'Saving...' : 'Save Employee'}
                   </button>
-                </form>
-              )}
+                </div>
+              </form>
             </div>
           </div>
         )}

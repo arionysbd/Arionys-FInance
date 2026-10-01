@@ -10,7 +10,12 @@ import {
   LogOut,
   ChevronRight,
   User as UserIcon,
+  PieChart,
+  ClipboardList,
   Banknote,
+  Menu,
+  X,
+  Bell
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
@@ -22,6 +27,7 @@ export default function DashboardLayout({ children }) {
   const pathname = usePathname();
   const router = useRouter();
   const [pendingCount, setPendingCount] = useState(0);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const fetchPending = async () => {
@@ -113,9 +119,10 @@ export default function DashboardLayout({ children }) {
     { id: 'pending',     label: 'Pending Approvals',   icon: <img src="/icons/nav-pending.png" alt="" className="nav-img-icon" />,   href: '/pending',             roles: ['owner', 'admin', 'ceo', 'cfo'], showBadge: true },
     { id: 'transactions',label: 'Transaction History',  icon: <img src="/icons/nav-history.png" alt="" className="nav-img-icon" />,   href: '/transactions',        roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
     { id: 'accounts',    label: 'Accounts',             icon: <img src="/icons/nav-accounts.png" alt="" className="nav-img-icon" />,  href: '/accounts',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
-    { id: 'employees',   label: 'Employees',            icon: <UserIcon size={22} />, href: '/employees', roles: ['owner', 'admin', 'ceo', 'cfo'] },
     { id: 'loans',       label: 'Loans',                icon: <Banknote size={22} />, href: '/loans',     roles: ['owner', 'admin', 'ceo', 'cfo', 'accountant'] },
-    { id: 'business-administration', label: 'Business Administration', icon: <SlidersHorizontal size={22} />, href: '/business-administration', roles: ['admin', 'ceo'] },
+    { id: 'reports',     label: 'Financial Reports',    icon: <PieChart size={22} />, href: '/reports',   roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit'] },
+    { id: 'business-administration', label: 'Business & Staff', icon: <SlidersHorizontal size={22} />, href: '/business-administration', roles: ['owner', 'admin', 'ceo', 'cfo'] },
+    { id: 'audit-log',   label: 'Audit Log',            icon: <ClipboardList size={22} />, href: '/audit-log', roles: ['owner', 'admin'] },
     { id: 'settings',    label: 'Settings',             icon: < Settings size={22} />,href: '/settings',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
   ];
 
@@ -125,9 +132,9 @@ export default function DashboardLayout({ children }) {
     if (pathname === '/transactions') return 'Transaction History';
     if (pathname === '/transactions/create') return 'Create Transaction';
     if (pathname === '/pending') return 'Pending Approvals';
-    if (pathname === '/business-administration') return 'Business Administration';
-    if (pathname === '/employees') return 'Employees';
-    if (pathname.startsWith('/employees/')) return 'Employee Profile';
+    if (pathname === '/business-administration') return 'Business & Staff Administration';
+    if (pathname === '/reports') return 'Financial Reports';
+    if (pathname === '/audit-log') return 'Audit Log';
     if (pathname === '/loans') return 'Employee Loans';
     if (pathname.startsWith('/loans/')) return 'Loan Details';
 
@@ -140,9 +147,9 @@ export default function DashboardLayout({ children }) {
     if (pathname === '/transactions') return 'Transactions';
     if (pathname === '/transactions/create') return 'Transactions / Create';
     if (pathname === '/pending') return 'Pending Approvals';
-    if (pathname === '/business-administration') return 'Business Administration';
-    if (pathname === '/employees') return 'Employees';
-    if (pathname.startsWith('/employees/')) return 'Employees / Profile';
+    if (pathname === '/business-administration') return 'Business & Staff Administration';
+    if (pathname === '/reports') return 'Reports';
+    if (pathname === '/audit-log') return 'Audit Log';
     if (pathname === '/loans') return 'Loans';
     if (pathname.startsWith('/loans/')) return 'Loans / Details';
 
@@ -152,8 +159,13 @@ export default function DashboardLayout({ children }) {
   return (
     <div className="layout">
 
+      {/* Sidebar Overlay (Mobile) */}
+      {isMobileMenuOpen && (
+        <div className="mobile-overlay" onClick={() => setIsMobileMenuOpen(false)} />
+      )}
+
       {/* Sidebar */}
-      <aside className="sidebar glass">
+      <aside className={`sidebar glass ${isMobileMenuOpen ? 'open' : ''}`}>
         <div className="logo-area">
           <div className="logo-icon">
             <img src="https://files.edgestore.dev/58ak0uq249vmf7cf/publicFiles/_public/303ae74c-97f0-41f5-be5a-45a951af0d72.png" alt="Arionys Finance" />
@@ -169,6 +181,7 @@ export default function DashboardLayout({ children }) {
                 key={item.id}
                 href={item.href}
                 className={`nav-item ${pathname === item.href ? 'active' : ''}`}
+                onClick={() => setIsMobileMenuOpen(false)}
               >
                 <div className="nav-icon-wrapper">
                   {item.icon}
@@ -203,33 +216,18 @@ export default function DashboardLayout({ children }) {
           </div>
         </div>
         <div className="mobile-header-right">
+          {['owner', 'admin', 'ceo', 'cfo'].includes(user.role?.toLowerCase()) && (
+            <Link href="/pending" className="notification-bell">
+              <Bell size={20} />
+              {pendingCount > 0 && <span className="bell-badge">{pendingCount}</span>}
+            </Link>
+          )}
           <span className="mobile-user-name">{user.name}</span>
-          <button onClick={logout} className="mobile-logout">
-            <LogOut size={20} />
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="mobile-menu-btn">
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
       </header>
-
-      {/* Mobile Bottom Nav */}
-      <nav className="mobile-nav glass">
-        {navItems.map((item) => {
-          if (item.roles && !item.roles.includes(user.role?.toLowerCase())) return null;
-          
-          return (
-            <Link 
-              key={item.id}
-              href={item.href}
-              className={`mob-nav-item ${pathname === item.href ? 'active' : ''}`}
-            >
-              <div className="nav-icon-wrapper">
-                {item.icon}
-                {item.showBadge && pendingCount > 0 && <span className="notification-badge">{pendingCount}</span>}
-              </div>
-              <span className="mob-label">{item.id === 'dashboard' ? 'Home' : item.id === 'users' ? 'System' : item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
 
       {/* Main Content */}
       <main className="main-content">
@@ -241,8 +239,15 @@ export default function DashboardLayout({ children }) {
           </div>
           <div className="header-flex">
             <h1>{getPageTitle()}</h1>
-            <div className="current-user-badge">
-              <span className={`role-tag role-${user.role?.toLowerCase()}`}>
+            <div className="header-actions">
+              {['owner', 'admin', 'ceo', 'cfo'].includes(user.role?.toLowerCase()) && (
+                <Link href="/pending" className="notification-bell desktop-bell">
+                  <Bell size={20} />
+                  {pendingCount > 0 && <span className="bell-badge">{pendingCount}</span>}
+                </Link>
+              )}
+              <div className="current-user-badge">
+                <span className={`role-tag role-${user.role?.toLowerCase()}`}>
                 <span className="desktop-role">
                   {user.role?.toLowerCase() === 'owner' ? 'Company Owner' :
                    user.role?.toLowerCase() === 'admin' ? 'Administrator' :
@@ -262,6 +267,7 @@ export default function DashboardLayout({ children }) {
                    user.role?.toUpperCase()}
                 </span>
               </span>
+            </div>
             </div>
           </div>
         </header>
@@ -358,25 +364,43 @@ export default function DashboardLayout({ children }) {
         .role-cfo { background: #0f172a; color: white; }
         .role-accountant { background: #f1f5f9; color: #475569; }
         .mobile-role { display: none; }
+        
+        .header-actions { display: flex; align-items: center; gap: 1rem; }
+        .notification-bell { position: relative; color: #64748b; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #f8fafc; transition: all 0.2s; text-decoration: none; border: 1px solid #e2e8f0; }
+        .notification-bell:hover { color: #0f172a; background: white; border-color: #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .bell-badge { position: absolute; top: -4px; right: -4px; background: #ef4444; color: white; font-size: 0.65rem; font-weight: 800; min-width: 18px; height: 18px; border-radius: 9px; display: flex; align-items: center; justify-content: center; border: 2px solid white; padding: 0 4px; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2); }
 
         .loading-screen { height: 100vh; width: 100vw; display: flex; align-items: center; justify-content: center; background: #ffffff; }
         .spinner { width: 40px; height: 40px; border: 3px solid #f1f5f9; border-top-color: #0f172a; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
         @media (max-width: 1024px) {
-          .sidebar { display: none; }
-          .main-content { margin-left: 0; padding: 6rem 5vw 7rem; }
+          .sidebar {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+          }
+          .sidebar.open {
+            transform: translateX(0);
+          }
+          .mobile-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(4px);
+            z-index: 90;
+          }
+          .main-content { margin-left: 0; padding: 6rem 5vw 3rem; }
           .mobile-header { position: fixed; top: 0; left: 0; right: 0; height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 0 5vw 0 4vw; z-index: 1000; border-bottom: 1px solid #f1f5f9; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
           .mobile-header .logo-area { padding: 0; border: none; margin: 0; display: flex; flex-direction: row; align-items: center; justify-content: flex-start; }
           .mobile-header .logo-icon { width: 110px; transform: translateY(-1px); display: flex; align-items: center; justify-content: flex-start; }
           .mobile-header-right { display: flex; align-items: center; gap: 0.75rem; }
           .mobile-user-name { font-size: 0.8125rem; font-weight: 800; color: #0f172a; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-          .mobile-logout { background: transparent; border: none; color: #64748b; display: flex; align-items: center; justify-content: center; padding: 0.25rem; }
-          .mobile-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 5vw; z-index: 1000; border-top: 1px solid #f1f5f9; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
-          :global(.mob-nav-item) { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; text-decoration: none; min-width: 50px; height: 100%; transition: all 0.2s; }
-          :global(.mob-nav-item.active) { color: #0f172a; transform: translateY(-2px); }
-          .mob-label { display: none; }
-          .mobile-logout { background: transparent; border: none; color: #64748b; }
+          .mobile-menu-btn { background: transparent; border: none; color: #0f172a; display: flex; align-items: center; justify-content: center; padding: 0.25rem; cursor: pointer; }
+          .desktop-bell { display: none; }
+          .notification-bell { background: transparent; border: none; }
           .header-flex h1 { font-size: clamp(1.25rem, 5vw, 1.5rem); }
           .desktop-role { display: none; }
           .mobile-role { display: inline; }

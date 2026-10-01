@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
+import AuditLog from '@/models/AuditLog';
 import jwt from 'jsonwebtoken';
 
 export async function POST(req) {
@@ -18,6 +19,18 @@ export async function POST(req) {
     if (user && user.password && (await user.matchPassword(password))) {
       const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
       
+      await AuditLog.create({
+        companyId: user.companyId,
+        userId: user._id,
+        actorName: user.name,
+        action: 'user_login',
+        entity: 'user',
+        entityId: user._id,
+        entityLabel: `User ${user.name} logged in`,
+        ipAddress: req.headers.get('x-forwarded-for') || req.ip || '',
+        userAgent: req.headers.get('user-agent') || ''
+      });
+
       return NextResponse.json({
         success: true,
         data: {

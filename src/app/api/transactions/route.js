@@ -3,6 +3,7 @@ import dbConnect from '@/lib/db';
 import Transaction from '@/models/Transaction';
 import User from '@/models/User';
 import Account from '@/models/Account';
+import AuditLog from '@/models/AuditLog';
 import { sendEmail } from '@/lib/mail';
 import { getAuthUser, unauthorized } from '@/lib/auth';
 
@@ -92,6 +93,19 @@ export async function POST(req) {
       account,
       toAccount: type === 'transfer' ? toAccount : undefined,
       status: 'pending' // Force pending on creation
+    });
+
+    await AuditLog.create({
+      companyId,
+      userId,
+      actorName: authUser.name,
+      action: 'created_transaction',
+      entity: 'transaction',
+      entityId: transaction._id,
+      entityLabel: `${type.toUpperCase()} transaction of ${amount} created`,
+      newValue: { type, amount, status: 'pending' },
+      ipAddress: req.headers.get('x-forwarded-for') || req.ip || '',
+      userAgent: req.headers.get('user-agent') || ''
     });
 
     // Notify CFOs

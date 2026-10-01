@@ -267,8 +267,14 @@ export default function LoansPage() {
             .controls-card { padding: 1rem; margin-bottom: 2rem; display: flex; gap: 1rem; align-items: center; }
             .search-box { position: relative; flex: 1; max-width: 400px; }
             :global(.search-icon) { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
-            .search-box .input-field { padding-left: 2.5rem; }
+            .search-box .input-field { padding-left: 2.5rem; width: 100%; }
             .filter-box { width: 250px; }
+            @media (max-width: 640px) {
+                .controls-card { flex-direction: column; align-items: stretch; }
+                .search-box { max-width: 100%; }
+                .filter-box { width: 100%; }
+                .form-row { flex-direction: column; }
+            }
 
             .loans-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
             .loan-card { padding: 1.5rem; transition: all 0.2s; text-decoration: none; display: flex; flex-direction: column; color: inherit; }
