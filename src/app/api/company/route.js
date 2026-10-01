@@ -49,16 +49,29 @@ export async function PATCH(req) {
     const body = await req.json();
 
     // Whitelist only editable fields — ownerId is never changeable here
-    const allowed = ['name', 'email', 'phone', 'website', 'industry', 'address'];
+    const allowed = ['name', 'email', 'phone', 'website', 'industry', 'address', 'country', 'currency', 'timezone', 'businessType', 'logo', 'registrationNo', 'taxNo'];
+    const arrayAllowed = ['departments', 'designations'];
+    const objectAllowed = ['loanPolicy'];
+    
     const updates = {};
     for (const key of allowed) {
       if (body[key] !== undefined) {
         updates[key] = String(body[key]).trim();
       }
     }
+    for (const key of arrayAllowed) {
+      if (Array.isArray(body[key])) {
+        updates[key] = body[key];
+      }
+    }
+    for (const key of objectAllowed) {
+      if (typeof body[key] === 'object' && !Array.isArray(body[key])) {
+        updates[key] = body[key];
+      }
+    }
 
-    if (!updates.name) {
-      return NextResponse.json({ success: false, message: 'Company name is required.' }, { status: 400 });
+    if (!updates.name && body.name !== undefined && body.name.trim() === '') {
+      return NextResponse.json({ success: false, message: 'Company name cannot be empty.' }, { status: 400 });
     }
 
     const company = await Company.findByIdAndUpdate(

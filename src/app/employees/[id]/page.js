@@ -111,8 +111,8 @@ export default function EmployeeDetailsPage() {
         return (
             <DashboardLayout>
                 <div className="alert alert-danger m-6">{error || 'Employee not found.'}</div>
-                <Link href="/business-administration" className="btn btn-secondary m-6" style={{ width: 'fit-content', display: 'inline-flex' }}>
-                    <ArrowLeft size={16} /> Back to Administration
+                <Link href="/employees" className="btn btn-secondary m-6" style={{ width: 'fit-content', display: 'inline-flex' }}>
+                    <ArrowLeft size={16} /> Back to Employees
                 </Link>
             </DashboardLayout>
         );
@@ -123,9 +123,9 @@ export default function EmployeeDetailsPage() {
             <div className="employee-details-container animate-fade-in">
                 {/* Header */}
                 <div className="nav-header">
-                    <Link href="/business-administration" className="back-link">
+                    <Link href="/employees" className="back-link">
                         <ArrowLeft size={18} />
-                        <span>Business Administration</span>
+                        <span>Employees Directory</span>
                     </Link>
                 </div>
 

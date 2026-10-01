@@ -121,9 +121,10 @@ export default function DashboardLayout({ children }) {
     { id: 'accounts',    label: 'Accounts',             icon: <img src="/icons/nav-accounts.png" alt="" className="nav-img-icon" />,  href: '/accounts',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
     { id: 'loans',       label: 'Loans',                icon: <Banknote size={22} />, href: '/loans',     roles: ['owner', 'admin', 'ceo', 'cfo', 'accountant'] },
     { id: 'reports',     label: 'Financial Reports',    icon: <PieChart size={22} />, href: '/reports',   roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit'] },
-    { id: 'business-administration', label: 'Business & Staff', icon: <SlidersHorizontal size={22} />, href: '/business-administration', roles: ['owner', 'admin', 'ceo', 'cfo'] },
+    { id: 'business-administration', label: 'Business Settings', icon: <SlidersHorizontal size={22} />, href: '/business-administration', roles: ['owner', 'admin'] },
+    { id: 'employees',   label: 'Employees Directory',  icon: <UserIcon size={22} />, href: '/employees', roles: ['owner', 'admin', 'ceo', 'cfo'] },
     { id: 'audit-log',   label: 'Audit Log',            icon: <ClipboardList size={22} />, href: '/audit-log', roles: ['owner', 'admin'] },
-    { id: 'settings',    label: 'Settings',             icon: < Settings size={22} />,href: '/settings',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
+    { id: 'settings',    label: 'Profile Settings',     icon: < Settings size={22} />,href: '/settings',            roles: ['owner', 'admin', 'ceo', 'cfo', 'csuit', 'accountant'] },
   ];
 
   const getPageTitle = () => {
@@ -132,7 +133,8 @@ export default function DashboardLayout({ children }) {
     if (pathname === '/transactions') return 'Transaction History';
     if (pathname === '/transactions/create') return 'Create Transaction';
     if (pathname === '/pending') return 'Pending Approvals';
-    if (pathname === '/business-administration') return 'Business & Staff Administration';
+    if (pathname === '/business-administration') return 'Business Administration';
+    if (pathname.startsWith('/employees')) return 'Employees Directory';
     if (pathname === '/reports') return 'Financial Reports';
     if (pathname === '/audit-log') return 'Audit Log';
     if (pathname === '/loans') return 'Employee Loans';
@@ -147,7 +149,8 @@ export default function DashboardLayout({ children }) {
     if (pathname === '/transactions') return 'Transactions';
     if (pathname === '/transactions/create') return 'Transactions / Create';
     if (pathname === '/pending') return 'Pending Approvals';
-    if (pathname === '/business-administration') return 'Business & Staff Administration';
+    if (pathname === '/business-administration') return 'Business Administration';
+    if (pathname.startsWith('/employees')) return 'Employees';
     if (pathname === '/reports') return 'Reports';
     if (pathname === '/audit-log') return 'Audit Log';
     if (pathname === '/loans') return 'Loans';

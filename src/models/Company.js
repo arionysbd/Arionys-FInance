@@ -35,6 +35,10 @@ const companySchema = new mongoose.Schema({
   taxNo:            { type: String, trim: true, default: '' },
 
   loanPolicy: { type: loanPolicySchema, default: () => ({}) },
+  
+  // Customization
+  departments: [{ type: String, trim: true }],
+  designations: [{ type: String, trim: true }],
 }, {
   timestamps: true,
 });
