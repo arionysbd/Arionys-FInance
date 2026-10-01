@@ -25,6 +25,9 @@ export async function GET(req) {
     const handledEmails = new Set();
 
     for (const u of users) {
+      if (['owner', 'admin'].includes(u.role?.toLowerCase())) {
+        continue;
+      }
       const emp = employees.find(e => e.email.toLowerCase() === u.email.toLowerCase());
       merged.push({
         ...u,
