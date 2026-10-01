@@ -30,7 +30,7 @@ export default function Dashboard({ stats, recentTransactions, user }) {
         data: [stats.totalRevenue, stats.totalExpense, stats.totalInvestment],
         backgroundColor: ['#10b981', '#ef4444', '#2563eb'],
         borderRadius: 6,
-        barThickness: 40,
+        maxBarThickness: 60,
       },
     ],
   };
@@ -151,7 +151,7 @@ export default function Dashboard({ stats, recentTransactions, user }) {
       )}
 
       <div className="grid-content">
-        <div className="card chart-container">
+        <div className="card chart-container" style={{ overflow: 'hidden', minWidth: 0 }}>
           <div className="card-header">
             <h3>Financial Performance</h3>
             <p>Distribution of capital across categories</p>
@@ -161,7 +161,7 @@ export default function Dashboard({ stats, recentTransactions, user }) {
           </div>
         </div>
 
-        <div className="card recent-transactions">
+        <div className="card recent-transactions" style={{ overflow: 'hidden', minWidth: 0 }}>
           <div className="card-header">
             <h3>Recent Activity</h3>
             <p>Latest approved transactions</p>
@@ -265,7 +265,10 @@ export default function Dashboard({ stats, recentTransactions, user }) {
           display: grid;
           grid-template-columns: 1.8fr 1.2fr;
           gap: 1.5rem;
+          min-width: 0;
+          overflow: hidden;
         }
+        .grid-content > * { min-width: 0; overflow: hidden; }
         @media (max-width: 1024px) {
           .grid-content { grid-template-columns: 1fr; }
         }
