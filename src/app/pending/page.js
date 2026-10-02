@@ -25,6 +25,11 @@ export default function PendingApprovalsPage() {
   const [accounts, setAccounts] = useState([]);
   // Account chosen in the Approve popup (pre-filled with the one on the transaction, if any)
   const [approveAccount, setApproveAccount] = useState('');
+  // Bulk review: selected row keys ("transaction-<id>" / "loan-<id>") and the open bulk dialog ({ status })
+  const [selected, setSelected] = useState(() => new Set());
+  const [bulkDialog, setBulkDialog] = useState(null);
+  const [bulkAccount, setBulkAccount] = useState('');
+  const [bulkRunning, setBulkRunning] = useState(false);
 
   const fetchPending = async () => {
     try {
@@ -126,6 +131,8 @@ export default function PendingApprovalsPage() {
       date: tx.date,
       creator: tx.createdBy?.name || tx.performedBy || 'System',
       isOwn: false,
+      // Approving needs an account to be chosen
+      needsAccount: !tx.account && tx.type !== 'transfer',
     })),
     ...loans.map(loan => ({
       kind: 'loan',
@@ -141,6 +148,57 @@ export default function PendingApprovalsPage() {
     })),
   ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
+  const rowKey = (row) => `${row.kind}-${row.id}`;
+  // Own loan requests can't be reviewed by their submitter, so they can't be selected either
+  const selectableRows = rows.filter(r => !r.isOwn);
+  const selectedRows = selectableRows.filter(r => selected.has(rowKey(r)));
+  const allSelected = selectableRows.length > 0 && selectedRows.length === selectableRows.length;
+  const bulkNeedsAccount = selectedRows.filter(r => r.needsAccount);
+
+  const toggleRow = (row) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      const key = rowKey(row);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(selectableRows.map(rowKey)));
+
+  const openBulk = (status) => {
+    setBulkAccount('');
+    setBulkDialog({ status });
+  };
+
+  // Approve or reject every selected item, one after another, then report anything that failed
+  const runBulk = async () => {
+    const { status } = bulkDialog;
+    setBulkRunning(true);
+    const failures = [];
+    for (const row of selectedRows) {
+      try {
+        if (row.kind === 'loan') {
+          await approveLoan(row.id, status);
+        } else {
+          await approveTransaction({
+            transactionId: row.id,
+            status,
+            ...(status === 'approved' && row.needsAccount ? { account: bulkAccount } : {}),
+          });
+        }
+      } catch (err) {
+        failures.push(`${row.description}: ${err.response?.data?.message || 'failed'}`);
+      }
+    }
+    setBulkRunning(false);
+    setBulkDialog(null);
+    setSelected(new Set());
+    await fetchPending();
+    if (failures.length) {
+      alert(`${selectedRows.length - failures.length} of ${selectedRows.length} done. These could not be processed:\n\n${failures.join('\n')}`);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="pending-layout">
@@ -155,8 +213,29 @@ export default function PendingApprovalsPage() {
         ) : (
           <>
           <div className="queue-summary">
-            <span className="queue-count">{rows.length}</span>
-            <span>{rows.length === 1 ? 'item awaiting your review' : 'items awaiting your review'}</span>
+            {selectedRows.length > 0 ? (
+              <div className="bulk-bar">
+                <span className="queue-count">{selectedRows.length}</span>
+                <span>selected</span>
+                <button className="bulk-link" onClick={() => setSelected(new Set())}>Clear</button>
+                <div className="bulk-actions">
+                  <button className="btn-action reject" onClick={() => openBulk('rejected')}>
+                    <XCircle size={16} /> Reject selected
+                  </button>
+                  <button className="btn-action approve" onClick={() => openBulk('approved')}>
+                    <CheckCircle size={16} /> Approve selected
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <span className="queue-count">{rows.length}</span>
+                <span>{rows.length === 1 ? 'item awaiting your review' : 'items awaiting your review'}</span>
+                {selectableRows.length > 1 && (
+                  <button className="bulk-link mobile-select-all" onClick={toggleAll}>Select all</button>
+                )}
+              </>
+            )}
           </div>
 
           <div className="table-card desktop-view">
@@ -164,6 +243,16 @@ export default function PendingApprovalsPage() {
               <table className="tx-table">
                 <thead>
                   <tr>
+                    <th className="select-col">
+                      <input
+                        type="checkbox"
+                        className="row-check"
+                        aria-label="Select all"
+                        checked={allSelected}
+                        onChange={toggleAll}
+                        disabled={selectableRows.length === 0}
+                      />
+                    </th>
                     <th>Type</th>
                     <th>Description</th>
                     <th>Account Info</th>
@@ -178,7 +267,18 @@ export default function PendingApprovalsPage() {
                     const TypeIcon = meta.icon;
                     const busy = processingId === row.id;
                     return (
-                      <tr key={`${row.kind}-${row.id}`} className="tx-row">
+                      <tr key={`${row.kind}-${row.id}`} className={`tx-row ${selected.has(rowKey(row)) ? 'is-selected' : ''}`}>
+                        <td className="select-col">
+                          {!row.isOwn && (
+                            <input
+                              type="checkbox"
+                              className="row-check"
+                              aria-label={`Select ${row.description}`}
+                              checked={selected.has(rowKey(row))}
+                              onChange={() => toggleRow(row)}
+                            />
+                          )}
+                        </td>
                         <td data-label="Type">
                           <div className={`type-pill-minimal type-${row.type}`}>
                             <TypeIcon size={13} />
@@ -249,6 +349,15 @@ export default function PendingApprovalsPage() {
               return (
                 <article key={`m-${row.kind}-${row.id}`} className={`approval-card accent-${row.type}`}>
                   <header className="ac-top">
+                    {!row.isOwn && (
+                      <input
+                        type="checkbox"
+                        className="row-check"
+                        aria-label={`Select ${row.description}`}
+                        checked={selected.has(rowKey(row))}
+                        onChange={() => toggleRow(row)}
+                      />
+                    )}
                     <div className={`type-pill-minimal type-${row.type}`}>
                       <TypeIcon size={13} />
                       <span>{row.label || meta.label}</span>
@@ -310,6 +419,46 @@ export default function PendingApprovalsPage() {
           </>
         )}
       </div>
+
+      {bulkDialog && (
+        <div className="modal-overlay">
+          <div className="modal-content animate-scale">
+            <h3 className="modal-title">
+              {bulkDialog.status === 'approved' ? 'Approve' : 'Reject'} {selectedRows.length} item{selectedRows.length === 1 ? '' : 's'}
+            </h3>
+            <p className="modal-message">
+              {bulkDialog.status === 'approved'
+                ? 'All selected transactions and loans will be approved.'
+                : 'All selected transactions and loans will be rejected. This cannot be undone.'}
+            </p>
+            {bulkDialog.status === 'approved' && bulkNeedsAccount.length > 0 && (
+              <div className="approve-account">
+                <label>Account for {bulkNeedsAccount.length} transaction{bulkNeedsAccount.length === 1 ? '' : 's'} without one</label>
+                <CustomSelect
+                  placeholder="Select account..."
+                  value={bulkAccount}
+                  onChange={setBulkAccount}
+                  options={accounts.map(acc => ({
+                    value: acc._id,
+                    label: `${acc.bankName} (BDT ${Math.round(acc.balance || 0).toLocaleString()})`,
+                    subtext: acc.acName || undefined,
+                  }))}
+                />
+              </div>
+            )}
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={() => setBulkDialog(null)} disabled={bulkRunning}>Cancel</button>
+              <button
+                className={`btn-confirm ${bulkDialog.status}`}
+                onClick={runBulk}
+                disabled={bulkRunning || (bulkDialog.status === 'approved' && bulkNeedsAccount.length > 0 && !bulkAccount)}
+              >
+                {bulkRunning ? 'Working...' : `Yes, ${bulkDialog.status === 'approved' ? 'Approve' : 'Reject'} all`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {confirmDialog.isOpen && (
         <div className="modal-overlay">
@@ -437,7 +586,17 @@ export default function PendingApprovalsPage() {
           white-space: nowrap;
         }
         /* Queue summary */
-        .queue-summary { display: flex; align-items: center; gap: 0.625rem; margin-bottom: 1rem; font-size: 0.875rem; font-weight: 600; color: #64748b; }
+        .queue-summary { display: flex; align-items: center; gap: 0.625rem; min-height: 40px; margin-bottom: 1rem; font-size: 0.875rem; font-weight: 600; color: #64748b; }
+        .bulk-bar { display: flex; align-items: center; gap: 0.625rem; width: 100%; flex-wrap: wrap; padding: 0.5rem 0.75rem; border: 1px solid #c7d2fe; border-radius: 8px; background: #f5f7ff; color: #3730a3; }
+        .bulk-bar .queue-count { background: #4f46e5; }
+        .bulk-actions { display: flex; gap: 0.5rem; margin-left: auto; }
+        .bulk-link { padding: 0; border: none; background: none; font-family: inherit; font-size: 0.8125rem; font-weight: 600; color: #4f46e5; cursor: pointer; }
+        .bulk-link:hover { text-decoration: underline; }
+        .mobile-select-all { display: none; margin-left: auto; }
+        .select-col { width: 44px; padding-right: 0 !important; }
+        .row-check { width: 16px; height: 16px; min-height: 0 !important; margin: 0; accent-color: #4f46e5; cursor: pointer; }
+        .tx-row.is-selected td { background: #f5f7ff; }
+        .ac-top .row-check { margin-right: 0.25rem; }
         .queue-count { min-width: 26px; height: 26px; padding: 0 0.5rem; display: inline-grid; place-items: center; border-radius: 6px; background: #0f172a; color: #ffffff; font-size: 0.8125rem; font-weight: 800; }
 
         /* Mobile approval cards (hidden on desktop) */
@@ -662,6 +821,10 @@ export default function PendingApprovalsPage() {
           
           .desktop-view { display: none; }
           .mobile-view { display: flex; }
+          .mobile-select-all { display: inline; }
+          .bulk-actions { width: 100%; margin-left: 0; }
+          .bulk-actions .btn-action { flex: 1; justify-content: center; }
+          .ac-top .type-pill-minimal { margin-right: auto; }
         }
       `}</style>
     </DashboardLayout>
