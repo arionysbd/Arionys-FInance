@@ -9,6 +9,7 @@ export const PERMISSIONS = [
   { key: 'dashboard',          label: 'Office Dashboard',    href: '/dashboard',               group: 'Overview',     description: 'Full office overview: all balances, revenue and transactions' },
   { key: 'personal_dashboard', label: 'Personal Dashboard',  href: '/my-dashboard',            group: 'Overview',     description: 'Only their own transactions and loans' },
   { key: 'create_transaction', label: 'Create Transaction',  href: '/transactions/create',     group: 'Transactions', description: 'Record new transactions (sent for approval)' },
+  { key: 'transaction_full',   label: 'Full Transaction Access', href: null,                 group: 'Transactions', description: 'Record every type (Investment, Transfer too) and choose the bank account. Without it: Inflow/Outflow only, the approver picks the account' },
   { key: 'pending_approvals',  label: 'Pending Approvals',   href: '/pending',                 group: 'Transactions', description: 'Approve or reject transactions and loans, and disburse loans' },
   { key: 'transactions',       label: 'Transaction History', href: '/transactions',            group: 'Transactions', description: 'View, import and export approved transactions' },
   { key: 'accounts',           label: 'Accounts',            href: '/accounts',                group: 'Finance',      description: 'View and manage bank accounts' },
@@ -31,13 +32,13 @@ export const ALWAYS_ALLOWED_PATHS = ['/settings'];
 export const DEFAULT_PERMISSIONS = ['personal_dashboard', 'create_transaction', 'loan_request'];
 
 // Abilities that need a page to be useful: { ability: requiredPage }
-export const PERMISSION_REQUIRES = { manage_employees: 'employees' };
+export const PERMISSION_REQUIRES = { manage_employees: 'employees', transaction_full: 'create_transaction' };
 
 /**
- * Whether a user picks the bank account when recording a transaction and can use every type.
- * General employees (no Accounts page) only record Inflow/Outflow; the approver chooses the account.
+ * Whether a user picks the bank account when recording a transaction and can use every type
+ * (the "Full Transaction Access" ability). Without it: Inflow/Outflow only, the approver chooses the account.
  */
-export const canPickTransactionAccount = (user) => hasPermission(user, 'accounts');
+export const canPickTransactionAccount = (user) => hasPermission(user, 'transaction_full');
 
 /** Whether this user may see other people's page access (the company admin and employee managers). */
 export const canSeeAccess = (user) => isOwner(user) || hasPermission(user, 'manage_employees');
@@ -47,10 +48,10 @@ export const EXCLUSIVE_PERMISSION_GROUPS = [['dashboard', 'personal_dashboard']]
 
 // Access for accounts created before route-based access existed, derived from their old role
 const LEGACY_ROLE_PERMISSIONS = {
-  ceo: ['dashboard', 'create_transaction', 'pending_approvals', 'transactions', 'accounts', 'loans', 'loan_request', 'reports', 'employees', 'manage_employees'],
-  cfo: ['dashboard', 'create_transaction', 'pending_approvals', 'transactions', 'accounts', 'loans', 'loan_request', 'reports', 'employees', 'manage_employees'],
-  csuit: ['dashboard', 'create_transaction', 'transactions', 'accounts', 'loans', 'loan_request', 'reports'],
-  accountant: ['dashboard', 'create_transaction', 'transactions', 'accounts', 'loans', 'loan_request'],
+  ceo: ['dashboard', 'create_transaction', 'transaction_full', 'pending_approvals', 'transactions', 'accounts', 'loans', 'loan_request', 'reports', 'employees', 'manage_employees'],
+  cfo: ['dashboard', 'create_transaction', 'transaction_full', 'pending_approvals', 'transactions', 'accounts', 'loans', 'loan_request', 'reports', 'employees', 'manage_employees'],
+  csuit: ['dashboard', 'create_transaction', 'transaction_full', 'transactions', 'accounts', 'loans', 'loan_request', 'reports'],
+  accountant: ['dashboard', 'create_transaction', 'transaction_full', 'transactions', 'accounts', 'loans', 'loan_request'],
   viewer: ['personal_dashboard', 'loan_request'],
 };
 

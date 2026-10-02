@@ -308,7 +308,7 @@ export default function CompanyMembers() {
                                                         title={accessSummary(u.permissions)}
                           >
                             <span className="access-count">{u.permissions?.length || 0}</span>
-                            <span>access</span>
+                            <span>pages</span>
                             {canEditAccess && canManage(u) && <Pencil size={12} className="access-edit" />}
                             </button>
                         </td>
@@ -480,7 +480,7 @@ export default function CompanyMembers() {
                                                                     title={accessSummary(u.permissions)}
                                 >
                                   <span className="access-count">{u.permissions?.length || 0}</span>
-                                  <span>access</span>
+                                  <span>pages</span>
                                   {canEditAccess && canManage(u) && <Pencil size={12} className="access-edit" />}
                             </button>
                               </div>
@@ -697,7 +697,7 @@ export default function CompanyMembers() {
           .access-cell:disabled { cursor: default; opacity: 0.75; }
           .access-count { min-width: 20px; height: 20px; padding: 0 0.3rem; display: inline-grid; place-items: center; border-radius: 4px; background: #eef2ff; color: #4338ca; font-size: 0.75rem; font-weight: 800; }
           .access-cell :global(.access-edit) { color: #94a3b8; }
-          .access-modal { max-width: 960px; display: flex; flex-direction: column; overflow: hidden; }
+          .modal-card.access-modal { max-width: 1040px; width: 100%; display: flex; flex-direction: column; overflow: hidden; }
           .access-modal .modal-body { flex: 1; min-height: 0; overflow-y: auto; padding: 1.25rem 1.5rem; }
           .access-modal .modal-header p strong { color: #0f172a; font-weight: 700; }
           .access-note { display: flex; align-items: flex-start; gap: 0.625rem; margin-top: 1.5rem; padding: 0.75rem 1rem; border: 1px solid #e0e7ff; border-radius: 6px; background: #f5f7ff; color: #4338ca; }
