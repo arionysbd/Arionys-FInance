@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import jwt from 'jsonwebtoken';
-import { sendEmail } from '@/lib/mail';
+import { queueEmail } from '@/lib/mail';
 
 export async function POST(req) {
   try {
@@ -26,7 +26,7 @@ export async function POST(req) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
     const magicLink = `${appUrl}/verify?token=${token}`;
 
-    await sendEmail({
+    queueEmail({
       to: user.email,
       subject: 'Secure Sign In - Arionys Finance',
       text: `Sign in to Arionys Finance by clicking this link: ${magicLink}`,

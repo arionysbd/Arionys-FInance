@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
-import { sendEmail } from '@/lib/mail';
+import { queueEmail } from '@/lib/mail';
 
 // In-memory OTP store (sufficient for single-instance deployments)
 // In production, consider using Redis or a DB collection with TTL
@@ -33,7 +33,7 @@ export async function POST(req) {
     });
 
     // Send OTP email
-    await sendEmail({
+    queueEmail({
       to: email,
       subject: 'Arionys Finance — Verification Code',
       text: `Your verification code is: ${otp}\n\nThis code expires in 10 minutes.`,

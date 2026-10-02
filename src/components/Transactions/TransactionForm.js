@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import axios from 'axios';
 import { hasPermission, canPickTransactionAccount } from '@/lib/permissions';
+import { refreshPendingCount } from '@/lib/api';
 import { FileText, Tag, Send, User, Wallet, ArrowUpRight, TrendingDown, DollarSign, ChevronDown, Check, ArrowRightLeft, CreditCard } from 'lucide-react';
 
 export default function TransactionForm({ onTransactionAdded }) {
@@ -118,6 +119,7 @@ export default function TransactionForm({ onTransactionAdded }) {
         toAccount: ''
       });
       setIsOther(false);
+      refreshPendingCount();
       onTransactionAdded();
       alert('Transaction submitted and awaiting approval.');
     } catch (err) {

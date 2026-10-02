@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getUserPermissions } from '@/lib/permissions';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
-import { getAuthUser, unauthorized } from '@/lib/auth';
+import { getAuthUser, unauthorized, invalidateAuthUser } from '@/lib/auth';
 
 export async function PUT(req) {
   try {
@@ -44,6 +44,7 @@ export async function PUT(req) {
     if (position !== undefined) user.position = position;
 
     await user.save();
+    invalidateAuthUser(user._id);
 
     // Keep the linked employee record in step, otherwise the directory shows a duplicate person
     if (user.companyId) {

@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
-import { getMyLoanRequests, requestLoan } from '@/lib/api';
+import { getMyLoanRequests, requestLoan, refreshPendingCount } from '@/lib/api';
 import { HandCoins, Loader2, CheckCircle2, AlertCircle, ArrowRight, Inbox } from 'lucide-react';
 
 const STATUS_META = {
@@ -68,6 +68,7 @@ export default function RequestLoanPage() {
       if (res.success) {
         setSuccess('Your loan request was submitted and is waiting for approval.');
         setForm(emptyForm());
+        refreshPendingCount();
         loadRequests();
       } else {
         setError(res.message);

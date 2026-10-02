@@ -105,6 +105,20 @@ export const deleteEmployee = async (id) => {
   return data;
 };
 
+// --- Pending approvals count (sidebar badge), cached briefly so page changes don't refetch it ---
+let pendingCountCache = { value: 0, at: 0 };
+export const getPendingCount = async ({ force = false } = {}) => {
+  if (!force && Date.now() - pendingCountCache.at < 30000) return pendingCountCache.value;
+  const { data } = await api.get('/pending/count');
+  pendingCountCache = { value: data.data.total, at: Date.now() };
+  return pendingCountCache.value;
+};
+// Call after approving/rejecting/creating items so the badge refreshes everywhere
+export const refreshPendingCount = () => {
+  pendingCountCache.at = 0;
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('pending-changed'));
+};
+
 // --- Loans API ---
 export const getLoans = async (filters = {}) => {
   const { data } = await api.get('/loans', { params: filters });

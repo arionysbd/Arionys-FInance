@@ -1,4 +1,36 @@
 import nodemailer from 'nodemailer';
+import { after } from 'next/server';
+
+const transporterCache = global.__mailTransporter || (global.__mailTransporter = { key: null, transporter: null });
+
+function getTransporter({ host, port, secure, user, pass }) {
+  const key = `${host}:${port}:${secure}:${user}`;
+  if (transporterCache.key !== key || !transporterCache.transporter) {
+    transporterCache.transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      pool: true,
+      maxConnections: 3,
+      auth: { user, pass },
+    });
+    transporterCache.key = key;
+  }
+  return transporterCache.transporter;
+}
+
+/**
+ * Sends an email after the API response has been returned, so the person using the app never waits on SMTP.
+ * Falls back to sending in the background when called outside a request.
+ */
+export function queueEmail(options) {
+  const task = () => sendEmail(options).catch(err => console.error('Queued email failed:', err?.message));
+  try {
+    after(task);
+  } catch {
+    task();
+  }
+}
 
 /**
  * Sends an email using Nodemailer.
@@ -31,15 +63,8 @@ export async function sendEmail({ to, subject, text, html }) {
     return { success: false, message: 'SMTP config missing' };
   }
 
-  const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: {
-      user,
-      pass,
-    },
-  });
+  // One pooled SMTP connection is reused across emails instead of a new TLS handshake each time
+  const transporter = getTransporter({ host, port, secure, user, pass });
 
   try {
     const info = await transporter.sendMail({

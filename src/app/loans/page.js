@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import { hasPermission } from '@/lib/permissions';
 import CustomSelect from '@/components/UI/CustomSelect';
-import { getLoans, createLoan, getEmployees, getAccounts } from '@/lib/api';
+import { getLoans, createLoan, getEmployees, getAccounts, refreshPendingCount } from '@/lib/api';
 import { Banknote, Plus, Search, Filter, Loader2, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
@@ -104,6 +104,7 @@ export default function LoansPage() {
       const res = await createLoan(formData);
       if (res.success) {
         closeModal();
+        refreshPendingCount();
         setFormData(emptyLoanForm());
         fetchLoans();
       } else {

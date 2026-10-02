@@ -5,8 +5,6 @@ import { getAccounts, addAccount, getStats, getTransactions } from '@/lib/api';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import { hasPermission } from '@/lib/permissions';
 import { Wallet, Plus, Copy, Check, X, Landmark, TrendingUp, TrendingDown, MoreVertical, Download } from 'lucide-react';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { typeLabel } from '@/lib/transactionTypes';
 
 export default function AccountsPage() {
@@ -92,11 +90,14 @@ export default function AccountsPage() {
   const handleDownloadStatement = async (account, balance) => {
     setOpenMenuId(null);
     try {
-      const txRes = await getTransactions({ status: 'approved', companyId: user.companyId });
-      const allTx = txRes.data || [];
-      const txForAccount = allTx.filter(tx =>
-        tx.account?._id === account._id || tx.toAccount?._id === account._id
-      );
+      // Fetch only this account's approved transactions (all of them, not just the first page),
+      // and load the PDF library only when a statement is actually requested
+      const [txRes, { jsPDF }, { default: autoTable }] = await Promise.all([
+        getTransactions({ status: 'approved', account: account._id, limit: 5000 }),
+        import('jspdf'),
+        import('jspdf-autotable'),
+      ]);
+      const txForAccount = txRes.data || [];
 
       const doc = new jsPDF({ orientation: 'portrait' });
       const pageWidth = doc.internal.pageSize.getWidth();

@@ -18,64 +18,58 @@ export async function GET(req) {
       return NextResponse.json({ success: false, message: 'Company ID is required' }, { status: 400 });
     }
 
-    const transactions = await Transaction.find({ status: 'approved', companyId });
-    const accounts = await Account.find({ companyId });
+    // Totals and per-account balances are computed by the database instead of loading every transaction
+    const [typeTotals, accounts, movements] = await Promise.all([
+      Transaction.aggregate([
+        { $match: { companyId, status: 'approved' } },
+        { $group: { _id: '$type', amount: { $sum: '$amount' } } },
+      ]),
+      Account.find({ companyId }).select('bankName').lean(),
+      Transaction.aggregate([
+        { $match: { companyId, status: 'approved' } },
+        {
+          $project: {
+            amount: 1,
+            entries: {
+              $switch: {
+                branches: [
+                  { case: { $in: ['$type', ['revenue', 'investment', 'loan_repayment']] }, then: [{ acc: '$account', sign: 1 }] },
+                  { case: { $in: ['$type', ['expense', 'loan_disbursement']] }, then: [{ acc: '$account', sign: -1 }] },
+                  { case: { $eq: ['$type', 'transfer'] }, then: [{ acc: '$account', sign: -1 }, { acc: '$toAccount', sign: 1 }] },
+                ],
+                default: [],
+              },
+            },
+          },
+        },
+        { $unwind: '$entries' },
+        { $group: { _id: '$entries.acc', balance: { $sum: { $multiply: ['$amount', '$entries.sign'] } } } },
+      ]),
+    ]);
 
-    const accountBalances = {};
-    accounts.forEach(acc => {
-      accountBalances[acc._id.toString()] = {
-        accountId: acc._id.toString(),
-        name: acc.bankName || 'Unknown Bank',
-        balance: 0
-      };
-    });
+    const byType = Object.fromEntries(typeTotals.map(t => [t._id, t.amount]));
+    const balances = Object.fromEntries(movements.map(m => [String(m._id), m.balance]));
 
-    const stats = transactions.reduce((acc, curr) => {
-      if (curr.type === 'investment') acc.totalInvestment += curr.amount;
-      if (curr.type === 'revenue') acc.totalRevenue += curr.amount;
-      if (curr.type === 'expense') acc.totalExpense += curr.amount;
-
-      const accId = curr.account?.toString();
-      const toAccId = curr.toAccount?.toString();
-
-      if (curr.type === 'revenue' || curr.type === 'investment') {
-        if (accId && accountBalances[accId]) {
-          accountBalances[accId].balance += curr.amount;
-        }
-      } else if (curr.type === 'expense' || curr.type === 'loan_disbursement') {
-        // Expenses and loans paid out leave the account
-        if (accId && accountBalances[accId]) {
-          accountBalances[accId].balance -= curr.amount;
-        }
-      } else if (curr.type === 'loan_repayment') {
-        // Loan repayments come back into the receiving account
-        if (accId && accountBalances[accId]) {
-          accountBalances[accId].balance += curr.amount;
-        }
-      } else if (curr.type === 'transfer') {
-        if (accId && accountBalances[accId]) {
-          accountBalances[accId].balance -= curr.amount;
-        }
-        if (toAccId && accountBalances[toAccId]) {
-          accountBalances[toAccId].balance += curr.amount;
-        }
-      }
-
-      return acc;
-    }, { totalInvestment: 0, totalRevenue: 0, totalExpense: 0 });
-
-    // netBalance = true Account Balance: sum of every account's running balance
-    // (each account starts at 0 and is adjusted by all approved transactions)
-    stats.netBalance = Object.values(accountBalances).reduce((sum, acc) => sum + acc.balance, 0);
-    stats.accountBalances = Object.values(accountBalances);
+    const stats = {
+      totalInvestment: byType.investment || 0,
+      totalRevenue: byType.revenue || 0,
+      totalExpense: byType.expense || 0,
+    };
+    stats.accountBalances = accounts.map(acc => ({
+      accountId: String(acc._id),
+      name: acc.bankName || 'Unknown Bank',
+      balance: balances[String(acc._id)] || 0,
+    }));
+    // netBalance = sum of every account's running balance
+    stats.netBalance = stats.accountBalances.reduce((sum, acc) => sum + acc.balance, 0);
 
     // Fetch total outstanding loans
     const EmployeeLoan = (await import('@/models/EmployeeLoan')).default;
-    const activeLoans = await EmployeeLoan.find({ 
-        companyId, 
-        status: { $in: ['active', 'partially_repaid', 'overdue'] } 
-    });
-    stats.totalOutstandingLoans = activeLoans.reduce((sum, loan) => sum + loan.outstandingAmount, 0);
+    const [outstanding] = await EmployeeLoan.aggregate([
+      { $match: { companyId, status: { $in: ['active', 'partially_repaid', 'overdue'] } } },
+      { $group: { _id: null, total: { $sum: '$outstandingAmount' } } },
+    ]);
+    stats.totalOutstandingLoans = outstanding?.total || 0;
 
     return NextResponse.json({ success: true, data: stats });
   } catch (error) {

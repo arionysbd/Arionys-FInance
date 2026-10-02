@@ -34,5 +34,7 @@ const accountSchema = new mongoose.Schema({
   timestamps: true,
 });
 
+accountSchema.index({ companyId: 1, createdAt: -1 });
+
 delete mongoose.models.Account;
 export default mongoose.models.Account || mongoose.model('Account', accountSchema);

@@ -4,7 +4,7 @@ import Company from '@/models/Company';
 import Account from '@/models/Account';
 import AuditLog from '@/models/AuditLog';
 import Notification from '@/models/Notification';
-import { sendEmail } from '@/lib/mail';
+import { queueEmail } from '@/lib/mail';
 
 // Finds the signed-in user's own employee record, creating it for owners/admins who are not auto-synced
 export async function getOrCreateOwnEmployee(authUser) {
@@ -123,7 +123,7 @@ export async function submitLoan({ authUser, employeeId, paidFromAccount, amount
   });
 
   if (employee.email) {
-    await sendEmail({
+    queueEmail({
       to: employee.email,
       subject: isRequest ? 'Loan Request Submitted — Arionys Finance' : 'Employee Loan Created — Arionys Finance',
       html: loanCreatedEmailHtml({
@@ -142,7 +142,7 @@ export async function submitLoan({ authUser, employeeId, paidFromAccount, amount
       text: isRequest
         ? `Dear ${employee.fullName}, your loan request of ${amountLabel} has been submitted. Status: ${status}.`
         : `Dear ${employee.fullName}, a loan of ${amountLabel} has been created for you. Status: ${status}.`,
-    }).catch(console.error);
+    });
   }
 
   return { loan };

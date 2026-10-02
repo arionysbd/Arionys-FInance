@@ -4,7 +4,7 @@ import dbConnect from '@/lib/db';
 import Transaction from '@/models/Transaction';
 import User from '@/models/User';
 import AuditLog from '@/models/AuditLog';
-import { sendEmail } from '@/lib/mail';
+import { queueEmail } from '@/lib/mail';
 import { getAuthUser, unauthorized } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
 
@@ -80,7 +80,7 @@ export async function POST(req) {
         const companyUsers = await User.find({ companyId: transaction.companyId, isActive: true });
         const notifiables = companyUsers.filter(u => hasPermission(u, 'pending_approvals') && String(u._id) !== String(userId));
         for (const notifiable of notifiables) {
-          await sendEmail({
+          queueEmail({
             to: notifiable.email,
             subject: 'Transaction Approved Notification',
             text: `A transaction of BDT ${transaction.amount} (${typeLabel(transaction.type)}) has been approved by ${user.name}.`,

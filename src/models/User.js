@@ -70,5 +70,8 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 // This ensures schema changes (like adding new roles) are always picked up
 // in Next.js dev mode where the module re-evaluates but the mongoose
 // connection persists with the old compiled model.
+// Company member lists
+userSchema.index({ companyId: 1 });
+
 delete mongoose.models['User'];
 export default mongoose.model('User', userSchema);

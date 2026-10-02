@@ -38,6 +38,10 @@ const auditLogSchema = new mongoose.Schema({
   timestamps: true,
 });
 
+// Newest-first audit list per company, optionally filtered by entity
+auditLogSchema.index({ companyId: 1, createdAt: -1 });
+auditLogSchema.index({ companyId: 1, entity: 1, createdAt: -1 });
+
 // Audit logs are immutable — never expose update/delete routes for this collection
 delete mongoose.models['AuditLog'];
 export default mongoose.model('AuditLog', auditLogSchema);

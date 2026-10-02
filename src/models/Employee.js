@@ -41,5 +41,7 @@ const employeeSchema = new mongoose.Schema({
 // Compound index: email must be unique within a company
 employeeSchema.index({ email: 1, companyId: 1 }, { unique: true });
 
+employeeSchema.index({ companyId: 1, userId: 1 });
+
 delete mongoose.models['Employee'];
 export default mongoose.model('Employee', employeeSchema);

@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Transaction from '@/models/Transaction';
+import mongoose from 'mongoose';
 import User from '@/models/User';
 import Account from '@/models/Account';
 import AuditLog from '@/models/AuditLog';
-import { sendEmail } from '@/lib/mail';
+import { queueEmail } from '@/lib/mail';
 import { getAuthUser, unauthorized, forbidden } from '@/lib/auth';
 import { hasPermission, canPickTransactionAccount } from '@/lib/permissions';
 import { typeLabel } from '@/lib/transactionTypes';
@@ -23,7 +24,7 @@ export async function GET(req) {
     // Always scope to the caller's own company — never trust a client companyId
     const companyId = authUser.companyId;
     const page = parseInt(searchParams.get('page')) || 1;
-    const limit = parseInt(searchParams.get('limit')) || 20;
+    const limit = Math.min(parseInt(searchParams.get('limit')) || 20, 5000);
     const skip = (page - 1) * limit;
 
     let query = {};
@@ -37,6 +38,11 @@ export async function GET(req) {
     }
     
     if (type) query.type = type;
+    // Optional: only transactions that touch one account (as source or destination)
+    const accountFilter = searchParams.get('account');
+    if (accountFilter && mongoose.isValidObjectId(accountFilter)) {
+      query.$or = [{ account: accountFilter }, { toAccount: accountFilter }];
+    }
 
     const transactions = await Transaction.find(query)
       .populate('createdBy', 'name')
@@ -147,7 +153,7 @@ export async function POST(req) {
       const creator = await User.findById(userId);
       
       for (const cfo of cfos) {
-        await sendEmail({
+        queueEmail({
           to: cfo.email,
           subject: 'Action Required: New Transaction Pending Approval',
           text: `A new ${typeLabel(type)} of BDT ${amount} was recorded by ${creator.name}. Description: ${description}`,

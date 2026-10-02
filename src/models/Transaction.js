@@ -89,6 +89,11 @@ const transactionSchema = new mongoose.Schema({
   timestamps: true,
 });
 
+// Indexes for the common lookups: lists by status/date, dashboards, approvals and "my transactions"
+transactionSchema.index({ companyId: 1, status: 1, date: -1 });
+transactionSchema.index({ companyId: 1, createdBy: 1, date: -1 });
+transactionSchema.index({ companyId: 1, account: 1, status: 1 });
+
 if (mongoose.models.Transaction) {
   delete mongoose.models.Transaction;
   delete mongoose.connection.models.Transaction;

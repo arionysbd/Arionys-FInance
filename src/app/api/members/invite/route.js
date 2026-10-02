@@ -4,7 +4,7 @@ import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import Invite from '@/models/Invite';
 import Company from '@/models/Company';
-import { sendEmail } from '@/lib/mail';
+import { queueEmail } from '@/lib/mail';
 import { employeeInviteEmail } from '@/lib/emailTemplates';
 import { getAuthUser, unauthorized } from '@/lib/auth';
 import { hasPermission, isOwner, sanitizePermissions, DEFAULT_PERMISSIONS, PERMISSIONS } from '@/lib/permissions';
@@ -72,7 +72,7 @@ export async function POST(req) {
       accessLabels: PERMISSIONS.filter(p => permissions.includes(p.key)).map(p => p.label),
       expiresAt,
     });
-    await sendEmail({ to: email, ...invitation });
+    queueEmail({ to: email, ...invitation });
 
     return NextResponse.json({
       success: true,

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
-import { sendEmail } from '@/lib/mail';
-import { getAuthUser, unauthorized } from '@/lib/auth';
+import { queueEmail } from '@/lib/mail';
+import { getAuthUser, unauthorized, invalidateAuthUser } from '@/lib/auth';
 import { hasPermission, isOwner, sanitizePermissions } from '@/lib/permissions';
 
 export async function GET(req) {
@@ -70,10 +70,11 @@ export async function PATCH(req) {
     if (isActive !== undefined) user.isActive = isActive;
     
     await user.save();
+    invalidateAuthUser(user._id);
 
     if (isBeingApproved) {
       try {
-        await sendEmail({
+        queueEmail({
           to: user.email,
           subject: 'Your Arionys Finance Account is Approved',
           text: `Hello ${user.name},\n\nYour account has been approved by an administrator. You can now log in and access the dashboard.`,
@@ -128,6 +129,7 @@ export async function DELETE(req) {
     }
 
     await User.findByIdAndDelete(userId);
+    invalidateAuthUser(userId);
     return NextResponse.json({ success: true, message: 'Account deleted' });
   } catch (error) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });

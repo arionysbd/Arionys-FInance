@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
-import { sendEmail } from '@/lib/mail';
+import { queueEmail } from '@/lib/mail';
 import { getAuthUser, unauthorized } from '@/lib/auth';
 
 export async function POST(req) {
@@ -14,7 +14,7 @@ export async function POST(req) {
     // In a real app, you'd generate a token. For now, we'll send a direct reset link.
     const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin}/login`; // Redirecting to login for now
 
-    await sendEmail({
+    queueEmail({
       to: user.email,
       subject: 'Password Reset Request - Arionys Finance',
       text: `Hello ${user.name}, you requested a password reset. Please contact your system administrator to proceed or visit ${resetUrl}`,

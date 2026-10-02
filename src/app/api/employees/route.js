@@ -105,7 +105,7 @@ export async function POST(req) {
     const User = (await import('@/models/User')).default;
     const Invite = (await import('@/models/Invite')).default;
     const Company = (await import('@/models/Company')).default;
-    const { sendEmail } = await import('@/lib/mail');
+    const { queueEmail } = await import('@/lib/mail');
     const crypto = await import('crypto');
 
     let existingUser = await User.findOne({ email: email.toLowerCase() });
@@ -155,7 +155,7 @@ export async function POST(req) {
         expiresAt,
       });
 
-      await sendEmail({ to: email, ...invitation }).catch(err => console.error("Email failed:", err));
+      queueEmail({ to: email, ...invitation });
     }
 
     // Audit log

@@ -1,8 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { Filter, CheckCircle, XCircle, Download, ChevronDown, Check, ArrowUpRight, TrendingDown, Wallet, ArrowRightLeft, Loader2 } from 'lucide-react';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { typeLabel } from '@/lib/transactionTypes';
 
 export default function TransactionHistory({ transactions, onUpdate, filterType, setFilterType, hasMore, loadingMore, onLoadMore }) {
@@ -22,8 +20,10 @@ export default function TransactionHistory({ transactions, onUpdate, filterType,
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const generatePDF = (type) => {
+  const generatePDF = async (type) => {
     setShowDownloadMenu(false);
+    // The PDF library is only downloaded when a statement is requested
+    const [{ jsPDF }, { default: autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
     const doc = new jsPDF({ orientation: 'portrait' });
     const pageWidth = doc.internal.pageSize.getWidth();
 

@@ -7,7 +7,7 @@ import AuditLog from '@/models/AuditLog';
 import Company from '@/models/Company';
 import { getAuthUser, unauthorized } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
-import { sendEmail } from '@/lib/mail';
+import { queueEmail } from '@/lib/mail';
 import mongoose from 'mongoose';
 
 export async function PATCH(req, { params }) {
@@ -92,7 +92,7 @@ export async function PATCH(req, { params }) {
     // Email the employee
     if (loan.employeeEmail) {
       const company = await Company.findById(authUser.companyId).lean();
-      await sendEmail({
+      queueEmail({
         to: loan.employeeEmail,
         subject: 'Employee Loan Activated — Arionys Finance',
         html: loanActivatedEmailHtml({
@@ -104,7 +104,7 @@ export async function PATCH(req, { params }) {
           endDate: loan.endDate,
         }),
         text: `Dear ${loan.employeeName}, your loan of ${loan.currency || 'BDT'} ${Number(loan.amount).toLocaleString()} has been activated and disbursed.`,
-      }).catch(console.error);
+      });
     }
 
     return NextResponse.json({ success: true, data: loan });

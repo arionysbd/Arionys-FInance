@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { getTransactions, approveTransaction, getLoans, approveLoan, getAccounts } from '@/lib/api';
+import { getTransactions, approveTransaction, getLoans, approveLoan, getAccounts, refreshPendingCount } from '@/lib/api';
 import CustomSelect from '@/components/UI/CustomSelect';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import { CheckCircle, XCircle, Loader2, ArrowUpRight, TrendingDown, Wallet, ArrowRightLeft, Banknote } from 'lucide-react';
@@ -80,6 +80,7 @@ export default function PendingApprovalsPage() {
         });
       }
       await fetchPending();
+      refreshPendingCount();
     } catch (err) {
       console.error(`Error ${status} ${kind}:`, err);
       alert(err.response?.data?.message || `Failed to ${status === 'approved' ? 'approve' : 'reject'} ${kind}. You may not have permission.`);
@@ -194,6 +195,7 @@ export default function PendingApprovalsPage() {
     setBulkDialog(null);
     setSelected(new Set());
     await fetchPending();
+    refreshPendingCount();
     if (failures.length) {
       alert(`${selectedRows.length - failures.length} of ${selectedRows.length} done. These could not be processed:\n\n${failures.join('\n')}`);
     }

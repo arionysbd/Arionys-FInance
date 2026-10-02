@@ -4,7 +4,6 @@ import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import Company from '@/models/Company';
 import jwt from 'jsonwebtoken';
-import { sendEmail } from '@/lib/mail';
 
 // Reference the same global OTP store used by send-otp
 const otpStore = global.__otpStore || (global.__otpStore = new Map());

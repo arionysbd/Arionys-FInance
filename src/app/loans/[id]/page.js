@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import DashboardLayout from '@/components/Layout/DashboardLayout';
 import { hasPermission } from '@/lib/permissions';
 import CustomSelect from '@/components/UI/CustomSelect';
-import { getLoan, getLoanRepayments, addLoanRepayment, approveLoan, disburseLoan, getAccounts } from '@/lib/api';
+import { getLoan, getLoanRepayments, addLoanRepayment, approveLoan, disburseLoan, getAccounts, refreshPendingCount } from '@/lib/api';
 import { useParams, useRouter } from 'next/navigation';
 import { Banknote, Calendar, CheckCircle, Clock, CheckCircle2, ArrowRightLeft, User, FileText, Loader2, ArrowLeft, ShieldCheck, ShieldAlert, Plus, DollarSign } from 'lucide-react';
 import Link from 'next/link';
@@ -70,8 +70,10 @@ export default function LoanDetailsPage() {
       setError('');
       try {
           const res = await approveLoan(id, status);
-          if (res.success) fetchData();
-          else setError(res.message);
+          if (res.success) {
+              fetchData();
+              refreshPendingCount();
+          } else setError(res.message);
       } catch(err) {
           setError(err.response?.data?.message || err.message);
       } finally {

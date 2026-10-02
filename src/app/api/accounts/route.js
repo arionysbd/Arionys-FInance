@@ -18,10 +18,10 @@ export async function GET(req) {
       return NextResponse.json({ success: false, message: 'Company ID is required' }, { status: 400 });
     }
 
-    const accounts = await Account.find({ companyId }).populate('createdBy', 'name').sort({ createdAt: -1 }).lean();
-
-    // Current balance of each account from approved transactions (same rules as the dashboard)
-    const movements = await Transaction.aggregate([
+    // Accounts and their current balances (from approved transactions, same rules as the dashboard), fetched together
+    const [accounts, movements] = await Promise.all([
+      Account.find({ companyId }).populate('createdBy', 'name').sort({ createdAt: -1 }).lean(),
+      Transaction.aggregate([
       { $match: { companyId, status: 'approved' } },
       {
         $project: {
@@ -40,6 +40,7 @@ export async function GET(req) {
       },
       { $unwind: '$entries' },
       { $group: { _id: '$entries.acc', balance: { $sum: { $multiply: ['$amount', '$entries.sign'] } } } },
+      ]),
     ]);
     const balances = Object.fromEntries(movements.map(m => [String(m._id), m.balance]));
     const data = accounts.map(acc => ({ ...acc, balance: balances[String(acc._id)] || 0 }));

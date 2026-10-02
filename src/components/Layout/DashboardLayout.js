@@ -25,7 +25,7 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getTransactions, getLoans } from '@/lib/api';
+import { getPendingCount } from '@/lib/api';
 import { hasPermission, canAccessPath, getHomePath, isOwner } from '@/lib/permissions';
 
 export default function DashboardLayout({ children }) {
@@ -46,21 +46,16 @@ export default function DashboardLayout({ children }) {
   }, [authLoading, user, pathAllowed, router]);
 
   useEffect(() => {
-    const fetchPending = async () => {
-      if (user && hasPermission(user, 'pending_approvals')) {
-        try {
-          const params = { status: 'pending', companyId: user.companyId };
-          const [txRes, loanRes] = await Promise.all([
-            getTransactions(params),
-            getLoans({ status: 'pending_approval' }),
-          ]);
-          setPendingCount(txRes.data.length + (loanRes.success ? loanRes.data.length : 0));
-        } catch (err) {
-          console.error('Error fetching pending count:', err);
-        }
-      }
-    };
-    fetchPending();
+    if (!user || !hasPermission(user, 'pending_approvals')) return;
+    let cancelled = false;
+    const load = (force) => getPendingCount({ force })
+      .then(count => { if (!cancelled) setPendingCount(count); })
+      .catch(() => {});
+    load(false);
+    // Refresh when approvals change anywhere in the app
+    const onChange = () => load(true);
+    window.addEventListener('pending-changed', onChange);
+    return () => { cancelled = true; window.removeEventListener('pending-changed', onChange); };
   }, [user]);
 
   if (authLoading || !user) {

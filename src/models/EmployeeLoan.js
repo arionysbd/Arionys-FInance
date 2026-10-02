@@ -108,5 +108,9 @@ const loanSchema = new mongoose.Schema({
   timestamps: true,
 });
 
+// Loan lists per company by status and per employee
+loanSchema.index({ companyId: 1, status: 1, createdAt: -1 });
+loanSchema.index({ companyId: 1, employeeId: 1, createdAt: -1 });
+
 delete mongoose.models['EmployeeLoan'];
 export default mongoose.model('EmployeeLoan', loanSchema);

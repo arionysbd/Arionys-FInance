@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
-import { sendEmail } from '@/lib/mail';
+import { queueEmail } from '@/lib/mail';
 import { getAuthUser, unauthorized } from '@/lib/auth';
 import { hasPermission, DEFAULT_PERMISSIONS } from '@/lib/permissions';
 
@@ -54,7 +54,7 @@ export async function POST(req) {
     const confirmUrl = `${baseUrl}/invite/confirm?token=${inviteToken}`;
 
     // Send the confirmation email
-    await sendEmail({
+    queueEmail({
       to: email,
       subject: 'You\'ve Been Invited to Arionys Finance',
       text: `Hello ${name},\n\nYou have been invited to join Arionys Finance. Please click the link below to set your password and activate your account:\n\n${confirmUrl}\n\nThis link will expire in 7 days.`,

@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import AuditLog from '@/models/AuditLog';
-import { sendEmail } from '@/lib/mail';
-import { getAuthUser, unauthorized, forbidden } from '@/lib/auth';
+import { queueEmail } from '@/lib/mail';
+import { getAuthUser, unauthorized, forbidden, invalidateAuthUser } from '@/lib/auth';
 import { getUserPermissions, hasPermission, isOwner, sanitizePermissions, canSeeAccess, DEFAULT_PERMISSIONS } from '@/lib/permissions';
 
 export async function GET(req) {
@@ -159,6 +159,7 @@ export async function PATCH(req) {
     if (permissions) target.permissions = permissions;
     if (isActive !== undefined) target.isActive = isActive;
     await target.save();
+    invalidateAuthUser(target._id);
 
     await AuditLog.create({
       companyId: actor.companyId,
@@ -176,7 +177,7 @@ export async function PATCH(req) {
 
     if (isBeingApproved) {
       try {
-        await sendEmail({
+        queueEmail({
           to: target.email,
           subject: 'Your Arionys Finance Account is Approved',
           text: `Hello ${target.name},\n\nYour account has been approved. You can now log in.`,
@@ -232,6 +233,7 @@ export async function DELETE(req) {
       if (manageError) return forbidden(manageError);
 
       await User.findByIdAndDelete(userId);
+      invalidateAuthUser(userId);
       await Employee.findOneAndDelete({ userId });
 
       await AuditLog.create({

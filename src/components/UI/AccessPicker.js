@@ -27,24 +27,37 @@ const withExclusivity = (keys, justEnabled) => {
  * disabled: read-only view
  */
 export default function AccessPicker({ value = [], onChange, disabled = false }) {
+  // Pages grouped like the sidebar; abilities (no page of their own) get their own category at the end
   const groups = PERMISSIONS.reduce((acc, p) => {
-    (acc[p.group] ||= []).push(p);
+    (acc[p.href ? p.group : 'Abilities'] ||= []).push(p);
     return acc;
   }, {});
+  const abilities = groups.Abilities;
+  delete groups.Abilities;
+  if (abilities) groups.Abilities = abilities;
+
+  // An ability can only be switched on while the page it belongs to is on
+  const requiredPage = (key) => PERMISSION_REQUIRES[key];
+  const isLocked = (key) => Boolean(requiredPage(key)) && !value.includes(requiredPage(key));
+  const pageLabel = (key) => PERMISSIONS.find(p => p.key === key)?.label;
 
   const toggle = (key) => {
     if (disabled) return;
     const turningOn = !value.includes(key);
+    if (turningOn && isLocked(key)) return;
     const next = turningOn ? withExclusivity([...value, key], key) : value.filter(k => k !== key);
     onChange(withDependencies(next, key, turningOn));
   };
 
   const toggleGroup = (items) => {
     if (disabled) return;
-    const keys = items.map(p => p.key);
-    const allOn = keys.every(k => value.includes(k));
+    const keys = items.map(p => p.key).filter(k => value.includes(k) || !isLocked(k));
+    const allOn = keys.length > 0 && keys.every(k => value.includes(k));
     if (allOn) {
-      onChange(value.filter(k => !keys.includes(k)));
+      // Turning a page group off also turns off abilities that depend on those pages
+      let next = value.filter(k => !keys.includes(k));
+      for (const k of keys) next = withDependencies(next, k, false);
+      onChange(next);
       return;
     }
     // Enabling a whole group still keeps only one dashboard type
@@ -88,25 +101,26 @@ export default function AccessPicker({ value = [], onChange, disabled = false })
                 </span>
               </header>
 
-              {group === 'Overview' && (
-                <p className="ap-note">Choose one: Office Dashboard shows everything, Personal Dashboard shows only their own records.</p>
-              )}
               {items.map(p => {
                 const on = value.includes(p.key);
+                const locked = !on && isLocked(p.key);
                 return (
-                  <label key={p.key} className={`ap-row ${on ? 'on' : ''} ${disabled ? 'readonly' : ''}`}>
-                    <span className="ap-text">
-                      <span className="ap-label">{p.label}</span>
-                      <span className="ap-desc">{p.description}</span>
-                    </span>
-                    {p.href ? <span className="ap-path">{p.href}</span> : <span className="ap-ability">Ability</span>}
+                  <label
+                    key={p.key}
+                    className={`ap-row ${on ? 'on' : ''} ${disabled || locked ? 'readonly' : ''} ${locked ? 'locked' : ''}`}
+                    title={locked ? `Turn on ${pageLabel(requiredPage(p.key))} first` : undefined}
+                  >
+                    <span className="ap-label">{p.label}</span>
+                    {p.href
+                      ? <span className="ap-path">{p.href}</span>
+                      : <span className="ap-ability">Needs {pageLabel(requiredPage(p.key))}</span>}
                     <input
                       type="checkbox"
                       role="switch"
                       aria-checked={on}
                       aria-label={p.label}
                       checked={on}
-                      disabled={disabled}
+                      disabled={disabled || locked}
                       onChange={() => toggle(p.key)}
                     />
                     <span className="ap-switch" aria-hidden="true"><span className="ap-knob" /></span>
@@ -129,25 +143,26 @@ export default function AccessPicker({ value = [], onChange, disabled = false })
         .ap-bulk button:hover,
         .ap-group-meta button:hover { text-decoration: underline; }
 
-        .ap-list { border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
-        .ap-group + .ap-group { border-top: 1px solid #e2e8f0; }
+        /* Two columns of category cards */
+        .ap-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; align-items: start; }
+        .ap-group { border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #ffffff; }
         .ap-group-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.5rem 1rem; background: #f8fafc; border-bottom: 1px solid #f1f5f9; }
         .ap-group-title { font-size: 0.6875rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; }
         .ap-group-meta { display: flex; align-items: center; gap: 0.75rem; font-size: 0.75rem; font-weight: 600; color: #94a3b8; }
         .ap-group-meta button { font-size: 0.75rem; }
 
-        .ap-note { margin: 0; padding: 0.5rem 1rem; font-size: 0.75rem; color: #64748b; border-bottom: 1px solid #f1f5f9; }
+        .ap-row.locked .ap-label { color: #94a3b8; }
+        .ap-row.locked .ap-switch { opacity: 0.45; }
         .ap-row { position: relative; display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem; cursor: pointer; transition: background 0.15s; }
         .ap-row + .ap-row { border-top: 1px solid #f1f5f9; }
         .ap-row:hover:not(.readonly) { background: #fafbff; }
         .ap-row.readonly { cursor: default; }
 
-        .ap-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.125rem; }
-        .ap-label { font-size: 0.875rem; font-weight: 600; color: #0f172a; }
+        
+        .ap-label { flex: 1; min-width: 0; font-size: 0.875rem; font-weight: 600; color: #0f172a; }
         .ap-row:not(.on) .ap-label { color: #475569; }
-        .ap-desc { font-size: 0.75rem; line-height: 1.45; color: #64748b; }
-        .ap-ability { flex-shrink: 0; padding: 0.0625rem 0.375rem; border-radius: 4px; background: #fef3c7; color: #92400e; font-size: 0.625rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
-        .ap-path { flex-shrink: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.6875rem; color: #94a3b8; }
+        .ap-ability { flex-shrink: 0; padding: 0.0625rem 0.4375rem; border-radius: 4px; background: #f1f5f9; color: #64748b; font-size: 0.6875rem; font-weight: 600; }
+        .ap-path { flex-shrink: 1; min-width: 0; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.6875rem; color: #94a3b8; }
 
         .ap-row input { position: absolute; opacity: 0; pointer-events: none; }
         .ap-switch { flex-shrink: 0; position: relative; width: 36px; height: 20px; border-radius: 999px; background: #cbd5e1; transition: background 0.15s; }
@@ -157,6 +172,9 @@ export default function AccessPicker({ value = [], onChange, disabled = false })
         .ap-row.readonly .ap-switch { opacity: 0.6; }
         .ap-row:has(input:focus-visible) .ap-switch { box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25); }
 
+        @media (max-width: 760px) {
+          .ap-list { grid-template-columns: 1fr; }
+        }
         @media (max-width: 560px) {
           .ap-path { display: none; }
           .ap-summary { flex-direction: column; align-items: flex-start; gap: 0.375rem; }
